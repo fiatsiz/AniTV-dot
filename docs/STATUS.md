@@ -15,12 +15,11 @@ As of 2026-10-12.
 
 - `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline` passed, including 3 library tests and 3 source parsing tests.
 - Debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `b16b051bdc92ef158d201dc3394c3c755c46f5c5e8545f094843f94178bb1bd9`).
-- On the connected Beko Google TV (API 34), a prior build of this milestone displayed the home screen and search results for `one piece`. D-pad Down moved from the search field to the Search button after keyboard dismissal. Selecting One Piece loaded episodes. Selecting Episode 1 rendered full-viewport video with English subtitles.
-- The prior build's standard `PlayerView` controls were not visible under D-pad/Select. The current APK replaces them with Compose controls. These controls have not yet been device-tested.
+- On the connected Beko Google TV (API 34), a developer probe displayed the home screen and search results for `one piece`. D-pad Down moved from the search field to the Search button after keyboard dismissal. Selecting One Piece loaded episodes. Selecting Episode 1 rendered full-viewport video with English subtitles.
+- The user installed the final APK and reported the full manual TV checklist successful: search and focus, result → episode → playback, video, audio, subtitles, play/pause, 10-second seeking, caption toggle, Back, favorites, watch progress after restart, and the completed archive. This is user-reported verification; no further ADB testing was run.
 
 ## Open verification and limits
 
-- The user requested no further ADB testing. Installing the current APK over wireless ADB stalled twice and was stopped; installation is unverified. Current APK controls, video, audio, subtitle toggle, seeking, Back, and persistence across restart require manual TV checks. Audio was not audibly verified during the earlier probe.
 - Search reads one result page. Playback supports one HiAnime subtitle server and requires an HTTPS subtitle track. There is no server fallback.
 - HiAnime is unofficial and changeable. Markup, player encoding, blocks, and expiring links can break this flow; the app reports those failures.
 - No login, downloads, recommendations, other sources, or publishing are included.
