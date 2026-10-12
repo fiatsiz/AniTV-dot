@@ -231,8 +231,8 @@ private fun AniTV() {
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("AniTV", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF8FAFC))
-            Text("•", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFC0DE))
-            Text("YOUR ANIME SPACE", fontSize = 14.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+            Text(".", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFC0DE))
+            Text("ANIME PLAYER FOR AndroidTV", fontSize = 14.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
         }
         when {
             episode != null -> {
