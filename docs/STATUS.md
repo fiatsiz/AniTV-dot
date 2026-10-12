@@ -1,28 +1,28 @@
 # AniTV status
 
-As of 2026-10-12. First implementation: commit `dbf3002`.
+As of 2026-10-12.
 
 ## Implemented
 
-- Android TV search, results, episode list, and subtitled HLS player in the existing `app` module.
-- Loading, empty-result, source-error, and playback-error messages.
-- Compose for TV buttons and lists, a focused search field, Back navigation, and Media3 `PlayerView` controls.
-- HiAnime requests and parsing isolated in `HiAnimeSource`. Only the ZokoAnime subtitle server is supported.
-- Android 14 minimum (`minSdk = 34`); `targetSdk` and `compileSdk` remain 37.
+- TV home screen with Search, Currently watching, Favorites, and Completed sections.
+- Local favorites, last episode and playback position, and manually controlled title completion survive app restarts via `SharedPreferences`.
+- Playing records progress every five seconds and when leaving playback. Currently watching contains titles with saved progress unless marked completed. Playback starting or ending never marks a title completed; use the detail-screen button.
+- Full-viewport video with Compose remote controls for Back, 10-second seeking, play/pause, and captions. The player still sends `Referer` for HLS and VTT.
+- Search field routes D-pad Down to the Search button. Back unwinds playback, detail, section, then home.
+- Search, results, episodes, source errors, and the subtitled ZokoAnime path remain in place.
 
 ## Verified
 
-- `./gradlew :app:testDebugUnitTest :app:assembleDebug` passed. All 3 parsing tests passed.
-- Debug APK: `app/build/outputs/apk/debug/app-debug.apk` (35 MB at the last build).
-- Live HiAnime search, episode-list, server, and embed responses were inspected on 2026-10-12. A sampled HLS playlist and VTT subtitle returned HTTP 200 with the player `Referer`.
-- A connected Beko Google TV reports API 34. The installed app launched and a search for `one piece` displayed results.
+- `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline` passed, including 3 library tests and 3 source parsing tests.
+- Debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `b16b051bdc92ef158d201dc3394c3c755c46f5c5e8545f094843f94178bb1bd9`).
+- On the connected Beko Google TV (API 34), a prior build of this milestone displayed the home screen and search results for `one piece`. D-pad Down moved from the search field to the Search button after keyboard dismissal. Selecting One Piece loaded episodes. Selecting Episode 1 rendered full-viewport video with English subtitles.
+- The prior build's standard `PlayerView` controls were not visible under D-pad/Select. The current APK replaces them with Compose controls. These controls have not yet been device-tested.
 
 ## Open verification and limits
 
-- The complete result → episode → playback path has **not** been exercised on the TV. Video decoding, subtitle rendering, audio, seeking, Select, and Back during playback remain unverified.
-- During the TV probe, D-pad Down did not visibly move focus away from the search field. Keyboard and D-pad focus behavior needs a focused follow-up test and possibly a fix.
+- The user requested no further ADB testing. Installing the current APK over wireless ADB stalled twice and was stopped; installation is unverified. Current APK controls, video, audio, subtitle toggle, seeking, Back, and persistence across restart require manual TV checks. Audio was not audibly verified during the earlier probe.
 - Search reads one result page. Playback supports one HiAnime subtitle server and requires an HTTPS subtitle track. There is no server fallback.
-- HiAnime is an unofficial, changeable source. Markup, player encoding, blocks, and expiring links can break this flow. The app reports these failures but cannot repair the source automatically.
-- No login, downloads, history, recommendations, other sources, or publishing are included.
+- HiAnime is unofficial and changeable. Markup, player encoding, blocks, and expiring links can break this flow; the app reports those failures.
+- No login, downloads, recommendations, other sources, or publishing are included.
 
-Do not describe the APK as fully working on TV until the complete remote and playback flow passes there. Content rights remain with their owners; personal installation does not grant redistribution rights.
+Content rights remain with their owners; personal installation does not grant redistribution rights.

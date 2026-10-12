@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,8 +29,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -53,6 +63,7 @@ import indie.fiatsiz.anitv.source.HiAnimeSource
 import indie.fiatsiz.anitv.source.Stream
 import indie.fiatsiz.anitv.ui.theme.AniTVTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -67,10 +78,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private enum class Page { HOME, SEARCH, FAVORITES, WATCHING, COMPLETED }
+
 @Composable
 private fun AniTV() {
+    val context = LocalContext.current
     val source = remember { HiAnimeSource() }
+    val store = remember { LibraryStore(context) }
     val scope = rememberCoroutineScope()
+    var library by remember { mutableStateOf(store.read()) }
+    var page by remember { mutableStateOf(Page.HOME) }
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<Anime>>(emptyList()) }
     var anime by remember { mutableStateOf<Anime?>(null) }
@@ -81,6 +98,12 @@ private fun AniTV() {
     var error by remember { mutableStateOf<String?>(null) }
     var searched by remember { mutableStateOf(false) }
     var request by remember { mutableStateOf(0) }
+    val firstFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+
+    fun save(change: (List<LibraryEntry>) -> List<LibraryEntry>) {
+        library = change(library)
+        store.save(library)
+    }
 
     fun search() {
         if (query.isBlank() || loading) return
@@ -88,10 +111,11 @@ private fun AniTV() {
         error = null
         searched = true
         results = emptyList()
+        val term = query
         val current = ++request
         scope.launch {
             try {
-                val found = withContext(Dispatchers.IO) { source.search(query) }
+                val found = withContext(Dispatchers.IO) { source.search(term) }
                 if (current == request) results = found
             } catch (e: Exception) { if (current == request) error = e.message ?: "Search failed. Try again." }
             finally { if (current == request) loading = false }
@@ -128,48 +152,125 @@ private fun AniTV() {
         }
     }
 
-    BackHandler(episode != null || anime != null) {
+    fun back() {
         request++
-        if (episode != null) { episode = null; stream = null; error = null; loading = false }
-        else { anime = null; episodes = emptyList(); error = null; loading = false }
+        error = null
+        loading = false
+        when {
+            episode != null -> { episode = null; stream = null }
+            anime != null -> { anime = null; episodes = emptyList() }
+            page != Page.HOME -> page = Page.HOME
+        }
     }
 
-    Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("AniTV", fontSize = 30.sp, fontWeight = FontWeight.Bold)
+    BackHandler(episode != null || anime != null || page != Page.HOME) { back() }
+
+    if (episode != null && stream != null) {
+        val selectedAnime = anime!!
+        val selectedEpisode = episode!!
+        val saved = library.firstOrNull { it.anime.id == selectedAnime.id }?.progress
+            ?.takeIf { it.episodeId == selectedEpisode.id }?.positionMs ?: 0L
+        Playback(stream!!, saved, onBack = ::back, onProgress = { position, duration ->
+            save { entries -> LibraryStore.update(entries, selectedAnime) {
+                it.copy(progress = WatchProgress(selectedEpisode.id, selectedEpisode.number, position, duration))
+            } }
+        }, onError = { error = it; stream = null })
+        return
+    }
+
+    val screen = when {
+        episode != null -> "episode"
+        anime != null -> "detail"
+        else -> page.name
+    }
+    androidx.compose.runtime.LaunchedEffect(screen) { firstFocus.requestFocus() }
+
+    Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            Text("AniTV", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF8FAFC))
+            Text("YOUR ANIME SPACE", fontSize = 14.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+        }
         when {
             episode != null -> {
-                Text("${anime?.title} · ${episode!!.title}", fontSize = 22.sp)
+                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Back to episodes") }
+                Text("${anime?.title} · ${episode!!.title}", fontSize = 26.sp)
                 if (loading) Text("Loading subtitled stream…")
-                error?.let { Text(it, color = Color(0xFFFF8080)) }
-                if (stream != null) Playback(stream!!, onError = { error = it })
-                Button(onClick = { request++; episode = null; stream = null; error = null; loading = false }) { Text("Back to episodes") }
+                error?.let { Text(it, color = Color(0xFFFF9999)) }
+                if (error != null) Button(onClick = { selectEpisode(episode!!) }) { Text("Retry playback") }
             }
             anime != null -> {
-                Text(anime!!.title, fontSize = 22.sp)
+                val selected = anime!!
+                val entry = library.firstOrNull { it.anime.id == selected.id }
+                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Back") }
+                Text(selected.title, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(onClick = { save { LibraryStore.update(it, selected) { item -> item.copy(favorite = !item.favorite) } } }) {
+                        Text(if (entry?.favorite == true) "Remove favorite" else "Add favorite")
+                    }
+                    Button(onClick = { save { LibraryStore.update(it, selected) { item -> item.copy(completed = !item.completed) } } }) {
+                        Text(if (entry?.completed == true) "Move to watching" else "Mark title completed")
+                    }
+                }
                 if (loading) Text("Loading episodes…")
-                error?.let { Text(it, color = Color(0xFFFF8080)) }
+                error?.let { Text(it, color = Color(0xFFFF9999)) }
                 if (!loading && episodes.isNotEmpty()) {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("EPISODES", fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(episodes, key = { it.id }) { item ->
                             Button(onClick = { selectEpisode(item) }, modifier = Modifier.fillMaxWidth()) {
-                                Text("${item.number}. ${item.title}")
+                                val resume = entry?.progress?.takeIf { it.episodeId == item.id && it.positionMs > 0 }
+                                Text("${item.number}. ${item.title}" + (if (resume != null) "  ·  Resume ${resume.positionMs / 60_000}m" else ""))
                             }
                         }
                     }
                 }
-                if (episodes.isEmpty() && !loading) Button(onClick = { selectAnime(anime!!) }) { Text("Retry episodes") }
+                if (episodes.isEmpty() && !loading) Button(onClick = { selectAnime(selected) }) { Text("Retry episodes") }
             }
-            else -> {
-                Text("Search anime", fontSize = 22.sp)
+            page == Page.HOME -> {
+                Text("Find your next episode.", fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
+                Text("Search HiAnime, pick up where you left off, or browse your library.", color = Color(0xFFB9C5D8), fontSize = 18.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    HomeButton("Search", "Find a title", Modifier.weight(1f).focusRequester(firstFocus)) { page = Page.SEARCH }
+                    HomeButton("Currently watching", "${LibraryStore.watching(library).size} titles", Modifier.weight(1f)) { page = Page.WATCHING }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    HomeButton("Favorites", "${library.count { it.favorite }} saved", Modifier.weight(1f)) { page = Page.FAVORITES }
+                    HomeButton("Completed", "${library.count { it.completed }} archived", Modifier.weight(1f)) { page = Page.COMPLETED }
+                }
+                Text("Select to open · Back returns here", color = Color(0xFFB9C5D8), fontSize = 15.sp)
+            }
+            page == Page.SEARCH -> {
+                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Home") }
+                Text("Search anime", fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
                 SearchField(query, { query = it }, ::search)
                 Button(onClick = ::search, enabled = query.isNotBlank() && !loading) { Text("Search") }
                 if (loading) Text("Searching HiAnime…")
-                error?.let { Text(it, color = Color(0xFFFF8080)) }
+                error?.let { Text(it, color = Color(0xFFFF9999)) }
                 if (searched && !loading && error == null && results.isEmpty()) Text("No results found. Try another title.")
                 if (results.isNotEmpty()) {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("RESULTS", fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(results, key = { it.id }) { item ->
                             Button(onClick = { selectAnime(item) }, modifier = Modifier.fillMaxWidth()) { Text(item.title) }
+                        }
+                    }
+                }
+            }
+            else -> {
+                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Home") }
+                val entries = when (page) {
+                    Page.FAVORITES -> library.filter { it.favorite }
+                    Page.WATCHING -> LibraryStore.watching(library)
+                    else -> library.filter { it.completed }
+                }
+                Text(when (page) { Page.FAVORITES -> "Favorites"; Page.WATCHING -> "Currently watching"; else -> "Completed anime" },
+                    fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+                if (entries.isEmpty()) Text("Nothing here yet. Search for anime to build your library.", color = Color(0xFFB9C5D8))
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(entries, key = { it.anime.id }) { item ->
+                        Button(onClick = { selectAnime(item.anime) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(item.anime.title + (item.progress?.let { "  ·  Episode ${it.episodeNumber}" } ?: ""))
                         }
                     }
                 }
@@ -179,8 +280,20 @@ private fun AniTV() {
 }
 
 @Composable
+private fun HomeButton(title: String, subtitle: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Button(onClick = onClick, modifier = modifier.height(112.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, fontSize = 15.sp)
+        }
+    }
+}
+
+@Composable
 private fun SearchField(value: String, onChange: (String) -> Unit, onSearch: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     Box(
         Modifier.fillMaxWidth().height(54.dp)
             .border(if (focused) 3.dp else 1.dp, if (focused) Color.White else Color.Gray, RoundedCornerShape(8.dp))
@@ -194,16 +307,31 @@ private fun SearchField(value: String, onChange: (String) -> Unit, onSearch: () 
             textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 20.sp),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-            modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }
+            modifier = Modifier.fillMaxWidth()
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
+                        keyboard?.hide()
+                        focusManager.moveFocus(FocusDirection.Down)
+                        true
+                    } else false
+                }
+                .onFocusChanged { focused = it.isFocused }
         )
         if (value.isEmpty() && !focused) Text("Type a title with your remote", color = Color.LightGray)
     }
 }
 
 @Composable
-private fun Playback(stream: Stream, onError: (String) -> Unit) {
+private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, onProgress: (Long, Long) -> Unit, onError: (String) -> Unit) {
     val context = LocalContext.current
     var buffering by remember(stream) { mutableStateOf(true) }
+    var playing by remember(stream) { mutableStateOf(true) }
+    var captions by remember(stream) { mutableStateOf(true) }
+    var positionMs by remember(stream) { mutableStateOf(savedPositionMs) }
+    var durationMs by remember(stream) { mutableStateOf(0L) }
+    val controlFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val progressCallback by androidx.compose.runtime.rememberUpdatedState(onProgress)
+    val errorCallback by androidx.compose.runtime.rememberUpdatedState(onError)
     val player = remember(stream) {
         val factory = DefaultHttpDataSource.Factory()
             .setUserAgent("Mozilla/5.0 (Linux; Android 14; TV)")
@@ -213,28 +341,62 @@ private fun Playback(stream: Stream, onError: (String) -> Unit) {
             builder.setSubtitleConfigurations(listOf(MediaItem.SubtitleConfiguration.Builder(android.net.Uri.parse(stream.subtitleUrl))
                 .setMimeType(MimeTypes.TEXT_VTT).setLanguage("en").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()))
             setMediaItem(builder.build())
+            if (savedPositionMs > 0) seekTo(savedPositionMs)
             addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING }
-                override fun onPlayerError(error: PlaybackException) { onError("Playback failed. The stream may have expired. Return to episodes and retry.") }
+                override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
+                override fun onPlaybackStateChanged(state: Int) {
+                    buffering = state == Player.STATE_BUFFERING
+                    if (state == Player.STATE_ENDED) progressCallback(playerPosition(), duration.coerceAtLeast(0))
+                }
+                private fun playerPosition() = currentPosition.coerceAtLeast(0)
+                override fun onPlayerError(error: PlaybackException) {
+                    errorCallback("Playback failed. The stream may have expired. Return to episodes and retry.")
+                }
             })
             prepare()
             playWhenReady = true
         }
     }
-    DisposableEffect(player) { onDispose { player.release() } }
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Box(Modifier.weight(1f).height(380.dp)) {
-            AndroidView(
-                factory = { PlayerView(it).apply {
-                    this.player = player
-                    useController = true
-                    isFocusable = true
-                    post { requestFocus(); showController() }
-                } },
-                modifier = Modifier.fillMaxSize()
-            )
-            if (buffering) Text("Buffering…", modifier = Modifier.align(Alignment.Center))
+    androidx.compose.runtime.LaunchedEffect(player) {
+        while (true) {
+            delay(5_000)
+            positionMs = player.currentPosition.coerceAtLeast(0)
+            durationMs = player.duration.coerceAtLeast(0)
+            if (positionMs > 0) progressCallback(positionMs, durationMs)
         }
     }
-    Text("Select pauses or shows controls. Use D-pad to seek and choose captions; Back returns to episodes.", fontSize = 14.sp)
+    DisposableEffect(player) {
+        onDispose {
+            if (player.currentPosition > 0) progressCallback(player.currentPosition, player.duration.coerceAtLeast(0))
+            player.release()
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(player) { controlFocus.requestFocus() }
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        AndroidView(
+            factory = { PlayerView(it).apply {
+                this.player = player
+                useController = false
+                isFocusable = false
+            } },
+            modifier = Modifier.fillMaxSize()
+        )
+        Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().background(Color(0xDD0F0F23)).padding(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Button(onClick = onBack) { Text("Back to episodes") }
+            Button(onClick = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) }) { Text("−10s") }
+            Button(onClick = { if (player.isPlaying) player.pause() else player.play() }, modifier = Modifier.focusRequester(controlFocus)) {
+                Text(if (playing) "Pause" else "Play")
+            }
+            Button(onClick = { player.seekTo((player.currentPosition + 10_000).coerceAtMost(player.duration.coerceAtLeast(0))) }) { Text("+10s") }
+            Button(onClick = {
+                captions = !captions
+                player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !captions).build()
+            }) { Text(if (captions) "Captions on" else "Captions off") }
+            Text("${positionMs / 60_000}:${(positionMs / 1_000 % 60).toString().padStart(2, '0')} / " +
+                "${durationMs / 60_000}:${(durationMs / 1_000 % 60).toString().padStart(2, '0')}", color = Color.White)
+        }
+        if (buffering) Text("Buffering…", modifier = Modifier.align(Alignment.Center), color = Color.White)
+    }
 }
