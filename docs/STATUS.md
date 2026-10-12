@@ -22,7 +22,7 @@ As of 2026-10-12.
 
 ## Open verification and limits
 
-- The current APK's auto-hiding controls, D-pad Down/Up behavior, quality menu, portrait poster layout, and cache refresh have not been exercised on the TV. The user previously requested no ADB device testing; this build was not installed from this session.
+- **Current APK device status: NOT TESTED.** The user has not tested this build and cannot test it yet. Portrait poster placement, auto-hiding controls, D-pad Down/Up behavior, quality selection, and cache refresh all await TV verification. No ADB device test or installation was done in this session, per the user's request.
 - Quality options appear only when Media3 reports multiple supported HLS video tracks. A single-variant stream stays on Auto.
 - Search reads one result page. Playback supports one HiAnime subtitle server and requires an HTTPS subtitle track. There is no server fallback.
 - HiAnime is unofficial and changeable. Markup, player encoding, blocks, and expiring links can break this flow; the app reports those failures.
