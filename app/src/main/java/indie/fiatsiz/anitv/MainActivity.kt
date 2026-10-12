@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -105,7 +106,7 @@ private fun AniTV() {
     var anime by remember { mutableStateOf<Anime?>(null) }
     var episodes by remember { mutableStateOf<List<Episode>>(emptyList()) }
     var details by remember { mutableStateOf<AnimeDetails?>(null) }
-    var banner by remember { mutableStateOf<ImageBitmap?>(null) }
+    var poster by remember { mutableStateOf<ImageBitmap?>(null) }
     var detailError by remember { mutableStateOf<String?>(null) }
     var episode by remember { mutableStateOf<Episode?>(null) }
     var stream by remember { mutableStateOf<Stream?>(null) }
@@ -141,7 +142,7 @@ private fun AniTV() {
         anime = selected
         episodes = emptyList()
         details = null
-        banner = null
+        poster = null
         detailError = null
         error = null
         loading = true
@@ -159,19 +160,19 @@ private fun AniTV() {
                 if (current != request) return@launch
                 if (cached != null) {
                     details = cached.details
-                    banner = withContext(Dispatchers.IO) {
-                        BitmapFactory.decodeByteArray(cached.banner, 0, cached.banner.size)?.asImageBitmap()
+                    poster = withContext(Dispatchers.IO) {
+                        BitmapFactory.decodeByteArray(cached.poster, 0, cached.poster.size)?.asImageBitmap()
                     }
                 }
-                if (cached?.isFresh(System.currentTimeMillis()) == true && banner != null) return@launch
+                if (cached?.isFresh(System.currentTimeMillis()) == true && poster != null) return@launch
                 val fresh = withContext(Dispatchers.IO) { source.details(selected) }
                 if (current != request) return@launch
                 details = fresh
-                val bytes = withContext(Dispatchers.IO) { source.banner(fresh.bannerUrl) }
+                val bytes = withContext(Dispatchers.IO) { source.poster(fresh.posterUrl) }
                 val decoded = withContext(Dispatchers.IO) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
-                    ?: throw IllegalStateException("HiAnime returned an unreadable banner.")
+                    ?: throw IllegalStateException("HiAnime returned an unreadable poster.")
                 withContext(Dispatchers.IO) { detailCache.save(selected, fresh, bytes, System.currentTimeMillis()) }
-                if (current == request) banner = decoded
+                if (current == request) poster = decoded
             } catch (e: Exception) {
                 if (current == request) detailError = e.message ?: "Anime details are unavailable. Episodes are still accessible."
             }
@@ -249,17 +250,22 @@ private fun AniTV() {
                         Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Back") }
                     }
                     item {
-                        Box(Modifier.fillMaxWidth().height(160.dp).background(Color(0xFF27273B))) {
-                            banner?.let { Image(it, "${selected.title} banner", Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-                            if (banner == null) Text(if (detailError == null) "Artwork loading…" else "Artwork unavailable", modifier = Modifier.align(Alignment.Center), color = Color.White)
+                        Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.Top) {
+                            Box(Modifier.width(180.dp).height(280.dp).background(Color(0xFF27273B))) {
+                                poster?.let { Image(it, "${selected.title} poster", Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+                                if (poster == null) Text(if (detailError == null) "Artwork loading…" else "Artwork unavailable",
+                                    modifier = Modifier.align(Alignment.Center).padding(12.dp), color = Color.White)
+                            }
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(selected.title, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+                                details?.let { info ->
+                                    Text(info.description, maxLines = 7, overflow = TextOverflow.Ellipsis, fontSize = 17.sp)
+                                    info.facts.forEach { fact -> Text(fact, color = Color(0xFFB9C5D8), fontSize = 15.sp) }
+                                }
+                                detailError?.let { Text(it, color = Color(0xFFFF9999)) }
+                            }
                         }
                     }
-                    item { Text(selected.title, fontSize = 28.sp, fontWeight = FontWeight.SemiBold) }
-                    details?.let { info ->
-                        item { Text(info.description, maxLines = 4, overflow = TextOverflow.Ellipsis, fontSize = 17.sp) }
-                        item { Text(info.facts.joinToString("  ·  "), color = Color(0xFFB9C5D8), fontSize = 15.sp) }
-                    }
-                    detailError?.let { message -> item { Text(message, color = Color(0xFFFF9999)) } }
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Button(onClick = { save { LibraryStore.update(it, selected) { item -> item.copy(favorite = !item.favorite) } } }) {

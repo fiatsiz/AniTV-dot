@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 data class Anime(val id: String, val title: String, val detailUrl: String? = null)
-data class AnimeDetails(val description: String, val bannerUrl: String, val facts: List<String>)
+data class AnimeDetails(val description: String, val posterUrl: String, val facts: List<String>)
 data class Episode(val id: String, val number: String, val title: String)
 data class Stream(val url: String, val subtitleUrl: String, val referer: String)
 
@@ -33,7 +33,7 @@ class HiAnimeSource {
         return parseDetails(get(url))
     }
 
-    fun banner(url: String): ByteArray = getBytes(url, maxBytes = 8_000_000)
+    fun poster(url: String): ByteArray = getBytes(url, maxBytes = 8_000_000)
 
     fun episodes(anime: Anime): List<Episode> {
         val json = JSONObject(get("$base/api/theme/episode/list/${anime.id}"))
@@ -117,10 +117,8 @@ class HiAnimeSource {
             val detail = Jsoup.parse(html).selectFirst("#ani_detail")
                 ?: throw SourceException("HiAnime changed its anime detail page.")
             val description = detail.selectFirst(".film-description .text")?.text().orEmpty()
-            val style = detail.selectFirst(".anis-cover")?.attr("style").orEmpty()
-            val banner = Regex("url\\(['\"]?([^'\")]+)").find(style)?.groupValues?.get(1)
-                ?: detail.selectFirst(".anisc-poster img")?.attr("src").orEmpty()
-            requireHttps(banner)
+            val poster = detail.selectFirst(".anisc-poster img[src]")?.attr("src").orEmpty()
+            requireHttps(poster)
             if (description.isBlank()) throw SourceException("HiAnime changed its anime description.")
             val facts = detail.select(".anisc-info .item").mapNotNull { item ->
                 val name = item.selectFirst(".item-head")?.text()?.trimEnd(':') ?: return@mapNotNull null
@@ -128,7 +126,7 @@ class HiAnimeSource {
                 val value = item.text().removePrefix("$name:").trim()
                 if (value.isBlank()) null else "$name: $value"
             }
-            return AnimeDetails(description, banner, facts)
+            return AnimeDetails(description, poster, facts)
         }
 
         fun parseEpisodes(html: String): List<Episode> {

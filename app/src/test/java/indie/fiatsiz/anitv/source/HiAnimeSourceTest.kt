@@ -14,10 +14,13 @@ class HiAnimeSourceTest {
 
     @Test fun parsesCurrentDetailAndRejectsChangedMarkup() {
         assertEquals(AnimeDetails("Gold Roger inspired the Great Pirate Era.",
-            "https://hianime.at/storage/media/2026/08/one-piece-banner.webp",
+            "https://hianime.at/storage/media/2026/08/one-piece.webp",
             listOf("Aired: Oct 20, 1999 to ?", "Status: Currently Airing", "Genres: Adventure Fantasy")),
             HiAnimeSource.parseDetails(fixture("hianime-detail.html")))
         assertThrows(SourceException::class.java) { HiAnimeSource.parseDetails("<html></html>") }
+        assertThrows(SourceException::class.java) {
+            HiAnimeSource.parseDetails(fixture("hianime-detail.html").replace("anisc-poster", "missing-poster"))
+        }
     }
 
     @Test fun reportsChangedMarkup() {
