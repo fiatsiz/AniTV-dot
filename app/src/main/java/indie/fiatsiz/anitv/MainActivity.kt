@@ -1,5 +1,7 @@
 package indie.fiatsiz.anitv
 
+import android.app.LocaleManager
+import android.os.LocaleList
 import android.os.Bundle
 import android.graphics.BitmapFactory
 import androidx.activity.ComponentActivity
@@ -30,6 +32,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,6 +56,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -64,6 +70,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -102,7 +109,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Page { HOME, SEARCH, FAVORITES, WATCHING, COMPLETED }
+private enum class Page { HOME, SEARCH, FAVORITES, WATCHING, COMPLETED, SETTINGS }
 
 @Composable
 private fun AniTV() {
@@ -112,7 +119,7 @@ private fun AniTV() {
     val detailCache = remember { AnimeDetailCache(context) }
     val scope = rememberCoroutineScope()
     var library by remember { mutableStateOf(store.read()) }
-    var page by remember { mutableStateOf(Page.HOME) }
+    var page by rememberSaveable { mutableStateOf(Page.HOME) }
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<Anime>>(emptyList()) }
     var anime by remember { mutableStateOf<Anime?>(null) }
@@ -145,7 +152,7 @@ private fun AniTV() {
             try {
                 val found = withContext(Dispatchers.IO) { source.search(term) }
                 if (current == request) results = found
-            } catch (e: Exception) { if (current == request) error = e.message ?: "Search failed. Try again." }
+            } catch (e: Exception) { if (current == request) error = localizedError(context, e, R.string.search_failed) }
             finally { if (current == request) loading = false }
         }
     }
@@ -163,7 +170,7 @@ private fun AniTV() {
             try {
                 val found = withContext(Dispatchers.IO) { source.episodes(selected) }
                 if (current == request) episodes = found
-            } catch (e: Exception) { if (current == request) error = e.message ?: "Could not load episodes." }
+            } catch (e: Exception) { if (current == request) error = localizedError(context, e, R.string.episodes_failed) }
             finally { if (current == request) loading = false }
         }
         scope.launch {
@@ -182,11 +189,14 @@ private fun AniTV() {
                 details = fresh
                 val bytes = withContext(Dispatchers.IO) { source.poster(fresh.posterUrl) }
                 val decoded = withContext(Dispatchers.IO) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
-                    ?: throw IllegalStateException("HiAnime returned an unreadable poster.")
+                if (decoded == null) {
+                    if (current == request) detailError = context.getString(R.string.poster_unreadable)
+                    return@launch
+                }
                 withContext(Dispatchers.IO) { detailCache.save(selected, fresh, bytes, System.currentTimeMillis()) }
                 if (current == request) poster = decoded
             } catch (e: Exception) {
-                if (current == request) detailError = e.message ?: "Anime details are unavailable. Episodes are still accessible."
+                if (current == request) detailError = localizedError(context, e, R.string.detail_unavailable)
             }
         }
     }
@@ -201,7 +211,7 @@ private fun AniTV() {
             try {
                 val found = withContext(Dispatchers.IO) { source.stream(selected) }
                 if (current == request) stream = found
-            } catch (e: Exception) { if (current == request) error = e.message ?: "Could not load the stream." }
+            } catch (e: Exception) { if (current == request) error = localizedError(context, e, R.string.stream_failed) }
             finally { if (current == request) loading = false }
         }
     }
@@ -244,31 +254,31 @@ private fun AniTV() {
         BrandHeader()
         when {
             episode != null -> {
-                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Back to episodes") }
-                Text("${anime?.title} · ${episode!!.title}", fontSize = 26.sp)
-                if (loading) Text("Loading subtitled stream…")
+                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.back_to_episodes)) }
+                Text("${anime?.title} · ${localizedEpisodeTitle(episode!!)}", fontSize = 26.sp)
+                if (loading) Text(stringResource(R.string.loading_stream))
                 error?.let { Text(it, color = Color(0xFFFF9999)) }
-                if (error != null) Button(onClick = { selectEpisode(episode!!) }) { Text("Retry playback") }
+                if (error != null) Button(onClick = { selectEpisode(episode!!) }) { Text(stringResource(R.string.retry_playback)) }
             }
             anime != null -> {
                 val selected = anime!!
                 val entry = library.firstOrNull { it.anime.id == selected.id }
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     item {
-                        Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Back") }
+                        Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.back)) }
                     }
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.Top) {
                             Box(Modifier.width(180.dp).height(280.dp).background(Color(0xFF27273B))) {
-                                poster?.let { Image(it, "${selected.title} poster", Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-                                if (poster == null) Text(if (detailError == null) "Artwork loading…" else "Artwork unavailable",
+                                poster?.let { Image(it, stringResource(R.string.poster_description, selected.title), Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+                                if (poster == null) Text(stringResource(if (detailError == null) R.string.artwork_loading else R.string.artwork_unavailable),
                                     modifier = Modifier.align(Alignment.Center).padding(12.dp), color = Color.White)
                             }
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text(selected.title, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
                                 details?.let { info ->
                                     Text(info.description, maxLines = 7, overflow = TextOverflow.Ellipsis, fontSize = 17.sp)
-                                    info.facts.forEach { fact -> Text(fact, color = Color(0xFFB9C5D8), fontSize = 15.sp) }
+                                    info.facts.forEach { fact -> LocalizedFact(fact) }
                                 }
                                 detailError?.let { Text(it, color = Color(0xFFFF9999)) }
                             }
@@ -277,23 +287,23 @@ private fun AniTV() {
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Button(onClick = { save { LibraryStore.update(it, selected) { item -> item.copy(favorite = !item.favorite) } } }) {
-                                Text(if (entry?.favorite == true) "Remove favorite" else "Add favorite")
+                                Text(stringResource(if (entry?.favorite == true) R.string.remove_favorite else R.string.add_favorite))
                             }
                             Button(onClick = { save { LibraryStore.update(it, selected) { item -> item.copy(completed = !item.completed) } } }) {
-                                Text(if (entry?.completed == true) "Move to watching" else "Mark title completed")
+                                Text(stringResource(if (entry?.completed == true) R.string.move_to_watching else R.string.mark_completed))
                             }
                         }
                     }
-                    if (loading) item { Text("Loading episodes…") }
+                    if (loading) item { Text(stringResource(R.string.loading_episodes)) }
                     error?.let { message -> item { Text(message, color = Color(0xFFFF9999)) } }
                     if (!loading && episodes.isNotEmpty()) {
-                        item { Text("EPISODES", fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp) }
+                        item { Text(stringResource(R.string.episodes_heading), fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp) }
                         items(episodes, key = { it.id }) { episodeItem ->
                             EpisodeButton(episodeItem, entry?.progress) { selectEpisode(episodeItem) }
                         }
                     }
                     if (episodes.isEmpty() && !loading) item {
-                        Button(onClick = { selectAnime(selected) }) { Text("Retry episodes") }
+                        Button(onClick = { selectAnime(selected) }) { Text(stringResource(R.string.retry_episodes)) }
                     }
                 }
             }
@@ -301,15 +311,15 @@ private fun AniTV() {
                 HomeContent(library, firstFocus) { page = it }
             }
             page == Page.SEARCH -> {
-                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Home") }
-                Text("Search anime", fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.home)) }
+                Text(stringResource(R.string.search_anime), fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
                 SearchField(query, { query = it }, ::search)
-                Button(onClick = ::search, enabled = query.isNotBlank() && !loading) { Text("Search") }
-                if (loading) Text("Searching HiAnime…")
+                Button(onClick = ::search, enabled = query.isNotBlank() && !loading) { Text(stringResource(R.string.search)) }
+                if (loading) Text(stringResource(R.string.searching))
                 error?.let { Text(it, color = Color(0xFFFF9999)) }
-                if (searched && !loading && error == null && results.isEmpty()) Text("No results found. Try another title.")
+                if (searched && !loading && error == null && results.isEmpty()) Text(stringResource(R.string.no_results))
                 if (results.isNotEmpty()) {
-                    Text("RESULTS", fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+                    Text(stringResource(R.string.results_heading), fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(results, key = { it.id }) { item ->
                             Button(onClick = { selectAnime(item) }, modifier = Modifier.fillMaxWidth()) { Text(item.title) }
@@ -317,20 +327,29 @@ private fun AniTV() {
                     }
                 }
             }
+            page == Page.SETTINGS -> {
+                val localeManager = context.getSystemService(LocaleManager::class.java)
+                val appLocales = localeManager.applicationLocales
+                val selectedLanguage = if (appLocales.isEmpty) "" else appLocales[0].language
+                SettingsContent(selectedLanguage, firstFocus, ::back) { tag ->
+                    if (tag != selectedLanguage)
+                        localeManager.applicationLocales = if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(tag)
+                }
+            }
             else -> {
-                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Home") }
+                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.home)) }
                 val entries = when (page) {
                     Page.FAVORITES -> library.filter { it.favorite }
                     Page.WATCHING -> LibraryStore.watching(library)
                     else -> library.filter { it.completed }
                 }
-                Text(when (page) { Page.FAVORITES -> "Favorites"; Page.WATCHING -> "Currently watching"; else -> "Completed anime" },
+                Text(stringResource(when (page) { Page.FAVORITES -> R.string.favorites; Page.WATCHING -> R.string.watching; else -> R.string.completed_anime }),
                     fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
-                if (entries.isEmpty()) Text("Nothing here yet. Search for anime to build your library.", color = Color(0xFFB9C5D8))
+                if (entries.isEmpty()) Text(stringResource(R.string.empty_library), color = Color(0xFFB9C5D8))
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(entries, key = { it.anime.id }) { item ->
                         Button(onClick = { selectAnime(item.anime) }, modifier = Modifier.fillMaxWidth()) {
-                            Text(item.anime.title + (item.progress?.let { "  ·  Episode ${it.episodeNumber}" } ?: ""))
+                            Text(item.anime.title + (item.progress?.let { "  ·  ${stringResource(R.string.episode_number, it.episodeNumber)}" } ?: ""))
                         }
                     }
                 }
@@ -343,22 +362,69 @@ private fun AniTV() {
 private fun BrandHeader() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Image(painterResource(R.drawable.anitv_logo), "AniTV", Modifier.width(120.dp).height(60.dp), contentScale = ContentScale.Crop)
-        Text("ANIME PLAYER FOR AndroidTV", fontSize = 14.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+        Text(stringResource(R.string.tagline), fontSize = 14.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
     }
 }
 
 @Composable
 private fun HomeContent(library: List<LibraryEntry>, firstFocus: androidx.compose.ui.focus.FocusRequester, onNavigate: (Page) -> Unit) {
-    Text("Find your next episode.", fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
-    Text("Search HiAnime, pick up where you left off, or browse your library.", color = Color(0xFFB9C5D8), fontSize = 18.sp)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.home_heading), modifier = Modifier.weight(1f), fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
+        Button(onClick = { onNavigate(Page.SETTINGS) }, shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))) {
+            Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.settings))
+        }
+    }
+    Text(stringResource(R.string.home_description), color = Color(0xFFB9C5D8), fontSize = 18.sp)
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-        HomeButton("Search", "Find a title", Icons.Filled.Search, Modifier.weight(1f).focusRequester(firstFocus)) { onNavigate(Page.SEARCH) }
-        HomeButton("Currently watching", "${LibraryStore.watching(library).size} titles", Icons.Filled.PlayArrow, Modifier.weight(1f)) { onNavigate(Page.WATCHING) }
+        HomeButton(stringResource(R.string.search), stringResource(R.string.find_title), Icons.Filled.Search, Modifier.weight(1f).focusRequester(firstFocus)) { onNavigate(Page.SEARCH) }
+        HomeButton(stringResource(R.string.watching), stringResource(R.string.title_count, LibraryStore.watching(library).size), Icons.Filled.PlayArrow, Modifier.weight(1f)) { onNavigate(Page.WATCHING) }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-        HomeButton("Favorites", "${library.count { it.favorite }} saved", Icons.Filled.Favorite, Modifier.weight(1f)) { onNavigate(Page.FAVORITES) }
-        HomeButton("Completed", "${library.count { it.completed }} archived", Icons.Filled.CheckCircle, Modifier.weight(1f)) { onNavigate(Page.COMPLETED) }
+        HomeButton(stringResource(R.string.favorites), stringResource(R.string.saved_count, library.count { it.favorite }), Icons.Filled.Favorite, Modifier.weight(1f)) { onNavigate(Page.FAVORITES) }
+        HomeButton(stringResource(R.string.completed), stringResource(R.string.archived_count, library.count { it.completed }), Icons.Filled.CheckCircle, Modifier.weight(1f)) { onNavigate(Page.COMPLETED) }
     }
+}
+
+@Composable
+private fun LanguageChoice(label: Int, selected: Boolean, onClick: () -> Unit) {
+    Button(onClick = onClick, modifier = Modifier.semantics { this.selected = selected },
+        shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))) {
+        if (selected) {
+            Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(stringResource(label))
+    }
+}
+
+@Composable
+private fun SettingsContent(selectedLanguage: String, firstFocus: androidx.compose.ui.focus.FocusRequester,
+    onBack: () -> Unit, onSelect: (String) -> Unit) {
+    Button(onClick = onBack, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.home)) }
+    Text(stringResource(R.string.settings), fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+    Text(stringResource(R.string.language_hint), color = Color(0xFFB9C5D8), fontSize = 18.sp)
+    Text(stringResource(R.string.language), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LanguageChoice(R.string.language_system, selectedLanguage.isEmpty()) { onSelect("") }
+        LanguageChoice(R.string.language_english, selectedLanguage == "en") { onSelect("en") }
+        LanguageChoice(R.string.language_turkish, selectedLanguage == "tr") { onSelect("tr") }
+    }
+}
+
+@Composable
+private fun LocalizedFact(fact: String) {
+    val label = fact.substringBefore(':')
+    val labelId = when (label) {
+        "Aired" -> R.string.fact_aired
+        "Status" -> R.string.fact_status
+        "Genres" -> R.string.fact_genres
+        "MAL Score" -> R.string.fact_mal_score
+        else -> null
+    }
+    Text(if (labelId == null) fact else "${stringResource(labelId)}:${fact.substringAfter(':')}",
+        color = Color(0xFFB9C5D8), fontSize = 15.sp)
 }
 
 @Composable
@@ -379,9 +445,14 @@ private fun EpisodeButton(episode: Episode, progress: WatchProgress?, onClick: (
         scale = ButtonDefaults.scale(focusedScale = 1f),
         colors = ButtonDefaults.colors(focusedContainerColor = Color(0xFF4338CA), focusedContentColor = Color.White)) {
         val resume = progress?.takeIf { it.episodeId == episode.id && it.positionMs > 0 }
-        Text("${episode.number}. ${episode.title}" + (if (resume != null) "  ·  Resume ${resume.positionMs / 60_000}m" else ""))
+        val title = stringResource(R.string.episode_button, episode.number, localizedEpisodeTitle(episode))
+        Text(if (resume == null) title else stringResource(R.string.episode_resume, title, resume.positionMs / 60_000))
     }
 }
+
+@Composable
+private fun localizedEpisodeTitle(episode: Episode): String =
+    if (episode.title == "Episode ${episode.number}") stringResource(R.string.episode_number, episode.number) else episode.title
 
 @Preview(name = "TV home", widthDp = 960, heightDp = 540)
 @Composable
@@ -406,9 +477,37 @@ private fun EpisodesPreview() {
                 verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 BrandHeader()
                 Text("Sample anime", fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
-                Text("EPISODES", fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+                Text(stringResource(R.string.episodes_heading), fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
                 EpisodeButton(Episode("preview-1", "1", "Episode 1"), null) {}
                 EpisodeButton(Episode("preview-2", "2", "Episode 2"), null) {}
+            }
+        }
+    }
+}
+
+@Preview(name = "TV settings (English)", widthDp = 960, heightDp = 540, locale = "en")
+@Composable
+private fun SettingsEnglishPreview() {
+    AniTVTheme(isInDarkTheme = true) {
+        Surface(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                BrandHeader()
+                SettingsContent("en", remember { androidx.compose.ui.focus.FocusRequester() }, {}, {})
+            }
+        }
+    }
+}
+
+@Preview(name = "TV settings (Turkish)", widthDp = 960, heightDp = 540, locale = "tr")
+@Composable
+private fun SettingsPreview() {
+    AniTVTheme(isInDarkTheme = true) {
+        Surface(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                BrandHeader()
+                SettingsContent("tr", remember { androidx.compose.ui.focus.FocusRequester() }, {}, {})
             }
         }
     }
@@ -442,7 +541,7 @@ private fun SearchField(value: String, onChange: (String) -> Unit, onSearch: () 
                 }
                 .onFocusChanged { focused = it.isFocused }
         )
-        if (value.isEmpty() && !focused) Text("Type a title with your remote", color = Color.LightGray)
+        if (value.isEmpty() && !focused) Text(stringResource(R.string.search_hint), color = Color.LightGray)
     }
 }
 
@@ -459,7 +558,7 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
     var controlsVisible by remember(stream) { mutableStateOf(true) }
     var qualityOpen by remember(stream) { mutableStateOf(false) }
     var qualityOptions by remember(stream) { mutableStateOf<List<QualityOption>>(emptyList()) }
-    var selectedQuality by remember(stream) { mutableStateOf("Auto") }
+    var selectedQuality by remember(stream) { mutableStateOf(context.getString(R.string.auto)) }
     var interactionTick by remember(stream) { mutableStateOf(0) }
     val controlFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val videoFocus = remember { androidx.compose.ui.focus.FocusRequester() }
@@ -482,7 +581,7 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
                     qualityOptions = tracks.groups.filter { it.type == C.TRACK_TYPE_VIDEO }.flatMap { group ->
                         (0 until group.length).filter { group.isTrackSupported(it) }.map { index ->
                             val format = group.getTrackFormat(index)
-                            val name = if (format.height > 0) "${format.height}p" else "Video ${index + 1}"
+                            val name = if (format.height > 0) "${format.height}p" else context.getString(R.string.video_track, index + 1)
                             val bitrate = if (format.bitrate > 0) " · ${format.bitrate / 1000} kb/s" else ""
                             QualityOption(group.mediaTrackGroup, index, name + bitrate)
                         }
@@ -494,7 +593,7 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
                 }
                 private fun playerPosition() = currentPosition.coerceAtLeast(0)
                 override fun onPlayerError(error: PlaybackException) {
-                    errorCallback("Playback failed. The stream may have expired. Return to episodes and retry.")
+                    errorCallback(context.getString(R.string.playback_failed))
                 }
             })
             prepare()
@@ -555,19 +654,19 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
         if (controlsVisible) {
             Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().background(Color(0xDD0F0F23)).padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onBack) { Text("Episodes") }
-                Button(onClick = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) }) { Text("−10s") }
+                Button(onClick = onBack) { Text(stringResource(R.string.episodes)) }
+                Button(onClick = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) }) { Text(stringResource(R.string.seek_back)) }
                 Button(onClick = { if (player.playWhenReady) player.pause() else player.play() }, modifier = Modifier.focusRequester(controlFocus)) {
-                    Text(if (playing) "Pause" else "Play")
+                    Text(stringResource(if (playing) R.string.pause else R.string.play))
                 }
-                Button(onClick = { player.seekTo((player.currentPosition + 10_000).coerceAtMost(player.duration.coerceAtLeast(0))) }) { Text("+10s") }
+                Button(onClick = { player.seekTo((player.currentPosition + 10_000).coerceAtMost(player.duration.coerceAtLeast(0))) }) { Text(stringResource(R.string.seek_forward)) }
                 Button(onClick = {
                     captions = !captions
                     player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
                         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !captions).build()
-                }) { Text(if (captions) "Captions on" else "Captions off") }
-                if (qualityOptions.size > 1) Button(onClick = { qualityOpen = !qualityOpen }) { Text("Quality: $selectedQuality") }
-                else Text("Auto quality", color = Color.White)
+                }) { Text(stringResource(if (captions) R.string.captions_on else R.string.captions_off)) }
+                if (qualityOptions.size > 1) Button(onClick = { qualityOpen = !qualityOpen }) { Text(stringResource(R.string.quality, selectedQuality)) }
+                else Text(stringResource(R.string.auto_quality), color = Color.White)
                 Text("${positionMs / 60_000}:${(positionMs / 1_000 % 60).toString().padStart(2, '0')} / " +
                     "${durationMs / 60_000}:${(durationMs / 1_000 % 60).toString().padStart(2, '0')}", color = Color.White)
             }
@@ -576,9 +675,9 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
                 Button(onClick = {
                     player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
                         .clearOverridesOfType(C.TRACK_TYPE_VIDEO).build()
-                    selectedQuality = "Auto"
+                    selectedQuality = context.getString(R.string.auto)
                     qualityOpen = false
-                }, modifier = Modifier.focusRequester(qualityFocus)) { Text("Auto") }
+                }, modifier = Modifier.focusRequester(qualityFocus)) { Text(stringResource(R.string.auto)) }
                 qualityOptions.forEach { option ->
                     Button(onClick = {
                         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
@@ -589,6 +688,6 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
                 }
             }
         }
-        if (buffering) Text("Buffering…", modifier = Modifier.align(Alignment.Center), color = Color.White)
+        if (buffering) Text(stringResource(R.string.buffering), modifier = Modifier.align(Alignment.Center), color = Color.White)
     }
 }

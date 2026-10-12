@@ -14,7 +14,14 @@ data class AnimeDetails(val description: String, val posterUrl: String, val fact
 data class Episode(val id: String, val number: String, val title: String)
 data class Stream(val url: String, val subtitleUrl: String, val referer: String)
 
-class SourceException(message: String) : IOException(message)
+enum class SourceFailure {
+    DETAIL_MISSING, DETAIL_LINK_INVALID, EPISODES_LOAD, SERVERS_LOAD, NO_SUB_SERVER,
+    SERVER_LINK_CHANGED, REQUEST_BLOCKED, REQUEST_FAILED, RESPONSE_TOO_LARGE, NETWORK,
+    SEARCH_BLOCKED, SEARCH_CHANGED, DETAIL_CHANGED, DESCRIPTION_CHANGED, NO_EPISODES,
+    PLAYER_PAGE_CHANGED, PLAYER_STREAM_CHANGED, NO_SUBTITLE, INSECURE_LINK
+}
+
+class SourceException(val failure: SourceFailure, val status: Int = 0) : IOException(failure.name)
 
 class HiAnimeSource {
     private val base = "https://hianime.at"
@@ -27,9 +34,9 @@ class HiAnimeSource {
 
     fun details(anime: Anime): AnimeDetails {
         val url = anime.detailUrl ?: search(anime.title).firstOrNull { it.id == anime.id }?.detailUrl
-            ?: throw SourceException("Could not find this anime's detail page. Search for it again.")
+            ?: throw SourceException(SourceFailure.DETAIL_MISSING)
         if (!runCatching { URI(url).let { it.scheme == "https" && it.host == "hianime.at" } }.getOrDefault(false))
-            throw SourceException("HiAnime returned an invalid detail link.")
+            throw SourceException(SourceFailure.DETAIL_LINK_INVALID)
         return parseDetails(get(url))
     }
 
@@ -37,20 +44,20 @@ class HiAnimeSource {
 
     fun episodes(anime: Anime): List<Episode> {
         val json = JSONObject(get("$base/api/theme/episode/list/${anime.id}"))
-        if (!json.optBoolean("status")) throw SourceException("HiAnime could not load episodes.")
+        if (!json.optBoolean("status")) throw SourceException(SourceFailure.EPISODES_LOAD)
         return parseEpisodes(json.getString("html"))
     }
 
     fun stream(episode: Episode): Stream {
         val json = JSONObject(get("$base/api/theme/episode/servers?episodeId=${episode.id}"))
-        if (!json.optBoolean("status")) throw SourceException("HiAnime could not load subtitle servers.")
+        if (!json.optBoolean("status")) throw SourceException(SourceFailure.SERVERS_LOAD)
         val server = Jsoup.parse(json.getString("html"))
             .select(".server-item[data-type=sub][data-server-name=ZokoAnime]").firstOrNull()
-            ?: throw SourceException("No supported subtitled server is available for this episode.")
+            ?: throw SourceException(SourceFailure.NO_SUB_SERVER)
         val embed = try {
             String(Base64.getDecoder().decode(server.attr("data-hash")), StandardCharsets.UTF_8)
         } catch (_: IllegalArgumentException) {
-            throw SourceException("HiAnime changed its server link format.")
+            throw SourceException(SourceFailure.SERVER_LINK_CHANGED)
         }
         requireHttps(embed)
         val player = get(embed, "$base/")
@@ -70,8 +77,8 @@ class HiAnimeSource {
         }
         try {
             val code = connection.responseCode
-            if (code == 403 || code == 429 || code == 503) throw SourceException("HiAnime or its player blocked the request ($code). Try again later.")
-            if (code !in 200..299) throw SourceException("Source request failed ($code). The link may have expired.")
+            if (code == 403 || code == 429 || code == 503) throw SourceException(SourceFailure.REQUEST_BLOCKED, code)
+            if (code !in 200..299) throw SourceException(SourceFailure.REQUEST_FAILED, code)
             requireHttps(connection.url.toString())
             return connection.inputStream.use { input ->
                 val output = java.io.ByteArrayOutputStream()
@@ -79,7 +86,7 @@ class HiAnimeSource {
                 while (true) {
                     val count = input.read(buffer)
                     if (count < 0) break
-                    if (output.size() + count > maxBytes) throw SourceException("Source response is too large.")
+                    if (output.size() + count > maxBytes) throw SourceException(SourceFailure.RESPONSE_TOO_LARGE)
                     output.write(buffer, 0, count)
                 }
                 output.toByteArray()
@@ -87,7 +94,7 @@ class HiAnimeSource {
         } catch (e: SourceException) {
             throw e
         } catch (_: IOException) {
-            throw SourceException("Could not reach HiAnime or its player. Check the connection and try again.")
+            throw SourceException(SourceFailure.NETWORK)
         } finally {
             connection.disconnect()
         }
@@ -97,7 +104,7 @@ class HiAnimeSource {
         private const val KEY = "otaku-embed-v1"
 
         fun parseSearch(html: String): List<Anime> {
-            if (html.contains("Just a moment", ignoreCase = true)) throw SourceException("HiAnime blocked the search request.")
+            if (html.contains("Just a moment", ignoreCase = true)) throw SourceException(SourceFailure.SEARCH_BLOCKED)
             val document = Jsoup.parse(html)
             val results = document.select(".film_list-wrap .flw-item").mapNotNull { item ->
                 val link = item.selectFirst(".film-poster-ahref[data-id]") ?: return@mapNotNull null
@@ -109,17 +116,17 @@ class HiAnimeSource {
                 if (title.isBlank() || !id.matches(Regex("[0-9]+"))) null else Anime(id, title, url)
             }
             if (results.isEmpty() && document.selectFirst(".film_list-wrap") == null)
-                throw SourceException("HiAnime changed its search page. Try again after an app update.")
+                throw SourceException(SourceFailure.SEARCH_CHANGED)
             return results
         }
 
         fun parseDetails(html: String): AnimeDetails {
             val detail = Jsoup.parse(html).selectFirst("#ani_detail")
-                ?: throw SourceException("HiAnime changed its anime detail page.")
+                ?: throw SourceException(SourceFailure.DETAIL_CHANGED)
             val description = detail.selectFirst(".film-description .text")?.text().orEmpty()
             val poster = detail.selectFirst(".anisc-poster img[src]")?.attr("src").orEmpty()
             requireHttps(poster)
-            if (description.isBlank()) throw SourceException("HiAnime changed its anime description.")
+            if (description.isBlank()) throw SourceException(SourceFailure.DESCRIPTION_CHANGED)
             val facts = detail.select(".anisc-info .item").mapNotNull { item ->
                 val name = item.selectFirst(".item-head")?.text()?.trimEnd(':') ?: return@mapNotNull null
                 if (name !in setOf("Aired", "Status", "Genres", "MAL Score")) return@mapNotNull null
@@ -137,19 +144,19 @@ class HiAnimeSource {
                 if (!id.matches(Regex("[0-9]+")) || number.isBlank()) null
                 else Episode(id, number, item.attr("title").ifBlank { "Episode $number" })
             }
-            if (episodes.isEmpty()) throw SourceException("No episodes found. HiAnime may have changed its episode list.")
+            if (episodes.isEmpty()) throw SourceException(SourceFailure.NO_EPISODES)
             return episodes
         }
 
         fun parsePlayer(html: String, referer: String): Stream {
             val blob = Regex("window\\.__P=\"([^\"]+)\"").find(html)?.groupValues?.get(1)
-                ?: throw SourceException("The subtitle player changed its page format.")
+                ?: throw SourceException(SourceFailure.PLAYER_PAGE_CHANGED)
             val data = try {
                 val bytes = Base64.getDecoder().decode(blob)
                 val clear = ByteArray(bytes.size) { i -> (bytes[i].toInt() xor KEY[i % KEY.length].code).toByte() }
                 JSONObject(String(clear, StandardCharsets.UTF_8))
             } catch (_: Exception) {
-                throw SourceException("The subtitle player changed its stream format.")
+                throw SourceException(SourceFailure.PLAYER_STREAM_CHANGED)
             }
             val url = data.optString("src")
             requireHttps(url)
@@ -159,13 +166,13 @@ class HiAnimeSource {
                 ?.optString("src")
                 ?: (0 until (tracks?.length() ?: 0)).map { tracks!!.getJSONObject(it) }
                     .firstOrNull { it.optString("src").startsWith("https://") }?.optString("src")
-            if (subtitle == null) throw SourceException("This episode has no usable subtitle track.")
+            if (subtitle == null) throw SourceException(SourceFailure.NO_SUBTITLE)
             return Stream(url, subtitle, referer)
         }
 
         private fun requireHttps(url: String) {
             if (runCatching { URI(url).scheme == "https" && URI(url).host != null }.getOrDefault(false)) return
-            throw SourceException("Source returned an invalid or insecure link.")
+            throw SourceException(SourceFailure.INSECURE_LINK)
         }
     }
 }

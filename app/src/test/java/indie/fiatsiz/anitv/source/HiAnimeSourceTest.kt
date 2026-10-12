@@ -17,15 +17,18 @@ class HiAnimeSourceTest {
             "https://hianime.at/storage/media/2026/08/one-piece.webp",
             listOf("Aired: Oct 20, 1999 to ?", "Status: Currently Airing", "Genres: Adventure Fantasy")),
             HiAnimeSource.parseDetails(fixture("hianime-detail.html")))
-        assertThrows(SourceException::class.java) { HiAnimeSource.parseDetails("<html></html>") }
-        assertThrows(SourceException::class.java) {
+        assertEquals(SourceFailure.DETAIL_CHANGED,
+            assertThrows(SourceException::class.java) { HiAnimeSource.parseDetails("<html></html>") }.failure)
+        assertEquals(SourceFailure.INSECURE_LINK, assertThrows(SourceException::class.java) {
             HiAnimeSource.parseDetails(fixture("hianime-detail.html").replace("anisc-poster", "missing-poster"))
-        }
+        }.failure)
     }
 
     @Test fun reportsChangedMarkup() {
-        assertThrows(SourceException::class.java) { HiAnimeSource.parseSearch("<html></html>") }
-        assertThrows(SourceException::class.java) { HiAnimeSource.parseEpisodes("<div></div>") }
+        assertEquals(SourceFailure.SEARCH_CHANGED,
+            assertThrows(SourceException::class.java) { HiAnimeSource.parseSearch("<html></html>") }.failure)
+        assertEquals(SourceFailure.NO_EPISODES,
+            assertThrows(SourceException::class.java) { HiAnimeSource.parseEpisodes("<div></div>") }.failure)
     }
 
     @Test fun decodesSubtitlePlayer() {
