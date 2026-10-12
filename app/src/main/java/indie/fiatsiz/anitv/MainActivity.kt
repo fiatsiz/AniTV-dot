@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +39,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.Image
@@ -49,11 +52,18 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -66,6 +76,8 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import indie.fiatsiz.anitv.source.Anime
@@ -229,11 +241,7 @@ private fun AniTV() {
 
     Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("AniTV", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF8FAFC))
-            Text(".", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFC0DE))
-            Text("ANIME PLAYER FOR AndroidTV", fontSize = 14.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
-        }
+        BrandHeader()
         when {
             episode != null -> {
                 Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Back to episodes") }
@@ -281,10 +289,7 @@ private fun AniTV() {
                     if (!loading && episodes.isNotEmpty()) {
                         item { Text("EPISODES", fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp) }
                         items(episodes, key = { it.id }) { episodeItem ->
-                            Button(onClick = { selectEpisode(episodeItem) }, modifier = Modifier.fillMaxWidth()) {
-                                val resume = entry?.progress?.takeIf { it.episodeId == episodeItem.id && it.positionMs > 0 }
-                                Text("${episodeItem.number}. ${episodeItem.title}" + (if (resume != null) "  ·  Resume ${resume.positionMs / 60_000}m" else ""))
-                            }
+                            EpisodeButton(episodeItem, entry?.progress) { selectEpisode(episodeItem) }
                         }
                     }
                     if (episodes.isEmpty() && !loading) item {
@@ -293,16 +298,7 @@ private fun AniTV() {
                 }
             }
             page == Page.HOME -> {
-                Text("Find your next episode.", fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
-                Text("Search HiAnime, pick up where you left off, or browse your library.", color = Color(0xFFB9C5D8), fontSize = 18.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                    HomeButton("Search", "Find a title", Modifier.weight(1f).focusRequester(firstFocus)) { page = Page.SEARCH }
-                    HomeButton("Currently watching", "${LibraryStore.watching(library).size} titles", Modifier.weight(1f)) { page = Page.WATCHING }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                    HomeButton("Favorites", "${library.count { it.favorite }} saved", Modifier.weight(1f)) { page = Page.FAVORITES }
-                    HomeButton("Completed", "${library.count { it.completed }} archived", Modifier.weight(1f)) { page = Page.COMPLETED }
-                }
+                HomeContent(library, firstFocus) { page = it }
             }
             page == Page.SEARCH -> {
                 Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Home") }
@@ -344,11 +340,76 @@ private fun AniTV() {
 }
 
 @Composable
-private fun HomeButton(title: String, subtitle: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = modifier.height(112.dp)) {
+private fun BrandHeader() {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Image(painterResource(R.drawable.anitv_logo), "AniTV", Modifier.width(120.dp).height(60.dp), contentScale = ContentScale.Crop)
+        Text("ANIME PLAYER FOR AndroidTV", fontSize = 14.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+    }
+}
+
+@Composable
+private fun HomeContent(library: List<LibraryEntry>, firstFocus: androidx.compose.ui.focus.FocusRequester, onNavigate: (Page) -> Unit) {
+    Text("Find your next episode.", fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
+    Text("Search HiAnime, pick up where you left off, or browse your library.", color = Color(0xFFB9C5D8), fontSize = 18.sp)
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+        HomeButton("Search", "Find a title", Icons.Filled.Search, Modifier.weight(1f).focusRequester(firstFocus)) { onNavigate(Page.SEARCH) }
+        HomeButton("Currently watching", "${LibraryStore.watching(library).size} titles", Icons.Filled.PlayArrow, Modifier.weight(1f)) { onNavigate(Page.WATCHING) }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
+        HomeButton("Favorites", "${library.count { it.favorite }} saved", Icons.Filled.Favorite, Modifier.weight(1f)) { onNavigate(Page.FAVORITES) }
+        HomeButton("Completed", "${library.count { it.completed }} archived", Icons.Filled.CheckCircle, Modifier.weight(1f)) { onNavigate(Page.COMPLETED) }
+    }
+}
+
+@Composable
+private fun HomeButton(title: String, subtitle: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Button(onClick = onClick, modifier = modifier.height(112.dp), shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
+        Spacer(Modifier.width(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
             Text(subtitle, fontSize = 15.sp)
+        }
+    }
+}
+
+@Composable
+private fun EpisodeButton(episode: Episode, progress: WatchProgress?, onClick: () -> Unit) {
+    Button(onClick = onClick, modifier = Modifier.fillMaxWidth(),
+        scale = ButtonDefaults.scale(focusedScale = 1f),
+        colors = ButtonDefaults.colors(focusedContainerColor = Color(0xFF4338CA), focusedContentColor = Color.White)) {
+        val resume = progress?.takeIf { it.episodeId == episode.id && it.positionMs > 0 }
+        Text("${episode.number}. ${episode.title}" + (if (resume != null) "  ·  Resume ${resume.positionMs / 60_000}m" else ""))
+    }
+}
+
+@Preview(name = "TV home", widthDp = 960, heightDp = 540)
+@Composable
+private fun HomePreview() {
+    AniTVTheme(isInDarkTheme = true) {
+        Surface(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                BrandHeader()
+                HomeContent(emptyList(), remember { androidx.compose.ui.focus.FocusRequester() }) {}
+            }
+        }
+    }
+}
+
+@Preview(name = "TV episodes", widthDp = 960, heightDp = 540)
+@Composable
+private fun EpisodesPreview() {
+    AniTVTheme(isInDarkTheme = true) {
+        Surface(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                BrandHeader()
+                Text("Sample anime", fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+                Text("EPISODES", fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+                EpisodeButton(Episode("preview-1", "1", "Episode 1"), null) {}
+                EpisodeButton(Episode("preview-2", "2", "Episode 2"), null) {}
+            }
         }
     }
 }

@@ -13,7 +13,7 @@ Home → Search/results or local library → detail + episodes → HLS + VTT pla
 
 | File | Responsibility |
 | --- | --- |
-| `app/src/main/java/indie/fiatsiz/anitv/MainActivity.kt` | Home, search, collections, detail and playback UI; transient state, focus, Back, errors, player lifecycle and remote controls. |
+| `app/src/main/java/indie/fiatsiz/anitv/MainActivity.kt` | Home, search, collections, detail and playback UI; transient state, focus, Back, errors, player lifecycle and remote controls. Pure home and episode composables also support sample `@Preview` functions. |
 | `app/src/main/java/indie/fiatsiz/anitv/LibraryStore.kt` | `SharedPreferences` JSON encoding, decoding, and library rules, including saved detail links. |
 | `app/src/main/java/indie/fiatsiz/anitv/AnimeDetailCache.kt` | Timestamped detail metadata in private preferences and poster bytes in the app cache directory. |
 | `app/src/main/java/indie/fiatsiz/anitv/source/HiAnimeSource.kt` | HTTPS requests, HiAnime selectors, detail/episode/server parsing, poster download, player metadata decoding, and source errors. |
@@ -21,6 +21,7 @@ Home → Search/results or local library → detail + episodes → HLS + VTT pla
 | `app/src/test/` | Library and cache rule tests, sanitized response fragments, and parser tests. |
 | `gradle/libs.versions.toml` | Dependency versions and aliases. |
 | `app/src/main/AndroidManifest.xml` | Leanback launcher and Internet permission. |
+| `app/src/main/res/drawable-nodpi/` | Supplied AniTV launcher logo and a 320×180 Android TV banner crop. |
 
 ## Flow
 
