@@ -303,7 +303,6 @@ private fun AniTV() {
                     HomeButton("Favorites", "${library.count { it.favorite }} saved", Modifier.weight(1f)) { page = Page.FAVORITES }
                     HomeButton("Completed", "${library.count { it.completed }} archived", Modifier.weight(1f)) { page = Page.COMPLETED }
                 }
-                Text("Select to open · Back returns here", color = Color(0xFFB9C5D8), fontSize = 15.sp)
             }
             page == Page.SEARCH -> {
                 Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text("Home") }
