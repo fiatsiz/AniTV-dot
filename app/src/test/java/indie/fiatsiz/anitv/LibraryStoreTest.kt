@@ -26,6 +26,12 @@ class LibraryStoreTest {
         assertEquals(completed, LibraryStore.decode(LibraryStore.encode(completed)))
     }
 
+    @Test fun detailLinkSurvivesRoundTrip() {
+        val linked = Anime("123", "Example", "https://hianime.at/example-123")
+        val restored = LibraryStore.decode(LibraryStore.encode(listOf(LibraryEntry(linked))))
+        assertEquals(linked, restored.single().anime)
+    }
+
     @Test fun badOrOldLibraryDataDoesNotCrash() {
         assertTrue(LibraryStore.decode("broken").isEmpty())
         assertTrue(LibraryStore.decode("[{\"id\":\"bad\",\"title\":\"X\"}]").isEmpty())

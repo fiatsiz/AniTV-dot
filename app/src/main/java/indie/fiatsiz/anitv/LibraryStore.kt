@@ -21,7 +21,7 @@ class LibraryStore(context: Context) {
         fun encode(entries: List<LibraryEntry>): String = JSONArray().apply {
             entries.forEach { entry ->
                 put(JSONObject().put("id", entry.anime.id).put("title", entry.anime.title)
-                    .put("favorite", entry.favorite).put("completed", entry.completed)
+                    .put("detailUrl", entry.anime.detailUrl).put("favorite", entry.favorite).put("completed", entry.completed)
                     .apply { entry.progress?.let { put("progress", JSONObject()
                         .put("episodeId", it.episodeId).put("episodeNumber", it.episodeNumber)
                         .put("positionMs", it.positionMs).put("durationMs", it.durationMs)) } })
@@ -41,7 +41,7 @@ class LibraryStore(context: Context) {
                         episodeId, it.optString("episodeNumber"), it.optLong("positionMs").coerceAtLeast(0),
                         it.optLong("durationMs").coerceAtLeast(0))
                 }
-                LibraryEntry(Anime(id, title), item.optBoolean("favorite"), item.optBoolean("completed"), progress)
+                LibraryEntry(Anime(id, title, item.optString("detailUrl").takeIf { it.startsWith("https://hianime.at/") }), item.optBoolean("favorite"), item.optBoolean("completed"), progress)
             }
         }.getOrDefault(emptyList())
 

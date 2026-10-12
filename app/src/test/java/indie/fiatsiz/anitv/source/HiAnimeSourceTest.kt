@@ -8,8 +8,16 @@ class HiAnimeSourceTest {
     private fun fixture(name: String) = javaClass.getResource("/$name")!!.readText()
 
     @Test fun parsesCurrentSearchAndEpisodes() {
-        assertEquals(listOf(Anime("1", "One Piece")), HiAnimeSource.parseSearch(fixture("hianime-search.html")))
+        assertEquals(listOf(Anime("1", "One Piece", "https://hianime.at/one-piece-1")), HiAnimeSource.parseSearch(fixture("hianime-search.html")))
         assertEquals(listOf(Episode("1", "1", "Episode 1")), HiAnimeSource.parseEpisodes(fixture("hianime-episodes.html")))
+    }
+
+    @Test fun parsesCurrentDetailAndRejectsChangedMarkup() {
+        assertEquals(AnimeDetails("Gold Roger inspired the Great Pirate Era.",
+            "https://hianime.at/storage/media/2026/08/one-piece-banner.webp",
+            listOf("Aired: Oct 20, 1999 to ?", "Status: Currently Airing", "Genres: Adventure Fantasy")),
+            HiAnimeSource.parseDetails(fixture("hianime-detail.html")))
+        assertThrows(SourceException::class.java) { HiAnimeSource.parseDetails("<html></html>") }
     }
 
     @Test fun reportsChangedMarkup() {
