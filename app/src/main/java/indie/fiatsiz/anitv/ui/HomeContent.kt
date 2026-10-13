@@ -89,11 +89,12 @@ internal fun HomeContent(library: List<LibraryEntry>, firstFocus: androidx.compo
                     }
                 }
             }
-            item(key = "continue_heading") {
-                Text(stringResource(R.string.continue_watching), fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+            if (latest != null) {
+                item(key = "continue_heading") {
+                    Text(stringResource(R.string.continue_watching), fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                }
+                item(key = "continue_${latest.anime.id}") { continueWatching(latest) }
             }
-            if (latest != null) item(key = "continue_${latest.anime.id}") { continueWatching(latest) }
-            else item(key = "continue_empty") { Text(stringResource(R.string.continue_empty), color = Color(0xFFB9C5D8)) }
         }
     }
 }
