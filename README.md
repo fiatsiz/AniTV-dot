@@ -22,7 +22,7 @@ The project is still in development, but the following features are already impl
 ## Current Status of Development
 
 - Minimum SDK version: 34 (Android 14)
-- Target SDK version: 36 (Android 16)
+- Target SDK version: 37 (Android 17)
 
 ## Disclaimer
 
