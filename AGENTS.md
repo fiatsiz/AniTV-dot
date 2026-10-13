@@ -17,6 +17,7 @@ AniTV is an Android TV app for searching anime on `https://hianime.at`, selectin
 - For UI work, use the installed `ui-ux-pro-max` skill. Run a relevant design-system search and focused UX searches; apply only guidance that fits Android TV, Compose for TV, and D-pad navigation. Check the skill's pre-delivery guidance before calling the UI complete.
 - Use the Git CLI for version control. Check `git status` before edits and review `git diff` before each commit.
 - Commit each completed, verified milestone with a clear message. Stage only files related to that milestone; do not commit unrelated user changes.
+- Use "Conventional Commits" for git commit messages such as "feat: ...", "fix: ...", "chore: ..."
 - Do not use `git reset --hard`, force pushes, or history rewrites. Do not create a remote or push unless the user asks.
 
 ## Current baseline
@@ -26,7 +27,7 @@ AniTV is an Android TV app for searching anime on `https://hianime.at`, selectin
 - Search, results, episode selection, subtitled playback, and loading/error states already exist. Preserve them.
 - Every screen and playback control must work with D-pad, Select, and Back. Show visible focus.
 - Do not claim the APK works until it builds and the relevant flow has been exercised. State what could not be tested.
-- Do not use adb to install or test the application, instead tell the user to do the installation and test for you.
+- Use adb to test and verify the changes you made (only if the Android TV in the adb devices is a emulator. If its a physical device, don't use adb to control the physical device. Let use do the tests and verifications).
 - Before doing anything, read the docs inside docs/
 
 ## Implementation
@@ -45,6 +46,6 @@ AniTV is an Android TV app for searching anime on `https://hianime.at`, selectin
 2. Preserve the existing search → result → episode → playback path while adding the next milestone.
 3. Add focused tests for local library/progress rules and any nontrivial parsing change.
 4. Build a debug APK. On the connected TV, test D-pad navigation, full-screen playback, video, audio, subtitles, seek, and Back where possible.
-5. Update `docs/STATUS.md` and `docs/ARCHITECTURE.md` to match verified results. Report the APK path, tested and untested steps, and source breakage.
+5. Update `docs/STATUS.md` and `docs/ARCHITECTURE.md` after adding/fixing/changing anything to match verified results. Report the APK path, tested and untested steps, and source breakage.
 
 Content rights belong to their respective owners. Personal installation does not grant redistribution rights.

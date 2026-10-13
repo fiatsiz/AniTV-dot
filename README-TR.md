@@ -10,7 +10,7 @@
 
 Android TV üzerinden **AniTV-dot** ile anime izleyin.
 
-*Bu araç, <a href="https://hianime.at/">hianime.</a> sitesinden veri toplar.*
+*Bu araç, <a href="https://hianime.at/">hianime</a> sitesinden veri toplar.*
 
 ## Özellikler
 
@@ -41,7 +41,7 @@ Bu proje, anime izlemek için kullanılan bir komut satırı aracı olan [ani-cl
 
 AniTV-dot, bağımsız bir hobi projesidir. HiAnime, anime yaratıcıları, dağıtımcılar, Google veya DeepL ile herhangi bir bağlantısı bulunmamakta veya bu kuruluşlar tarafından desteklenmemektedir.
 
-Uygulama, üçüncü taraflarca sağlanan içerik ve hizmetlere erişir. Bu proje, anime barındırmaz veya videolar, altyazılar, görseller ya da ticari markalar üzerinde herhangi bir hak vermez. Bu haklar, ilgili sahiplerine aittir. Bu uygulamayı kullanmanız ve üçüncü parti servislerinin içeriklerine erişmeniz tamamen sizin sorumluluğunuzdadır. Kişisel kurulum & kullanım, bu içeriği kopyalama veya yeniden dağıtma izni vermez.
+Uygulama, üçüncü taraflarca sağlanan içerik ve hizmetlere erişir. Bu proje, medya barındırmaz veya videolar, altyazılar, görseller ya da ticari markalar üzerinde herhangi bir hak vermez. Bu haklar, ilgili sahiplerine aittir. Bu uygulamayı kullanmanız ve üçüncü parti servislerinin içeriklerine erişmeniz tamamen sizin sorumluluğunuzdadır. Kişisel kurulum & kullanım, bu içeriği kopyalama veya yeniden dağıtma izni vermez.
 
 Üçüncü taraf siteler ve hizmetler değişebilir, istekleri engelleyebilir veya kullanılamaz hale gelebilir. Arama, oynatma, altyazılar ve çeviri işlevleri çalışmayabilir. Altyazı çevirisini etkinleştirirseniz, uygulama sağladığınız API anahtarını kullanarak seçtiğiniz Google Cloud Translation veya DeepL hizmetine altyazı metnini gönderir.
 

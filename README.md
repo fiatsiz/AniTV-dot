@@ -10,7 +10,7 @@
 
 Watch animes with your Android TV with **AniTV-dot**.
 
-*This tool scrapes the site <a href="https://hianime.at/">hianime.</a>*
+*This tool scrapes the site <a href="https://hianime.at/">hianime</a>.*
 
 ## Features
 
@@ -41,7 +41,7 @@ This project was inspired by the [ani-cli](https://github.com/pystardust/ani-cli
 
 AniTV-dot is an independent hobby project. HiAnime has no affiliation with anime creators, distributors, Google, or DeepL, nor is it supported by these organizations.
 
-The app accesses content and services provided by third parties. This project does not host anime nor does it grant any rights to videos, subtitles, images, or trademarks. These rights belong to their respective owners. Your use of this app & access to content of third-party services are entirely at your own risk. Personal installation and use do not grant permission to copy or redistribute this content.
+The app accesses content and services provided by third parties. This project does not host any media nor does it grant any rights to videos, subtitles, images, or trademarks. These rights belong to their respective owners. Your use of this app & access to content of third-party services are entirely at your own risk. Personal installation and use do not grant permission to copy or redistribute this content.
 
 Third-party sites and services may change, block requests, or become unavailable. Search, playback, subtitles, and translation features may not work. If you enable subtitle translation, the app will send the subtitle text to the Google Cloud Translation or DeepL service you select using the API key you provide.
 
