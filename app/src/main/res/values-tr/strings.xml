@@ -31,6 +31,7 @@
     <string name="loading_stream">Yayın yükleniyor…</string>
     <string name="retry_playback">Oynatmayı yeniden dene</string>
     <string name="poster_description">%1$s afişi</string>
+    <string name="loading_details">Bilgiler yükleniyor…</string>
     <string name="artwork_loading">Afiş yükleniyor…</string>
     <string name="artwork_unavailable">Afiş kullanılamıyor</string>
     <string name="remove_favorite">Favorilerden çıkar</string>

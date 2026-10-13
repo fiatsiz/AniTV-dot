@@ -1,6 +1,5 @@
 package indie.fiatsiz.anitv.ui
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,16 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,42 +38,11 @@ import indie.fiatsiz.anitv.WatchProgress
 import indie.fiatsiz.anitv.source.AnimeDetails
 import indie.fiatsiz.anitv.source.AudioVersion
 import indie.fiatsiz.anitv.source.HiAnimeSource
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Composable
 internal fun ContinueWatchingSection(entry: LibraryEntry, cache: AnimeDetailCache, source: HiAnimeSource, onContinue: () -> Unit) {
-    var details by remember(entry.anime) { mutableStateOf<AnimeDetails?>(null) }
-    var poster by remember(entry.anime) { mutableStateOf<ImageBitmap?>(null) }
-    var loading by remember(entry.anime) { mutableStateOf(true) }
-    LaunchedEffect(entry.anime, cache, source) {
-        try {
-            val cached = withContext(Dispatchers.IO) { cache.read(entry.anime) }
-            if (cached != null) {
-                details = cached.details
-                poster = withContext(Dispatchers.IO) {
-                    BitmapFactory.decodeByteArray(cached.poster, 0, cached.poster.size)?.asImageBitmap()
-                }
-            }
-            if (cached?.isFresh(System.currentTimeMillis()) == true && poster != null) return@LaunchedEffect
-            val fresh = withContext(Dispatchers.IO) { source.details(entry.anime) }
-            details = fresh
-            val bytes = withContext(Dispatchers.IO) { source.poster(fresh.posterUrl) }
-            val decoded = withContext(Dispatchers.IO) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
-            if (decoded != null) {
-                withContext(Dispatchers.IO) { cache.save(entry.anime, fresh, bytes, System.currentTimeMillis()) }
-                poster = decoded
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            // Cached information and the resume action remain available if artwork refresh fails.
-        } finally {
-            loading = false
-        }
-    }
-    ContinueWatchingCard(entry, details, poster, loading, onContinue)
+    val artwork = rememberAnimeArtwork(entry.anime, cache, source)
+    ContinueWatchingCard(entry, artwork.details, artwork.poster, artwork.loading, onContinue)
 }
 
 @Composable

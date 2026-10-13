@@ -132,3 +132,21 @@ private fun EpisodeSidebarPreview() {
         }
     }
 }
+
+@Preview(name = "TV favorite card", widthDp = 960, heightDp = 540)
+@Composable
+private fun FavoriteCardPreview() {
+    AniTVTheme(isInDarkTheme = true) {
+        Surface(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                BrandHeader()
+                Text(stringResource(R.string.favorites), fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+                FavoriteCard(LibraryEntry(Anime("1", "Sample favorite"), favorite = true),
+                    AnimeDetails("A saved title with artwork, a description, and details.",
+                        "https://image.example/poster.webp", listOf("Status: Currently Airing", "Genres: Adventure")),
+                    null, false) {}
+            }
+        }
+    }
+}

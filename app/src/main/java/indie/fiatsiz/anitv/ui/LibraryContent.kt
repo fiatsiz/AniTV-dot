@@ -8,7 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,7 +21,7 @@ import indie.fiatsiz.anitv.R
 
 @Composable
 internal fun LibraryContent(page: Page, library: List<LibraryEntry>, firstFocus: androidx.compose.ui.focus.FocusRequester,
-    onBack: () -> Unit, onAnime: (Anime) -> Unit) {
+    onBack: () -> Unit, onAnime: (Anime) -> Unit, favoriteContent: @Composable (LibraryEntry) -> Unit) {
                 Button(onClick = onBack, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.home)) }
                 val entries = when (page) {
                     Page.FAVORITES -> library.filter { it.favorite }
@@ -34,7 +33,8 @@ internal fun LibraryContent(page: Page, library: List<LibraryEntry>, firstFocus:
                 if (entries.isEmpty()) Text(stringResource(R.string.empty_library), color = Color(0xFFB9C5D8))
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(entries, key = { it.anime.id }) { item ->
-                        Button(onClick = { onAnime(item.anime) }, modifier = Modifier.fillMaxWidth()) {
+                        if (page == Page.FAVORITES) favoriteContent(item)
+                        else Button(onClick = { onAnime(item.anime) }, modifier = Modifier.fillMaxWidth()) {
                             Text(item.anime.title + (item.progress?.let { "  ·  ${stringResource(R.string.episode_number, it.episodeNumber)}" } ?: ""))
                         }
                     }

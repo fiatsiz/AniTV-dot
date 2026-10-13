@@ -31,6 +31,7 @@
     <string name="loading_stream">Loading stream…</string>
     <string name="retry_playback">Retry playback</string>
     <string name="poster_description">%1$s poster</string>
+    <string name="loading_details">Loading details…</string>
     <string name="artwork_loading">Artwork loading…</string>
     <string name="artwork_unavailable">Artwork unavailable</string>
     <string name="remove_favorite">Remove favorite</string>

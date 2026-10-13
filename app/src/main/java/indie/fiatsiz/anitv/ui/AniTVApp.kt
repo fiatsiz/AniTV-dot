@@ -285,7 +285,10 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
                 }
             }
             else -> {
-                LibraryContent(page, library, firstFocus, ::back, ::selectAnime)
+                LibraryContent(page, library, firstFocus, ::back, ::selectAnime) { entry ->
+                    val artwork = rememberAnimeArtwork(entry.anime, detailCache, source)
+                    FavoriteCard(entry, artwork.details, artwork.poster, artwork.loading) { selectAnime(entry.anime) }
+                }
             }
         }
     }
