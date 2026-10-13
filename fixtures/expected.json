@@ -1,0 +1,64 @@
+{
+  "search": {
+    "file": "hianime-search.html",
+    "expected": [
+      {
+        "id": "1",
+        "title": "One Piece",
+        "detailUrl": "https://hianime.at/one-piece-1"
+      }
+    ]
+  },
+  "detail": {
+    "file": "hianime-detail.html",
+    "expected": {
+      "description": "Gold Roger inspired the Great Pirate Era.",
+      "posterUrl": "https://hianime.at/storage/media/2026/08/one-piece.webp",
+      "facts": [
+        "Aired: Oct 20, 1999 to ?",
+        "Status: Currently Airing",
+        "Genres: Adventure Fantasy"
+      ]
+    }
+  },
+  "episodes": {
+    "file": "hianime-episodes.json",
+    "expected": [
+      {
+        "id": "1",
+        "number": "1",
+        "title": "Episode 1"
+      }
+    ]
+  },
+  "servers": {
+    "file": "hianime-servers.json",
+    "expected": [
+      {
+        "audio": "SUB",
+        "embedUrl": "https://player.example/episode-1/sub"
+      },
+      {
+        "audio": "DUB",
+        "embedUrl": "https://player.example/episode-1/dub"
+      }
+    ]
+  },
+  "player": {
+    "file": "hianime-player.html",
+    "referer": "https://player.example/",
+    "audio": "SUB",
+    "expected": {
+      "url": "https://video.example/master.m3u8",
+      "subtitleUrl": "https://video.example/en.vtt"
+    }
+  },
+  "dubPlayer": {
+    "file": "hianime-dub-player.html",
+    "referer": "https://player.example/",
+    "audio": "DUB",
+    "expected": {
+      "url": "https://video.example/dub.m3u8"
+    }
+  }
+}

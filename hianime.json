@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "revision": 1,
+  "minAppVersionCode": 1,
+  "search": {
+    "endpoint": "/search?keyword={query}",
+    "response": {
+      "format": "html",
+      "htmlPath": [],
+      "statusPath": []
+    },
+    "container": ".film_list-wrap",
+    "items": ".film_list-wrap .flw-item",
+    "id": {
+      "selector": ".film-poster-ahref[data-id]",
+      "attribute": "data-id"
+    },
+    "title": {
+      "selector": ".film-name .dynamic-name",
+      "attribute": ""
+    },
+    "link": {
+      "selector": ".film-name .dynamic-name[href]",
+      "attribute": "href"
+    }
+  },
+  "detail": {
+    "response": {
+      "format": "html",
+      "htmlPath": [],
+      "statusPath": []
+    },
+    "root": "#ani_detail",
+    "description": {
+      "selector": ".film-description .text",
+      "attribute": ""
+    },
+    "poster": {
+      "selector": ".anisc-poster img[src]",
+      "attribute": "src"
+    },
+    "facts": ".anisc-info .item",
+    "factName": ".item-head",
+    "factNames": [
+      "Aired",
+      "Status",
+      "Genres",
+      "MAL Score"
+    ]
+  },
+  "episodes": {
+    "endpoint": "/api/theme/episode/list/{animeId}",
+    "response": {
+      "format": "json",
+      "htmlPath": [
+        "html"
+      ],
+      "statusPath": [
+        "status"
+      ]
+    },
+    "items": "a.ep-item[data-id]",
+    "idAttribute": "data-id",
+    "numberAttribute": "data-number",
+    "titleAttribute": "title"
+  },
+  "servers": {
+    "endpoint": "/api/theme/episode/servers?episodeId={episodeId}",
+    "response": {
+      "format": "json",
+      "htmlPath": [
+        "html"
+      ],
+      "statusPath": [
+        "status"
+      ]
+    },
+    "items": ".server-item",
+    "audioAttribute": "data-type",
+    "nameAttribute": "data-server-name",
+    "name": "ZokoAnime",
+    "sub": "sub",
+    "dub": "dub",
+    "embedAttribute": "data-hash",
+    "base64": true
+  },
+  "player": {
+    "variable": "window.__P",
+    "base64": true,
+    "xor": true,
+    "key": "otaku-embed-v1",
+    "streamPath": [
+      "src"
+    ],
+    "subtitlesPath": [
+      "subtitles"
+    ],
+    "subtitleUrlPath": [
+      "src"
+    ],
+    "subtitleDefaultPath": [
+      "default"
+    ]
+  }
+}
