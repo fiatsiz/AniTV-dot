@@ -4,6 +4,8 @@ As of 2026-10-13.
 
 ## Implemented
 
+- Foreground-only player lifecycle: Activity Stop pauses, saves progress, and releases Media3 synchronously. Returning restores the position and prior play/pause state. Stream responses arriving while stopped cannot start background playback.
+
 - Modular Compose UI: `MainActivity` only starts the themed app; `ui/AniTVApp.kt` coordinates state and navigation; home, search, library, detail, Settings, and previews live in separate files. Playback and caption settings live under `playback/`.
 
 - TV home screen with Search, Currently watching, Favorites, and Completed sections.
@@ -25,11 +27,13 @@ As of 2026-10-13.
 
 ## Verified
 
+- Foreground lifecycle unit tests cover immediate Stop release, saved progress, return/resume, paused-state preservation, late stream handling, and idempotent disposal. `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline` passed with 17 tests. Physical Home/return behavior is not yet verified on TV.
+
 - UI extraction passed `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline`; all 15 existing unit tests passed. Screen layout, callbacks, source behavior, and storage formats were preserved. Device behavior remains unverified for this build.
 
 - The README disclaimer was checked against the source and translation data flow and the local GPL-3.0 license. `./gradlew :app:assembleDebug --offline` passed. No app source or resource changed; this APK has not been tested on the TV.
 - `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline` passed for caption styling. All 15 unit tests passed, including default caption style and size validation.
-- Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `7fb39070c922f19a7eb986b2149f9044c90a58336d652596cdb0cb47376cd38e`).
+- Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `6b8d6a1e7a5b8d074f2f5f66b6809d23611bf768ec0f92ab990c0685c224ba4c`).
 - `./gradlew :app:assembleDebug --offline` passed for the User-Agent update. The previous `:app:testDebugUnitTest` run passed 14 unit tests; tests were not rerun for this request-header change.
 - The local `LICENSE` matches the original GitHub `LICENSE` blob exactly. Both README SVG variants were rendered and visually inspected against their target backgrounds. Browser rendering on GitHub was not inspected.
 - GitHub reports `master` as the default and only remote branch. The former `main` branch was deleted after confirming `master` contains the project and license.
@@ -40,7 +44,7 @@ As of 2026-10-13.
 
 ## Open verification and limits
 
-- **Current APK device status: NOT TESTED.** Caption style appearance, each style choice, persistence, D-pad focus and Back, and matching original/translated rendering await TV verification. Actual User-Agent selection and HiAnime/stream response on the TV, in-app vector rendering, launcher icon and TV banner appearance, language selection and persistence, translation provider/key entry, translated captions and rolling lookahead, translation failure fallback, Settings focus and Back, system-language selection, playback, and cache behavior also await TV verification. Settings previews have not been rendered. No ADB device test or installation was done, per the repository instructions.
+- **Current APK device status: NOT TESTED.** Physical Home during playback must stop all sound; return/resume, paused-state restoration, late stream responses after Home, and Back cleanup await TV testing. Caption style appearance, each style choice, persistence, D-pad focus and Back, and matching original/translated rendering await TV verification. Actual User-Agent selection and HiAnime/stream response on the TV, in-app vector rendering, launcher icon and TV banner appearance, language selection and persistence, translation provider/key entry, translated captions and rolling lookahead, translation failure fallback, Settings focus and Back, system-language selection, playback, and cache behavior also await TV verification. Settings previews have not been rendered. No ADB device test or installation was done, per the repository instructions.
 - HiAnime titles, descriptions, metadata values, most episode names, and subtitle tracks remain in the source language. Generic “Episode N” labels are localized. The source was not contacted for this build; its site behavior remains unverified.
 - Quality options appear only when Media3 reports multiple supported HLS video tracks. A single-variant stream stays on Auto.
 - Translation API requests were not exercised with real provider keys. Google Cloud Translation Basic v2 requires an API key. Google ML Kit is keyless, but its terms prohibit TV app use without prior written permission, so it is not integrated. DeepL documents advise against using API keys in client-side code; this direct TV client sends the user's key to DeepL over HTTPS, so use a personal key and account for runtime extraction risk on a compromised device. Android Keystore protects the saved key at rest.

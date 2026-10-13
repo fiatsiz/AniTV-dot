@@ -14,7 +14,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             AniTVTheme {
-                Surface(Modifier.fillMaxSize()) { AniTVApp() }
+                Surface(Modifier.fillMaxSize()) { AniTVApp(lifecycle) }
             }
         }
     }

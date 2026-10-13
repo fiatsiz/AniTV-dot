@@ -4,6 +4,7 @@ import android.app.LocaleManager
 import android.os.LocaleList
 import android.graphics.BitmapFactory
 import android.webkit.WebSettings
+import androidx.lifecycle.Lifecycle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -48,7 +49,7 @@ import indie.fiatsiz.anitv.playback.Playback
 internal enum class Page { HOME, SEARCH, FAVORITES, WATCHING, COMPLETED, SETTINGS }
 
 @Composable
-internal fun AniTVApp() {
+internal fun AniTVApp(lifecycle: Lifecycle) {
     val context = LocalContext.current
     val userAgent = remember(context) {
         runCatching { WebSettings.getDefaultUserAgent(context) }.getOrNull()?.takeIf { it.isNotBlank() }
@@ -177,7 +178,7 @@ internal fun AniTVApp() {
         val selectedEpisode = episode!!
         val saved = library.firstOrNull { it.anime.id == selectedAnime.id }?.progress
             ?.takeIf { it.episodeId == selectedEpisode.id }?.positionMs ?: 0L
-        Playback(stream!!, saved, translationSettings, context.resources.configuration.locales[0].language, userAgent, onBack = ::back, onTranslationSettings = { next ->
+        Playback(lifecycle, stream!!, saved, translationSettings, context.resources.configuration.locales[0].language, userAgent, onBack = ::back, onTranslationSettings = { next ->
             translationSettings = next
             translationStore.save(next)
         }, onProgress = { position, duration ->

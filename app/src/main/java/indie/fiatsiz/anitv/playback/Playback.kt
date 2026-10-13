@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
 import androidx.media3.common.C
 import androidx.media3.common.text.Cue
 import androidx.media3.common.MediaItem
@@ -61,7 +62,7 @@ import indie.fiatsiz.anitv.R
 
 private data class QualityOption(val group: TrackGroup, val index: Int, val label: String)
 @Composable
-internal fun Playback(stream: Stream, savedPositionMs: Long, translation: TranslationSettings, targetLanguage: String, userAgent: String,
+internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Long, translation: TranslationSettings, targetLanguage: String, userAgent: String,
     onBack: () -> Unit, onTranslationSettings: (TranslationSettings) -> Unit,
     onProgress: (Long, Long) -> Unit, onError: (String) -> Unit) {
     val context = LocalContext.current
@@ -94,7 +95,8 @@ internal fun Playback(stream: Stream, savedPositionMs: Long, translation: Transl
     val choiceFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val progressCallback by androidx.compose.runtime.rememberUpdatedState(onProgress)
     val errorCallback by androidx.compose.runtime.rememberUpdatedState(onError)
-    val player = remember(stream) {
+    var currentPlayer by remember(lifecycle, stream) { mutableStateOf<Player?>(null) }
+    val createPlayer by androidx.compose.runtime.rememberUpdatedState(newValue = { resumePositionMs: Long ->
         val factory = DefaultHttpDataSource.Factory()
             .setUserAgent(userAgent)
             .setDefaultRequestProperties(mapOf("Referer" to stream.referer))
@@ -105,7 +107,7 @@ internal fun Playback(stream: Stream, savedPositionMs: Long, translation: Transl
             setMediaItem(builder.build())
             trackSelectionParameters = trackSelectionParameters.buildUpon()
                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, captionMode == CaptionMode.OFF || translationOn).build()
-            if (savedPositionMs > 0) seekTo(savedPositionMs)
+            if (resumePositionMs > 0) seekTo(resumePositionMs)
             addListener(object : Player.Listener {
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { playing = playWhenReady }
                 override fun onTracksChanged(tracks: Tracks) {
@@ -128,9 +130,14 @@ internal fun Playback(stream: Stream, savedPositionMs: Long, translation: Transl
                 }
             })
             prepare()
-            playWhenReady = true
         }
+    })
+    DisposableEffect(lifecycle, stream) {
+        val session = ForegroundPlayer(lifecycle, savedPositionMs, { createPlayer(it) },
+            { position, duration -> progressCallback(position, duration) }, { currentPlayer = it })
+        onDispose { session.dispose() }
     }
+    val player = currentPlayer ?: return
     androidx.compose.runtime.LaunchedEffect(player) {
         while (true) {
             delay(5_000)
@@ -146,7 +153,7 @@ internal fun Playback(stream: Stream, savedPositionMs: Long, translation: Transl
             durationMs = player.duration.coerceAtLeast(0)
         }
     }
-    androidx.compose.runtime.LaunchedEffect(stream, translationOn, translation.provider, translation.apiKey, effectiveTarget) {
+    androidx.compose.runtime.LaunchedEffect(player, stream, translationOn, translation.provider, translation.apiKey, effectiveTarget) {
         if (!translationOn) return@LaunchedEffect
         try {
             val cues = withContext(Dispatchers.IO) { source.subtitleCues(stream) }
@@ -177,12 +184,6 @@ internal fun Playback(stream: Stream, savedPositionMs: Long, translation: Transl
     androidx.compose.runtime.LaunchedEffect(player, captionMode, translationOn, translationFailed) {
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, captionMode == CaptionMode.OFF || (translationOn && !translationFailed)).build()
-    }
-    DisposableEffect(player) {
-        onDispose {
-            if (player.currentPosition > 0) progressCallback(player.currentPosition, player.duration.coerceAtLeast(0))
-            player.release()
-        }
     }
     BackHandler(captionMenu != CaptionMenu.CLOSED || qualityOpen) {
         when {
@@ -232,7 +233,8 @@ internal fun Playback(stream: Stream, savedPositionMs: Long, translation: Transl
                 useController = false
                 isFocusable = false
             } },
-            update = { view -> view.subtitleView?.let { styleCaptionView(it, captionStyle) } },
+            update = { view -> view.player = player; view.subtitleView?.let { styleCaptionView(it, captionStyle) } },
+            onRelease = { it.player = null },
             modifier = Modifier.fillMaxSize()
         )
         val activeCue = captionCues.withIndex().firstOrNull { positionMs in it.value.startMs until it.value.endMs }
