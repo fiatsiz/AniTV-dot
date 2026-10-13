@@ -72,7 +72,7 @@
     <string name="caption_background_title">Arka plan rengi</string>
     <string name="caption_foreground_title">Yazı rengi</string>
     <string name="caption_font_sans">Düz yazı</string>
-    <string name="caption_font_serif">Serifli</string>
+    <string name="caption_font_serif">Serif</string>
     <string name="caption_font_monospace">Eş aralıklı</string>
     <string name="caption_color_black">Siyah</string>
     <string name="caption_color_white">Beyaz</string>
