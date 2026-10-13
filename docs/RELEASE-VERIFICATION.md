@@ -2,6 +2,8 @@
 
 ## Signed release artifact
 
+Published at 2026-10-13 19:21:52 UTC as the public Latest release, with draft/prerelease disabled. The five uploaded assets were downloaded and verified byte for byte against staging and SHA256SUMS. Unauthenticated GitHub release access returned HTTP 200. Tag `v1.0.0` points to `cfe9659da44603ea900d631693acd1c1badcccab`; post-publication documentation does not move the tag or change the APK.
+
 Verified on 2026-10-13 after the owner supplied a signed APK. Release: [AniTV 1.0.0](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0). The APK's embedded Git provenance identifies `bf044b8c471c58c41df279cdf757a8d77f72a35e`; the release tag adds documentation only, with no application/build-configuration changes. The source asset is archived from that exact embedded commit.
 
 | Item | Verified value |

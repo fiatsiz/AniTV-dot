@@ -43,6 +43,8 @@ As of 2026-10-13.
 
 ## Release 1.0.0
 
+- Published `v1.0.0` as the public Latest release on 2026-10-13 at 19:21:52 UTC. All five downloaded assets matched staging byte for byte and passed SHA256SUMS. Unauthenticated release access was verified. Tag commit remains `cfe9659da44603ea900d631693acd1c1badcccab`; the rules branch remains unchanged.
+
 - Owner-built `app/build/outputs/apk/release/app-release.apk` passed signature, non-debuggable manifest, package/version/SDK, and bundled-rule verification. SHA-256: `3c629c2e932b723e94a1de492ffbf06da30f00216b443bcb6f071c6345309969`; owner certificate SHA-256: `9a65e9f457a546bd65d51146f1e4ab611f44c57be68e089c000d4431fb805854`. Rechecking after the user's rebuild produced the same checksum and certificate.
 - APK embedded source commit: `bf044b8c471c58c41df279cdf757a8d77f72a35e`. Release tag `v1.0.0` adds documentation only; release assets include the unchanged signed APK, exact build-source archive, GPL-3.0 license, certificate/provenance, and checksums. The owner authorized GitHub release publication after the earlier rules-only preparation.
 - Shared-source unit tests (51 passed, one publication-only test skipped) and release lint passed again. A separate fresh Android TV API 34 emulator installed the signed APK, displayed version/current signed rules, completed live search/details/episodes, and rendered SUB video/subtitles with forward seeking and an active audio track. Back returned to details. Existing emulator/user app data was not uninstalled or cleared. Physical-TV behavior and audible audio remain unverified.
