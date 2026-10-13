@@ -25,6 +25,14 @@ Proje geliştirme aşamasında, ancak aşağıdaki özellikler kullanılabilir d
 - Minimum SDK versiyonu: 34 (Android 14)
 - Hedef SDK versiyonu: 37 (Android 17)
 
+## Kurulum ve yerel sürümler
+
+AniTV, Android 14 veya daha yeni Android TV / Google TV gerektirir. Bu hazırlıkta sürüm `1.0.0`, Android versionCode `1` kullanılır. İmzalı HiAnime kuralları, herkese açık [rules dalından](https://github.com/fiatsiz/AniTV-dot/tree/rules) otomatik güncellenir.
+
+[Sürüm kılavuzundaki](docs/RELEASE.md) harici imzalama bilgileriyle sahibin anahtarı kullanılarak APK oluşturun, ardından APK'yı TV'ye kopyalayıp seçtiğiniz APK yükleyicisiyle kurun. Önce sağlama toplamını ve imza sertifikasını kontrol edin. Farklı sertifikayla imzalanmış debug kurulumu genellikle yerinde güncellenemez; kaldırmak favorileri ve ilerlemeyi silebilir. Verileri otomatik temizlemeyin veya uygulamayı otomatik kaldırmayın.
+
+[Doğrulama raporu](docs/RELEASE-VERIFICATION.md), `7d0f3db56e5e7b4686dcbcd11dc43a83624e8d9b` kaynak commit'ini, test sonuçlarını ve mevcut debug APK'nın sağlama toplamını içerir. **Kalıcı APK imzalama bilgileri hâlâ gereklidir; sahibin anahtarıyla imzalanmış release APK henüz oluşturulmadı.** Yalnızca kurallar yayımlandı. APK güncelleme denetimi, indirme, kurulum veya GitHub APK sürümü bulunmaz. Dağıtılan APK'larla eşleşen kaynak kod ve [GPL-3.0 lisansı](LICENSE) sağlanmalıdır.
+
 ## İlham Kaynağı
 
 Bu proje, anime izlemek için kullanılan bir komut satırı aracı olan [ani-cli](https://github.com/pystardust/ani-cli) projesinden ilham alınarak oluşturuldu. Android TV kullanıcıları için (özellikle de kendim için) benzer bir deneyim yaratmak istedim.

@@ -51,3 +51,17 @@ This command validates configuration and runs the actual Kotlin parser against f
 Rollback restores previous known-good rule content with a revision higher than all published revisions, followed by the same validation/signing/publication. Never rewrite history or decrease revision. Private cache stores accepted content and its ETag atomically and retains a validated previous copy. Bad signatures, malformed/incompatible data, unavailable GitHub, rate limits, and late downloads retain local rules. Key rotation has no remote mechanism; ship a new APK if trust must change.
 
 Production endpoint: `https://api.github.com/repos/fiatsiz/AniTV-dot/contents/hianime.signed.json?ref=rules`. Requests use `Accept: application/vnd.github.raw+json`, a descriptive User-Agent, HTTPS, a 256 KiB envelope limit, and conditional ETags. No token is embedded. See [GitHub Contents API](https://docs.github.com/en/rest/repos/contents#get-repository-content).
+
+## Verification record and Android smoke test
+
+See [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md) for matching source/rules commits, debug artifact metadata, verified emulator flows, and the missing owner-signing gate.
+
+To repeat the focused Android parser proof, build `:app:assembleDebugAndroidTest`. On an emulator only, verify `ro.kernel.qemu=1`, install the debug application and `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk` with `adb -s <emulator-serial> install -r`, then run:
+
+```bash
+adb -s <emulator-serial> shell am instrument -w -r \
+  -e class indie.fiatsiz.anitv.source.SignedRulesInstrumentedTest \
+  indie.fiatsiz.anitv.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+This test uses the installed application parser with synthetic keys/transport and a separate scratch cache. It does not publish test rules, replace production trust, or clear library data. Do not run device-control automation on a physical TV; leave those checks to the owner. No automatic uninstall is part of this manual test workflow.

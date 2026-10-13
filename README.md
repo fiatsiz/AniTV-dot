@@ -25,6 +25,14 @@ The project is still in development, but the following features are already impl
 - Minimum SDK version: 34 (Android 14)
 - Target SDK version: 37 (Android 17)
 
+## Installation and local releases
+
+AniTV requires Android TV / Google TV with Android 14 or newer. The current preparation uses version `1.0.0` and Android versionCode `1`, with automatic signed HiAnime rule updates from the public [rules branch](https://github.com/fiatsiz/AniTV-dot/tree/rules).
+
+Build an owner-signed APK using the external credentials in the [release guide](docs/RELEASE.md), then copy that APK to your TV and install it with your chosen APK installer. Check its checksum and signing certificate first. A differently signed debug installation normally cannot update in place; uninstalling can erase Favorites and progress. Never clear data or uninstall automatically.
+
+The [verification report](docs/RELEASE-VERIFICATION.md) records source commit `7d0f3db56e5e7b4686dcbcd11dc43a83624e8d9b`, test results, and the available debug APK's checksum. **Owner signing credentials are still required; this preparation has not produced an owner-signed release APK.** Only rules were published. No APK update checker, downloader, installer, or GitHub APK release is included. Distributed APKs must include the matching source and [GPL-3.0 license](LICENSE).
+
 ## Inspiration
 
 This project was inspired by the [ani-cli](https://github.com/pystardust/ani-cli) project, which is a command-line tool for watching animes. I wanted to create a similar experience for Android TV users (especially for myself).
