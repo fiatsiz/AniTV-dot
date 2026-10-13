@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import indie.fiatsiz.anitv.source.Anime
+import indie.fiatsiz.anitv.source.AudioVersion
 import indie.fiatsiz.anitv.source.AnimeDetails
 import indie.fiatsiz.anitv.source.EpisodeServer
 import indie.fiatsiz.anitv.source.Episode
@@ -75,6 +76,7 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
     var error by remember { mutableStateOf<String?>(null) }
     var searched by remember { mutableStateOf(false) }
     var request by remember { mutableStateOf(0) }
+    var detailRequest by remember { mutableStateOf(0) }
     val firstFocus = remember { androidx.compose.ui.focus.FocusRequester() }
 
     fun save(change: (List<LibraryEntry>) -> List<LibraryEntry>) {
@@ -108,17 +110,18 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
         error = null
         loading = true
         val current = ++request
+        val detailCurrent = ++detailRequest
         scope.launch {
             try {
                 val found = withContext(Dispatchers.IO) { source.episodes(selected) }
-                if (current == request) episodes = found
+                if (detailCurrent == detailRequest) episodes = found
             } catch (e: Exception) { if (current == request) error = localizedError(context, e, R.string.episodes_failed) }
             finally { if (current == request) loading = false }
         }
         scope.launch {
             try {
                 val cached = withContext(Dispatchers.IO) { detailCache.read(selected) }
-                if (current != request) return@launch
+                if (detailCurrent != detailRequest) return@launch
                 if (cached != null) {
                     details = cached.details
                     poster = withContext(Dispatchers.IO) {
@@ -127,18 +130,18 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
                 }
                 if (cached?.isFresh(System.currentTimeMillis()) == true && poster != null) return@launch
                 val fresh = withContext(Dispatchers.IO) { source.details(selected) }
-                if (current != request) return@launch
+                if (detailCurrent != detailRequest) return@launch
                 details = fresh
                 val bytes = withContext(Dispatchers.IO) { source.poster(fresh.posterUrl) }
                 val decoded = withContext(Dispatchers.IO) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
                 if (decoded == null) {
-                    if (current == request) detailError = context.getString(R.string.poster_unreadable)
+                    if (detailCurrent == detailRequest) detailError = context.getString(R.string.poster_unreadable)
                     return@launch
                 }
                 withContext(Dispatchers.IO) { detailCache.save(selected, fresh, bytes, System.currentTimeMillis()) }
-                if (current == request) poster = decoded
+                if (detailCurrent == detailRequest) poster = decoded
             } catch (e: Exception) {
-                if (current == request) detailError = localizedError(context, e, R.string.detail_unavailable)
+                if (detailCurrent == detailRequest) detailError = localizedError(context, e, R.string.detail_unavailable)
             }
         }
     }
@@ -158,7 +161,7 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
         }
     }
 
-    fun selectEpisode(selected: Episode) {
+    fun selectEpisode(selected: Episode, preferredAudio: AudioVersion? = null) {
         episode = selected
         episodeServers = emptyList()
         selectedServer = null
@@ -171,10 +174,21 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
                 val available = withContext(Dispatchers.IO) { source.servers(selected) }
                 if (current != request) return@launch
                 episodeServers = available
-                if (available.size == 1) playServer(available.single())
+                val preferred = available.firstOrNull { it.audio == preferredAudio }
+                when {
+                    preferred != null -> playServer(preferred)
+                    preferredAudio != null -> error = context.getString(R.string.resume_audio_unavailable)
+                    available.size == 1 -> playServer(available.single())
+                }
             } catch (e: Exception) { if (current == request) error = localizedError(context, e, R.string.stream_failed) }
             finally { if (current == request) loading = false }
         }
+    }
+
+    fun continueWatching(entry: LibraryEntry) {
+        val savedEpisode = LibraryStore.resumeEpisode(entry) ?: return
+        if (anime?.id != entry.anime.id) selectAnime(entry.anime)
+        selectEpisode(savedEpisode, entry.progress!!.audio)
     }
 
     fun back() {
@@ -183,7 +197,7 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
         loading = false
         when {
             episode != null -> { episode = null; stream = null; episodeServers = emptyList(); selectedServer = null }
-            anime != null -> { anime = null; episodes = emptyList() }
+            anime != null -> { anime = null; episodes = emptyList(); detailRequest++ }
             page != Page.HOME -> page = Page.HOME
         }
     }
@@ -193,14 +207,16 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
     if (episode != null && stream != null) {
         val selectedAnime = anime!!
         val selectedEpisode = episode!!
+        val selectedStream = stream!!
         val saved = library.firstOrNull { it.anime.id == selectedAnime.id }?.progress
             ?.takeIf { it.episodeId == selectedEpisode.id }?.positionMs ?: 0L
-        Playback(lifecycle, stream!!, saved, translationSettings, context.resources.configuration.locales[0].language, userAgent, onBack = ::back, onTranslationSettings = { next ->
+        Playback(lifecycle, selectedStream, saved, translationSettings, context.resources.configuration.locales[0].language, userAgent, onBack = ::back, onTranslationSettings = { next ->
             translationSettings = next
             translationStore.save(next)
         }, onProgress = { position, duration ->
             save { entries -> LibraryStore.update(entries, selectedAnime) {
-                it.copy(progress = WatchProgress(selectedEpisode.id, selectedEpisode.number, position, duration))
+                it.copy(progress = WatchProgress(selectedEpisode.id, selectedEpisode.number, position, duration,
+                    selectedStream.audio, System.currentTimeMillis()))
             } }
         }, onError = { error = it; stream = null })
         return
@@ -229,10 +245,13 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
                 DetailContent(selected, entry, episodes, details, poster, detailError, loading, error, firstFocus, ::back,
                     onFavorite = { save { LibraryStore.update(it, selected) { item -> item.copy(favorite = !item.favorite) } } },
                     onCompleted = { save { LibraryStore.update(it, selected) { item -> item.copy(completed = !item.completed) } } },
-                    onEpisode = ::selectEpisode, onRetry = { selectAnime(selected) })
+                    onEpisode = { selectEpisode(it) }, onRetry = { selectAnime(selected) },
+                    onContinue = { entry?.let(::continueWatching) })
             }
             page == Page.HOME -> {
-                HomeContent(library, firstFocus) { page = it }
+                HomeContent(library, firstFocus, Modifier.weight(1f), onNavigate = { page = it }) { entry ->
+                    ContinueWatchingSection(entry, detailCache, source) { continueWatching(entry) }
+                }
             }
             page == Page.SEARCH -> {
                 SearchContent(query, loading, searched, error, results, firstFocus, ::back, { query = it }, ::search, ::selectAnime)

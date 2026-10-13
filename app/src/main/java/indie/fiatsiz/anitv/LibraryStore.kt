@@ -1,11 +1,14 @@
 package indie.fiatsiz.anitv
 
 import android.content.Context
+import indie.fiatsiz.anitv.source.AudioVersion
+import indie.fiatsiz.anitv.source.Episode
 import indie.fiatsiz.anitv.source.Anime
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class WatchProgress(val episodeId: String, val episodeNumber: String, val positionMs: Long, val durationMs: Long)
+data class WatchProgress(val episodeId: String, val episodeNumber: String, val positionMs: Long, val durationMs: Long,
+    val audio: AudioVersion = AudioVersion.SUB, val watchedAt: Long = 0)
 data class LibraryEntry(val anime: Anime, val favorite: Boolean = false, val completed: Boolean = false, val progress: WatchProgress? = null)
 
 class LibraryStore(context: Context) {
@@ -24,7 +27,8 @@ class LibraryStore(context: Context) {
                     .put("detailUrl", entry.anime.detailUrl).put("favorite", entry.favorite).put("completed", entry.completed)
                     .apply { entry.progress?.let { put("progress", JSONObject()
                         .put("episodeId", it.episodeId).put("episodeNumber", it.episodeNumber)
-                        .put("positionMs", it.positionMs).put("durationMs", it.durationMs)) } })
+                        .put("positionMs", it.positionMs).put("durationMs", it.durationMs)
+                        .put("audio", it.audio.name).put("watchedAt", it.watchedAt)) } })
             }
         }.toString()
 
@@ -39,7 +43,9 @@ class LibraryStore(context: Context) {
                     val episodeId = it.optString("episodeId")
                     if (!episodeId.matches(Regex("[0-9]+"))) null else WatchProgress(
                         episodeId, it.optString("episodeNumber"), it.optLong("positionMs").coerceAtLeast(0),
-                        it.optLong("durationMs").coerceAtLeast(0))
+                        it.optLong("durationMs").coerceAtLeast(0),
+                        runCatching { AudioVersion.valueOf(it.optString("audio", "SUB")) }.getOrDefault(AudioVersion.SUB),
+                        it.optLong("watchedAt").coerceAtLeast(0))
                 }
                 LibraryEntry(Anime(id, title, item.optString("detailUrl").takeIf { it.startsWith("https://hianime.at/") }), item.optBoolean("favorite"), item.optBoolean("completed"), progress)
             }
@@ -50,6 +56,13 @@ class LibraryStore(context: Context) {
             val changed = change(current)
             return listOf(changed) + entries.filterNot { it.anime.id == anime.id }
         }
+
+        fun resumeEpisode(entry: LibraryEntry): Episode? = entry.progress?.takeIf { it.positionMs > 0 }?.let {
+            Episode(it.episodeId, it.episodeNumber, "Episode ${it.episodeNumber}")
+        }
+
+        fun continueWatching(entries: List<LibraryEntry>): LibraryEntry? =
+            watching(entries).maxByOrNull { it.progress!!.watchedAt }
 
         fun watching(entries: List<LibraryEntry>): List<LibraryEntry> = entries.filter {
             !it.completed && it.progress != null && it.progress.positionMs > 0

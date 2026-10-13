@@ -119,4 +119,9 @@
     <string name="audio_dub">Dubbed</string>
     <string name="audio_source_hint">Dubbed audio uses the source language. Its language cannot be changed.</string>
     <string name="captions_unavailable">No captions</string>
+    <string name="continue_watching">Continue watching</string>
+    <string name="continue_episode_position">Episode %1$s · %2$s · %3$s</string>
+    <string name="continue_hint">Pick up where you left off.</string>
+    <string name="continue_empty">Start an episode to continue watching here.</string>
+    <string name="resume_audio_unavailable">Your saved audio version is unavailable. Choose an available version to continue.</string>
 </resources>

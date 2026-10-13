@@ -32,6 +32,7 @@ import androidx.tv.material3.Text
 import indie.fiatsiz.anitv.source.Anime
 import indie.fiatsiz.anitv.source.AnimeDetails
 import indie.fiatsiz.anitv.source.Episode
+import indie.fiatsiz.anitv.LibraryStore
 import indie.fiatsiz.anitv.LibraryEntry
 import indie.fiatsiz.anitv.WatchProgress
 import indie.fiatsiz.anitv.R
@@ -40,7 +41,7 @@ import indie.fiatsiz.anitv.R
 internal fun DetailContent(selected: Anime, entry: LibraryEntry?, episodes: List<Episode>, details: AnimeDetails?,
     poster: ImageBitmap?, detailError: String?, loading: Boolean, error: String?,
     firstFocus: androidx.compose.ui.focus.FocusRequester, onBack: () -> Unit, onFavorite: () -> Unit,
-    onCompleted: () -> Unit, onEpisode: (Episode) -> Unit, onRetry: () -> Unit) {
+    onCompleted: () -> Unit, onEpisode: (Episode) -> Unit, onRetry: () -> Unit, onContinue: () -> Unit) {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     item {
                         Button(onClick = onBack, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.back)) }
@@ -61,6 +62,9 @@ internal fun DetailContent(selected: Anime, entry: LibraryEntry?, episodes: List
                                 detailError?.let { Text(it, color = Color(0xFFFF9999)) }
                             }
                         }
+                    }
+                    if (entry != null && LibraryStore.resumeEpisode(entry) != null) item {
+                        ContinueWatchingButton(entry.progress!!, onContinue)
                     }
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -20,6 +20,10 @@ import indie.fiatsiz.anitv.source.AudioVersion
 import indie.fiatsiz.anitv.source.EpisodeServer
 import indie.fiatsiz.anitv.source.Episode
 import indie.fiatsiz.anitv.ui.theme.AniTVTheme
+import indie.fiatsiz.anitv.LibraryEntry
+import indie.fiatsiz.anitv.WatchProgress
+import indie.fiatsiz.anitv.source.Anime
+import indie.fiatsiz.anitv.source.AnimeDetails
 import indie.fiatsiz.anitv.TranslationSettings
 import indie.fiatsiz.anitv.R
 
@@ -31,7 +35,7 @@ private fun HomePreview() {
             Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 BrandHeader()
-                HomeContent(emptyList(), remember { androidx.compose.ui.focus.FocusRequester() }) {}
+                HomeContent(emptyList(), remember { androidx.compose.ui.focus.FocusRequester() }, Modifier.weight(1f), onNavigate = {}) {}
             }
         }
     }
@@ -94,6 +98,24 @@ private fun AudioChoicePreview() {
                     listOf(EpisodeServer(AudioVersion.SUB, "https://player.example/sub"),
                         EpisodeServer(AudioVersion.DUB, "https://player.example/dub")),
                     false, null, remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, {})
+            }
+        }
+    }
+}
+
+@Preview(name = "TV continue watching", widthDp = 960, heightDp = 540)
+@Composable
+private fun ContinueWatchingPreview() {
+    AniTVTheme(isInDarkTheme = true) {
+        Surface(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                BrandHeader()
+                Text(stringResource(R.string.continue_watching), fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                ContinueWatchingCard(LibraryEntry(Anime("1", "Sample anime"),
+                    progress = WatchProgress("2", "2", 753_000, 1_440_000, AudioVersion.DUB)),
+                    AnimeDetails("A sample description for the title you last watched.", "https://image.example/poster.webp", emptyList()),
+                    null, false) {}
             }
         }
     }
