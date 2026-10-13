@@ -374,7 +374,7 @@ private fun AniTV() {
 @Composable
 private fun BrandHeader() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Image(painterResource(R.drawable.anitv_logo), "AniTV", Modifier.width(120.dp).height(60.dp), contentScale = ContentScale.Crop)
+        Image(painterResource(R.drawable.anitv_logo_vector), "AniTV", Modifier.width(120.dp).height(60.dp), contentScale = ContentScale.Crop)
         Text(stringResource(R.string.tagline), fontSize = 14.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
     }
 }

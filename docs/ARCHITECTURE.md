@@ -28,7 +28,8 @@ Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Com
 | `gradle/libs.versions.toml` | Dependency versions and aliases. |
 | `app/src/main/AndroidManifest.xml` | Leanback launcher, Internet permission, and Android per-app locale configuration. |
 | `app/src/main/res/values*/strings.xml`, `res/xml/locales_config.xml` | English defaults, Turkish translations, and advertised app languages. |
-| `app/src/main/res/drawable-nodpi/` | Supplied AniTV launcher logo and a 320×180 Android TV banner crop. |
+| `app/src/main/res/drawable/anitv_logo_vector.xml` | Scalable Android vector generated from the updated transparent SVG for the in-app header. |
+| `app/src/main/res/drawable-nodpi/` | Updated PNG launcher icon and 1280×720 TV banner rendered from the supplied SVG. |
 
 ## Flow
 
