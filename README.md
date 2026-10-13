@@ -17,7 +17,7 @@ The project is still in development, but the following features are already impl
 
 - Searching, favoriting, mark as watched anime titles.
 - Continue watching animes from the last watched episode.
-- Caption settings such as closing/opening captions and translating captions to other languages via Google Translate and DeepL (API keys required) (NOT TESTED).
+- Caption settings such as closing/opening captions and translating captions to other languages via Google Translate and DeepL (API keys required) (DeepL API tested and works, Google Translate API NOT TESTED).
 
 ## Current Status of Development
 
