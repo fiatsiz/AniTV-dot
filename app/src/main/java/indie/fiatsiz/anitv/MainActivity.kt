@@ -4,6 +4,8 @@ import android.app.LocaleManager
 import android.os.LocaleList
 import android.os.Bundle
 import android.graphics.BitmapFactory
+import android.graphics.Typeface
+import android.util.TypedValue
 import android.webkit.WebSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -76,6 +78,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.media3.common.C
+import androidx.media3.common.text.Cue
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
@@ -86,6 +89,8 @@ import androidx.media3.common.Tracks
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.CaptionStyleCompat
+import androidx.media3.ui.SubtitleView
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Icon
@@ -598,8 +603,34 @@ private fun SearchField(value: String, onChange: (String) -> Unit, onSearch: () 
 
 private data class QualityOption(val group: TrackGroup, val index: Int, val label: String)
 private enum class CaptionMode { OFF, ORIGINAL, TRANSLATED }
-private enum class CaptionMenu { CLOSED, OPTIONS, LANGUAGES }
+private enum class CaptionMenu { CLOSED, OPTIONS, LANGUAGES, STYLES, FONT, SIZE, BACKGROUND, FOREGROUND }
 private val captionLanguages = listOf("ar", "de", "en", "es", "fr", "id", "it", "ja", "ko", "nl", "pl", "pt", "ru", "tr", "uk")
+private val captionBackgroundColors = listOf(CaptionColor.BLACK, CaptionColor.BLUE, CaptionColor.WHITE)
+private val captionForegroundColors = listOf(CaptionColor.WHITE, CaptionColor.YELLOW, CaptionColor.CYAN, CaptionColor.BLACK)
+private fun captionFontLabel(font: CaptionFont) = when (font) {
+    CaptionFont.SANS -> R.string.caption_font_sans
+    CaptionFont.SERIF -> R.string.caption_font_serif
+    CaptionFont.MONOSPACE -> R.string.caption_font_monospace
+}
+private fun captionColorLabel(color: CaptionColor) = when (color) {
+    CaptionColor.BLACK -> R.string.caption_color_black
+    CaptionColor.WHITE -> R.string.caption_color_white
+    CaptionColor.YELLOW -> R.string.caption_color_yellow
+    CaptionColor.BLUE -> R.string.caption_color_blue
+    CaptionColor.CYAN -> R.string.caption_color_cyan
+}
+private fun styleCaptionView(view: SubtitleView, style: CaptionStyleSettings) {
+    val typeface = when (style.font) {
+        CaptionFont.SANS -> Typeface.SANS_SERIF
+        CaptionFont.SERIF -> Typeface.SERIF
+        CaptionFont.MONOSPACE -> Typeface.MONOSPACE
+    }
+    view.setApplyEmbeddedStyles(false)
+    view.setStyle(CaptionStyleCompat(style.foreground.argb, style.backgroundArgb,
+        android.graphics.Color.TRANSPARENT, CaptionStyleCompat.EDGE_TYPE_NONE,
+        android.graphics.Color.TRANSPARENT, typeface))
+    view.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, 24f * style.sizePercent / 100f)
+}
 
 @Composable
 private fun Playback(stream: Stream, savedPositionMs: Long, translation: TranslationSettings, targetLanguage: String, userAgent: String,
@@ -610,6 +641,7 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
     val source = remember(userAgent) { HiAnimeSource(userAgent) }
     val translator = remember { SubtitleTranslator() }
     val translationReady = translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
+    val captionStyle = translation.captionStyle
     val effectiveTarget = translation.targetLanguage.ifBlank { targetLanguage }
     var captionMode by remember(stream) { mutableStateOf(if (translationReady) CaptionMode.TRANSLATED else CaptionMode.ORIGINAL) }
     val translationOn = captionMode == CaptionMode.TRANSLATED && translationReady
@@ -631,6 +663,8 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
     val qualityFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val captionFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val languageFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val styleFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val choiceFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val progressCallback by androidx.compose.runtime.rememberUpdatedState(onProgress)
     val errorCallback by androidx.compose.runtime.rememberUpdatedState(onError)
     val player = remember(stream) {
@@ -726,6 +760,8 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
     BackHandler(captionMenu != CaptionMenu.CLOSED || qualityOpen) {
         when {
             captionMenu == CaptionMenu.LANGUAGES -> captionMenu = CaptionMenu.OPTIONS
+            captionMenu in listOf(CaptionMenu.FONT, CaptionMenu.SIZE, CaptionMenu.BACKGROUND, CaptionMenu.FOREGROUND) -> captionMenu = CaptionMenu.STYLES
+            captionMenu == CaptionMenu.STYLES -> captionMenu = CaptionMenu.OPTIONS
             captionMenu == CaptionMenu.OPTIONS -> captionMenu = CaptionMenu.CLOSED
             else -> qualityOpen = false
         }
@@ -734,6 +770,8 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
         when {
             !controlsVisible -> videoFocus.requestFocus()
             captionMenu == CaptionMenu.LANGUAGES -> languageFocus.requestFocus()
+            captionMenu == CaptionMenu.STYLES -> styleFocus.requestFocus()
+            captionMenu in listOf(CaptionMenu.FONT, CaptionMenu.SIZE, CaptionMenu.BACKGROUND, CaptionMenu.FOREGROUND) -> choiceFocus.requestFocus()
             captionMenu == CaptionMenu.OPTIONS -> captionFocus.requestFocus()
             qualityOpen -> qualityFocus.requestFocus()
             else -> controlFocus.requestFocus()
@@ -767,15 +805,16 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
                 useController = false
                 isFocusable = false
             } },
+            update = { view -> view.subtitleView?.let { styleCaptionView(it, captionStyle) } },
             modifier = Modifier.fillMaxSize()
         )
         val activeCue = captionCues.withIndex().firstOrNull { positionMs in it.value.startMs until it.value.endMs }
-        if (translationOn && !translationFailed && activeCue != null) {
-            Text(translatedTexts[activeCue.index] ?: activeCue.value.text,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 48.dp, vertical = 52.dp)
-                    .background(Color(0xCC000000), RoundedCornerShape(8.dp)).padding(horizontal = 20.dp, vertical = 12.dp),
-                color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        if (translationOn && !translationFailed) {
+            val text = activeCue?.let { translatedTexts[it.index] ?: it.value.text }
+            val cues = remember(text) { text?.let { listOf(Cue.Builder().setText(it).build()) } ?: emptyList() }
+            AndroidView(factory = { SubtitleView(it).apply { isFocusable = false } },
+                update = { view -> styleCaptionView(view, captionStyle); view.setCues(cues) },
+                modifier = Modifier.fillMaxSize())
         }
         if (translationOn && translationFailed) {
             Text(stringResource(R.string.translation_unavailable),
@@ -822,7 +861,8 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
             }
             if (captionMenu != CaptionMenu.CLOSED) Column(Modifier.align(Alignment.TopEnd).padding(top = 76.dp, end = 16.dp)
                 .width(320.dp).background(Color(0xEE0F0F23)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (captionMenu == CaptionMenu.OPTIONS) {
+                when (captionMenu) {
+                CaptionMenu.OPTIONS -> {
                     Text(stringResource(R.string.captions_settings), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                     Button(onClick = { captionMode = CaptionMode.OFF; captionMenu = CaptionMenu.CLOSED },
                         modifier = Modifier.fillMaxWidth().then(if (captionMode == CaptionMode.OFF) Modifier.focusRequester(captionFocus) else Modifier)
@@ -843,7 +883,11 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
                     Button(onClick = { captionMenu = CaptionMenu.LANGUAGES }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.captions_language, Locale.forLanguageTag(effectiveTarget).getDisplayLanguage(displayLocale)))
                     }
-                } else {
+                    Button(onClick = { captionMenu = CaptionMenu.STYLES }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.caption_style))
+                    }
+                }
+                CaptionMenu.LANGUAGES -> {
                     Text(stringResource(R.string.captions_language_title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                     Column(Modifier.height(320.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         captionLanguages.forEach { language ->
@@ -857,6 +901,64 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
                             }
                         }
                     }
+                }
+                CaptionMenu.STYLES -> {
+                    Text(stringResource(R.string.caption_style), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                    Button(onClick = { captionMenu = CaptionMenu.FONT }, modifier = Modifier.fillMaxWidth().focusRequester(styleFocus)) {
+                        Text(stringResource(R.string.caption_font, stringResource(captionFontLabel(captionStyle.font))))
+                    }
+                    Button(onClick = { captionMenu = CaptionMenu.SIZE }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.caption_size, captionStyle.sizePercent))
+                    }
+                    Button(onClick = { captionMenu = CaptionMenu.BACKGROUND }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.caption_background, stringResource(captionColorLabel(captionStyle.background))))
+                    }
+                    Button(onClick = { captionMenu = CaptionMenu.FOREGROUND }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.caption_foreground, stringResource(captionColorLabel(captionStyle.foreground))))
+                    }
+                }
+                CaptionMenu.FONT -> {
+                    Text(stringResource(R.string.caption_font_title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                    CaptionFont.entries.forEach { font ->
+                        Button(onClick = {
+                            onTranslationSettings(translation.copy(captionStyle = captionStyle.copy(font = font)))
+                            captionMenu = CaptionMenu.STYLES
+                        }, modifier = Modifier.fillMaxWidth()
+                            .then(if (font == captionStyle.font) Modifier.focusRequester(choiceFocus) else Modifier)
+                            .semantics { selected = font == captionStyle.font }) {
+                            Text(stringResource(captionFontLabel(font)))
+                        }
+                    }
+                }
+                CaptionMenu.SIZE -> {
+                    Text(stringResource(R.string.caption_size_title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                    captionSizes.forEach { size ->
+                        Button(onClick = {
+                            onTranslationSettings(translation.copy(captionStyle = captionStyle.copy(sizePercent = size)))
+                            captionMenu = CaptionMenu.STYLES
+                        }, modifier = Modifier.fillMaxWidth()
+                            .then(if (size == captionStyle.sizePercent) Modifier.focusRequester(choiceFocus) else Modifier)
+                            .semantics { selected = size == captionStyle.sizePercent }) { Text("$size%") }
+                    }
+                }
+                CaptionMenu.BACKGROUND, CaptionMenu.FOREGROUND -> {
+                    val background = captionMenu == CaptionMenu.BACKGROUND
+                    Text(stringResource(if (background) R.string.caption_background_title else R.string.caption_foreground_title),
+                        fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                    val selectedColor = if (background) captionStyle.background else captionStyle.foreground
+                    (if (background) captionBackgroundColors else captionForegroundColors).forEach { color ->
+                        Button(onClick = {
+                            val next = if (background) captionStyle.copy(background = color) else captionStyle.copy(foreground = color)
+                            onTranslationSettings(translation.copy(captionStyle = next))
+                            captionMenu = CaptionMenu.STYLES
+                        }, modifier = Modifier.fillMaxWidth()
+                            .then(if (color == selectedColor) Modifier.focusRequester(choiceFocus) else Modifier)
+                            .semantics { selected = color == selectedColor }) {
+                            Text(stringResource(captionColorLabel(color)))
+                        }
+                    }
+                }
+                CaptionMenu.CLOSED -> Unit
                 }
             }
         }

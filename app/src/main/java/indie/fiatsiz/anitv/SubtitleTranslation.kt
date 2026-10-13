@@ -19,11 +19,28 @@ import javax.crypto.spec.GCMParameterSpec
 import android.util.Base64
 
 enum class TranslationProvider { OFF, GOOGLE, DEEPL }
+enum class CaptionFont { SANS, SERIF, MONOSPACE }
+enum class CaptionColor(val argb: Int) {
+    BLACK(0xFF000000.toInt()), WHITE(0xFFFFFFFF.toInt()), YELLOW(0xFFFFFF00.toInt()), BLUE(0xFF123B8A.toInt()), CYAN(0xFF00FFFF.toInt())
+}
+
+internal val captionSizes = listOf(50, 75, 100, 150, 200)
+internal fun captionSizePercent(value: Int) = value.takeIf { it in captionSizes } ?: 100
+
+data class CaptionStyleSettings(
+    val font: CaptionFont = CaptionFont.SANS,
+    val sizePercent: Int = 100,
+    val background: CaptionColor = CaptionColor.BLACK,
+    val foreground: CaptionColor = CaptionColor.WHITE
+) {
+    val backgroundArgb: Int get() = 0xCC000000.toInt() or (background.argb and 0x00FFFFFF)
+}
 
 data class TranslationSettings(
     val provider: TranslationProvider = TranslationProvider.OFF,
     val apiKey: String = "",
-    val targetLanguage: String = ""
+    val targetLanguage: String = "",
+    val captionStyle: CaptionStyleSettings = CaptionStyleSettings()
 )
 
 internal fun subtitleBatchEnd(start: Int, cueCount: Int) = minOf(start + 4, cueCount)
@@ -40,12 +57,22 @@ class TranslationSettingsStore(context: Context) {
     fun read() = TranslationSettings(
         runCatching { TranslationProvider.valueOf(preferences.getString("provider", "OFF")!!) }.getOrDefault(TranslationProvider.OFF),
         runCatching { decrypt(preferences.getString("api_key", "").orEmpty()) }.getOrDefault(""),
-        preferences.getString("target_language", "").orEmpty()
+        preferences.getString("target_language", "").orEmpty(),
+        CaptionStyleSettings(
+            runCatching { CaptionFont.valueOf(preferences.getString("caption_font", "SANS")!!) }.getOrDefault(CaptionFont.SANS),
+            captionSizePercent(preferences.getInt("caption_size", 100)),
+            runCatching { CaptionColor.valueOf(preferences.getString("caption_background", "BLACK")!!) }.getOrDefault(CaptionColor.BLACK),
+            runCatching { CaptionColor.valueOf(preferences.getString("caption_foreground", "WHITE")!!) }.getOrDefault(CaptionColor.WHITE)
+        )
     )
 
     fun save(settings: TranslationSettings) {
         preferences.edit().putString("provider", settings.provider.name).putString("api_key", encrypt(settings.apiKey))
-            .putString("target_language", settings.targetLanguage).apply()
+            .putString("target_language", settings.targetLanguage)
+            .putString("caption_font", settings.captionStyle.font.name)
+            .putInt("caption_size", captionSizePercent(settings.captionStyle.sizePercent))
+            .putString("caption_background", settings.captionStyle.background.name)
+            .putString("caption_foreground", settings.captionStyle.foreground.name).apply()
     }
 
     private fun encrypt(value: String): String {
