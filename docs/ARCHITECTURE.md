@@ -4,11 +4,11 @@ AniTV is one Kotlin Android `app` module. Compose for TV owns navigation and scr
 
 ```text
 Home → Search/results or local library → detail + episodes → HLS + VTT player
-        MainActivity                       HiAnimeSource       Media3
+        ui/AniTVApp                        HiAnimeSource       Media3
                          LibraryStore ← progress/favorite/completed
                          AnimeDetailCache ← description/facts/poster/timestamp
 Home → Settings → Android LocaleManager → English or Turkish resources
-MainActivity → TV WebView/HTTP User-Agent → HiAnimeSource + Media3 HTTP requests
+AniTVApp → TV WebView/HTTP User-Agent → HiAnimeSource + Media3 HTTP requests
 Settings → TranslationSettingsStore → Android Keystore → provider key
 Playback caption menu → TranslationSettingsStore → target language + caption style
 Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Media3 SubtitleView overlay
@@ -18,7 +18,12 @@ Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Med
 
 | File | Responsibility |
 | --- | --- |
-| `app/src/main/java/indie/fiatsiz/anitv/MainActivity.kt` | Home, search, collections, Settings, detail and playback UI; transient state, focus, Back, errors, player lifecycle and remote controls. Home, episode, and Settings composables support sample `@Preview` functions. |
+| `app/src/main/java/indie/fiatsiz/anitv/MainActivity.kt` | Activity entry point and themed Compose host. |
+| `app/src/main/java/indie/fiatsiz/anitv/ui/AniTVApp.kt` | Transient app state, source requests, stores, navigation, Back, and screen dispatch. |
+| `app/src/main/java/indie/fiatsiz/anitv/ui/{Home,Search,Library,Detail,Settings}Content.kt` | Screen layout and D-pad controls; receive state and callbacks from the app coordinator. Detail owns episode buttons and localized episode labels. |
+| `app/src/main/java/indie/fiatsiz/anitv/ui/ScreenPreviews.kt` | Sample home, episode, English Settings, and Turkish Settings Compose previews. |
+| `app/src/main/java/indie/fiatsiz/anitv/playback/Playback.kt` | Media3 configuration, playback state/progress, translation lookahead, quality selection, and remote controls. |
+| `app/src/main/java/indie/fiatsiz/anitv/playback/CaptionSettings.kt` | Caption menu, language/style choices, and shared Media3 subtitle styling. |
 | `app/src/main/java/indie/fiatsiz/anitv/LocalizedSourceError.kt` | Maps source failure codes to localized Android string resources. |
 | `app/src/main/java/indie/fiatsiz/anitv/LibraryStore.kt` | `SharedPreferences` JSON encoding, decoding, and library rules, including saved detail links. |
 | `app/src/main/java/indie/fiatsiz/anitv/AnimeDetailCache.kt` | Timestamped detail metadata in private preferences and poster bytes in the app cache directory. |
@@ -36,7 +41,7 @@ Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Med
 
 ## Flow
 
-1. `MainActivity` sends a query to `HiAnimeSource.search()` on `Dispatchers.IO`. The source reads `https://hianime.at/search?keyword=...` and parses `.film_list-wrap .flw-item` cards into `Anime` records, including each result's detail link.
+1. `AniTVApp` sends a query to `HiAnimeSource.search()` on `Dispatchers.IO`. The source reads `https://hianime.at/search?keyword=...` and parses `.film_list-wrap .flw-item` cards into `Anime` records, including each result's detail link.
 2. Selecting a result or saved title loads episodes and details independently. `episodes()` reads `/api/theme/episode/list/{animeId}` and extracts `a.ep-item[data-id]`. `details()` reads the title page, parses `#ani_detail` for description and facts plus `.anisc-poster img[src]` for the portrait poster URL, and falls back to a search by title for older saved entries without a detail link.
 3. `AnimeDetailCache` returns stored details and image bytes immediately. Entries under 24 hours old skip a network request. Older entries stay visible while `HiAnimeSource` fetches new metadata and poster bytes; a missing cached image also triggers refresh. The changed cache metadata key invalidates earlier wide-cover entries, so they refresh on first open. Android may evict files from the cache directory, which results in a new fetch.
 4. Selecting an episode calls `stream()`. The source reads `/api/theme/episode/servers?episodeId=...`, selects the `sub` ZokoAnime server, decodes its embed link, and reads the embed page. `parsePlayer()` decodes `window.__P` into an HTTPS HLS URL and VTT subtitle URL.
@@ -49,7 +54,7 @@ The UI uses `remember` state for query, results, selection, loading, and errors.
 
 ## Boundaries and failure handling
 
-- `MainActivity` reads the TV's default WebView User-Agent once and falls back to Android's `http.agent` property if WebView is unavailable. A final fallback includes the TV's Android version and model. It passes this value to `HiAnimeSource` and Media3. Source calls use `HttpURLConnection` with 15-second connect and read timeouts, HTTPS validation, `User-Agent`, and `Referer`. Responses are limited to 8 MB. Jsoup parses HTML; `org.json` parses response bodies.
+- `AniTVApp` reads the TV's default WebView User-Agent once and falls back to Android's `http.agent` property if WebView is unavailable. A final fallback includes the TV's Android version and model. It passes this value to `HiAnimeSource` and Media3. Source calls use `HttpURLConnection` with 15-second connect and read timeouts, HTTPS validation, `User-Agent`, and `Referer`. Responses are limited to 8 MB. Jsoup parses HTML; `org.json` parses response bodies.
 - The source reports blocked requests, non-success HTTP responses, missing markup, missing subtitle servers, malformed player data, insecure links, and oversized responses. Player errors show a retry instruction. Full stream URLs, cookies, and tokens are not logged.
 - Translation uses Google Cloud Translation Basic v2 (API-key authentication) and DeepL v2. Google ML Kit is keyless but prohibits TV use without prior written permission. DeepL English and Portuguese targets use `EN-US` and `PT-BR`. Keys are encrypted on-device and never logged. Requests go directly from the TV to the provider. DeepL advises against client-side API keys; personal users accept exposure risk if a device is compromised, while a distributed app should use a protected server proxy.
 - Translation requests use HTTPS and short timeouts. The source VTT remains the fallback if translation fails; translation responses stay in playback memory and are not persisted.

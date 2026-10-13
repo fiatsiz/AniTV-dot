@@ -4,6 +4,8 @@ As of 2026-10-13.
 
 ## Implemented
 
+- Modular Compose UI: `MainActivity` only starts the themed app; `ui/AniTVApp.kt` coordinates state and navigation; home, search, library, detail, Settings, and previews live in separate files. Playback and caption settings live under `playback/`.
+
 - TV home screen with Search, Currently watching, Favorites, and Completed sections.
 - Local favorites, last episode and playback position, and manually controlled title completion survive app restarts via `SharedPreferences`.
 - Playing records progress every five seconds and when leaving playback. Currently watching contains titles with saved progress unless marked completed. Playback starting or ending never marks a title completed; use the detail-screen button.
@@ -23,9 +25,11 @@ As of 2026-10-13.
 
 ## Verified
 
+- UI extraction passed `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline`; all 15 existing unit tests passed. Screen layout, callbacks, source behavior, and storage formats were preserved. Device behavior remains unverified for this build.
+
 - The README disclaimer was checked against the source and translation data flow and the local GPL-3.0 license. `./gradlew :app:assembleDebug --offline` passed. No app source or resource changed; this APK has not been tested on the TV.
 - `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline` passed for caption styling. All 15 unit tests passed, including default caption style and size validation.
-- Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `5054f77cd43ccc401dfdad61ce72ae564737546a06aded0eddb7631f45d13b87`).
+- Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `7fb39070c922f19a7eb986b2149f9044c90a58336d652596cdb0cb47376cd38e`).
 - `./gradlew :app:assembleDebug --offline` passed for the User-Agent update. The previous `:app:testDebugUnitTest` run passed 14 unit tests; tests were not rerun for this request-header change.
 - The local `LICENSE` matches the original GitHub `LICENSE` blob exactly. Both README SVG variants were rendered and visually inspected against their target backgrounds. Browser rendering on GitHub was not inspected.
 - GitHub reports `master` as the default and only remote branch. The former `main` branch was deleted after confirming `master` contains the project and license.
