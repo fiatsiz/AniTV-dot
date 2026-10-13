@@ -20,6 +20,7 @@ import indie.fiatsiz.anitv.source.AudioVersion
 import indie.fiatsiz.anitv.source.EpisodeServer
 import indie.fiatsiz.anitv.source.Episode
 import indie.fiatsiz.anitv.ui.theme.AniTVTheme
+import indie.fiatsiz.anitv.playback.EpisodeSidebarContent
 import indie.fiatsiz.anitv.LibraryEntry
 import indie.fiatsiz.anitv.WatchProgress
 import indie.fiatsiz.anitv.source.Anime
@@ -117,6 +118,17 @@ private fun ContinueWatchingPreview() {
                     AnimeDetails("A sample description for the title you last watched.", "https://image.example/poster.webp", emptyList()),
                     null, false) {}
             }
+        }
+    }
+}
+
+@Preview(name = "TV episode sidebar", widthDp = 960, heightDp = 540)
+@Composable
+private fun EpisodeSidebarPreview() {
+    AniTVTheme(isInDarkTheme = true) {
+        Surface(Modifier.fillMaxSize()) {
+            EpisodeSidebarContent("Sample anime", Episode("3", "3", "Episode 3"),
+                (1..12).map { Episode("$it", "$it", "Episode $it") }, false, null, {}, {}, {})
         }
     }
 }

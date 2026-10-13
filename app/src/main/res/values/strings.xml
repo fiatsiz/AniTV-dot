@@ -123,4 +123,7 @@
     <string name="continue_episode_position">Episode %1$s · %2$s · %3$s</string>
     <string name="continue_hint">Pick up where you left off.</string>
     <string name="resume_audio_unavailable">Your saved audio version is unavailable. Choose an available version to continue.</string>
+    <string name="now_playing_episode">Now playing: Episode %1$s</string>
+    <string name="episode_playing">Playing</string>
+    <string name="close_episodes">Close episodes</string>
 </resources>

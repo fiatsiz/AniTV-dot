@@ -65,6 +65,8 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
     var results by remember { mutableStateOf<List<Anime>>(emptyList()) }
     var anime by remember { mutableStateOf<Anime?>(null) }
     var episodes by remember { mutableStateOf<List<Episode>>(emptyList()) }
+    var episodesLoading by remember { mutableStateOf(false) }
+    var episodesError by remember { mutableStateOf<String?>(null) }
     var details by remember { mutableStateOf<AnimeDetails?>(null) }
     var poster by remember { mutableStateOf<ImageBitmap?>(null) }
     var detailError by remember { mutableStateOf<String?>(null) }
@@ -101,6 +103,20 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
         }
     }
 
+    fun loadEpisodes(selected: Anime) {
+        episodesLoading = true
+        episodesError = null
+        val current = detailRequest
+        scope.launch {
+            try {
+                val found = withContext(Dispatchers.IO) { source.episodes(selected) }
+                if (current == detailRequest) episodes = found
+            } catch (e: Exception) {
+                if (current == detailRequest) episodesError = localizedError(context, e, R.string.episodes_failed)
+            } finally { if (current == detailRequest) episodesLoading = false }
+        }
+    }
+
     fun selectAnime(selected: Anime) {
         anime = selected
         episodes = emptyList()
@@ -108,16 +124,10 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
         poster = null
         detailError = null
         error = null
-        loading = true
-        val current = ++request
+        loading = false
+        request++
         val detailCurrent = ++detailRequest
-        scope.launch {
-            try {
-                val found = withContext(Dispatchers.IO) { source.episodes(selected) }
-                if (detailCurrent == detailRequest) episodes = found
-            } catch (e: Exception) { if (current == request) error = localizedError(context, e, R.string.episodes_failed) }
-            finally { if (current == request) loading = false }
-        }
+        loadEpisodes(selected)
         scope.launch {
             try {
                 val cached = withContext(Dispatchers.IO) { detailCache.read(selected) }
@@ -210,15 +220,21 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
         val selectedStream = stream!!
         val saved = library.firstOrNull { it.anime.id == selectedAnime.id }?.progress
             ?.takeIf { it.episodeId == selectedEpisode.id }?.positionMs ?: 0L
-        Playback(lifecycle, selectedStream, saved, translationSettings, context.resources.configuration.locales[0].language, userAgent, onBack = ::back, onTranslationSettings = { next ->
-            translationSettings = next
-            translationStore.save(next)
-        }, onProgress = { position, duration ->
-            save { entries -> LibraryStore.update(entries, selectedAnime) {
-                it.copy(progress = WatchProgress(selectedEpisode.id, selectedEpisode.number, position, duration,
-                    selectedStream.audio, System.currentTimeMillis()))
-            } }
-        }, onError = { error = it; stream = null })
+        androidx.compose.runtime.key(selectedAnime.id, selectedEpisode.id) {
+            Playback(lifecycle, selectedStream, saved, translationSettings, context.resources.configuration.locales[0].language, userAgent,
+                animeTitle = selectedAnime.title, currentEpisode = selectedEpisode, episodes = episodes,
+                episodesLoading = episodesLoading, episodesError = episodesError,
+                onReloadEpisodes = { if (!episodesLoading) loadEpisodes(selectedAnime) },
+                onSelectEpisode = { selectEpisode(it, selectedStream.audio) }, onTranslationSettings = { next ->
+                translationSettings = next
+                translationStore.save(next)
+            }, onProgress = { position, duration ->
+                save { entries -> LibraryStore.update(entries, selectedAnime) {
+                    it.copy(progress = WatchProgress(selectedEpisode.id, selectedEpisode.number, position, duration,
+                        selectedStream.audio, System.currentTimeMillis()))
+                } }
+            }, onError = { error = it; stream = null })
+        }
         return
     }
 
@@ -242,7 +258,7 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
             anime != null -> {
                 val selected = anime!!
                 val entry = library.firstOrNull { it.anime.id == selected.id }
-                DetailContent(selected, entry, episodes, details, poster, detailError, loading, error, firstFocus, ::back,
+                DetailContent(selected, entry, episodes, details, poster, detailError, episodesLoading, episodesError, firstFocus, ::back,
                     onFavorite = { save { LibraryStore.update(it, selected) { item -> item.copy(favorite = !item.favorite) } } },
                     onCompleted = { save { LibraryStore.update(it, selected) { item -> item.copy(completed = !item.completed) } } },
                     onEpisode = { selectEpisode(it) }, onRetry = { selectAnime(selected) },

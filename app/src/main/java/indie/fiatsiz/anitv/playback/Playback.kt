@@ -47,6 +47,7 @@ import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
 import androidx.tv.material3.Button
 import androidx.tv.material3.Text
+import indie.fiatsiz.anitv.source.Episode
 import indie.fiatsiz.anitv.source.HiAnimeSource
 import indie.fiatsiz.anitv.source.Stream
 import indie.fiatsiz.anitv.source.SubtitleCue
@@ -63,7 +64,8 @@ import indie.fiatsiz.anitv.R
 private data class QualityOption(val group: TrackGroup, val index: Int, val label: String)
 @Composable
 internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Long, translation: TranslationSettings, targetLanguage: String, userAgent: String,
-    onBack: () -> Unit, onTranslationSettings: (TranslationSettings) -> Unit,
+    animeTitle: String, currentEpisode: Episode, episodes: List<Episode>, episodesLoading: Boolean, episodesError: String?,
+    onReloadEpisodes: () -> Unit, onSelectEpisode: (Episode) -> Unit, onTranslationSettings: (TranslationSettings) -> Unit,
     onProgress: (Long, Long) -> Unit, onError: (String) -> Unit) {
     val context = LocalContext.current
     val source = remember(userAgent) { HiAnimeSource(userAgent) }
@@ -81,12 +83,15 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
     var durationMs by remember(stream) { mutableStateOf(0L) }
     var controlsVisible by remember(stream) { mutableStateOf(true) }
     var qualityOpen by remember(stream) { mutableStateOf(false) }
+    var episodesOpen by remember(stream) { mutableStateOf(false) }
+    var restoreEpisodesFocus by remember(stream) { mutableStateOf(false) }
     var qualityOptions by remember(stream) { mutableStateOf<List<QualityOption>>(emptyList()) }
     var selectedQuality by remember(stream) { mutableStateOf(context.getString(R.string.auto)) }
     var interactionTick by remember(stream) { mutableStateOf(0) }
     var captionCues by remember(stream, translationOn, effectiveTarget) { mutableStateOf<List<SubtitleCue>>(emptyList()) }
     var translatedTexts by remember(stream, translationOn, effectiveTarget) { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var translationFailed by remember(stream, translationOn, effectiveTarget) { mutableStateOf(false) }
+    val episodesButtonFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val controlFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val videoFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val qualityFocus = remember { androidx.compose.ui.focus.FocusRequester() }
@@ -197,19 +202,25 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
             else -> qualityOpen = false
         }
     }
-    androidx.compose.runtime.LaunchedEffect(controlsVisible, qualityOpen, captionMenu) {
+    androidx.compose.runtime.LaunchedEffect(controlsVisible, qualityOpen, captionMenu, episodesOpen) {
         when {
+            episodesOpen -> Unit
             !controlsVisible -> videoFocus.requestFocus()
             captionMenu == CaptionMenu.LANGUAGES -> languageFocus.requestFocus()
             captionMenu == CaptionMenu.STYLES -> styleFocus.requestFocus()
             captionMenu in listOf(CaptionMenu.FONT, CaptionMenu.SIZE, CaptionMenu.BACKGROUND, CaptionMenu.FOREGROUND) -> choiceFocus.requestFocus()
             captionMenu == CaptionMenu.OPTIONS -> captionFocus.requestFocus()
             qualityOpen -> qualityFocus.requestFocus()
+            restoreEpisodesFocus -> {
+                restoreEpisodesFocus = false
+                androidx.compose.runtime.withFrameNanos { }
+                episodesButtonFocus.requestFocus()
+            }
             else -> controlFocus.requestFocus()
         }
     }
-    androidx.compose.runtime.LaunchedEffect(controlsVisible, qualityOpen, captionMenu, playing, interactionTick) {
-        if (controlsVisible && playing && !qualityOpen && captionMenu == CaptionMenu.CLOSED) {
+    androidx.compose.runtime.LaunchedEffect(controlsVisible, qualityOpen, captionMenu, episodesOpen, playing, interactionTick) {
+        if (controlsVisible && playing && !episodesOpen && !qualityOpen && captionMenu == CaptionMenu.CLOSED) {
             delay(6_000)
             controlsVisible = false
         }
@@ -218,7 +229,7 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
         .onPreviewKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
             when {
-                controlsVisible && !qualityOpen && captionMenu == CaptionMenu.CLOSED && event.key == Key.DirectionDown -> {
+                controlsVisible && !episodesOpen && !qualityOpen && captionMenu == CaptionMenu.CLOSED && event.key == Key.DirectionDown -> {
                     controlsVisible = false
                     true
                 }
@@ -256,7 +267,11 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
         if (controlsVisible) {
             Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().background(Color(0xDD0F0F23)).padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onBack) { Text(stringResource(R.string.episodes)) }
+                Button(onClick = {
+                    qualityOpen = false
+                    captionMenu = CaptionMenu.CLOSED
+                    episodesOpen = true
+                }, modifier = Modifier.focusRequester(episodesButtonFocus)) { Text(stringResource(R.string.episodes)) }
                 Button(onClick = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) }) { Text(stringResource(R.string.seek_back)) }
                 Button(onClick = { if (player.playWhenReady) player.pause() else player.play() }, modifier = Modifier.focusRequester(controlFocus)) {
                     Text(stringResource(if (playing) R.string.pause else R.string.play))
@@ -297,5 +312,17 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
                 onMenu = { captionMenu = it }, onMode = { captionMode = it }, onTranslationSettings = onTranslationSettings)
         }
         if (buffering) Text(stringResource(R.string.buffering), modifier = Modifier.align(Alignment.Center), color = Color.White)
+        if (episodesOpen) EpisodeSidebar(animeTitle, currentEpisode, episodes, episodesLoading, episodesError,
+            onDismiss = { episodesOpen = false; restoreEpisodesFocus = true; interactionTick++ },
+            onRetry = onReloadEpisodes, onSelect = { selected ->
+                if (selected.id == currentEpisode.id) {
+                    episodesOpen = false
+                    restoreEpisodesFocus = true
+                    interactionTick++
+                } else {
+                    if (player.currentPosition > 0) progressCallback(player.currentPosition, player.duration.coerceAtLeast(0))
+                    onSelectEpisode(selected)
+                }
+            })
     }
 }
