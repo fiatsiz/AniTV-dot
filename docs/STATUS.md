@@ -15,6 +15,7 @@ As of 2026-10-13.
 - Home buttons use 10 dp corners and labeled Material icons. Episode buttons change background color on focus without growing.
 - The updated AniTV SVG paths render as a scalable vector in the app header. The new 1024×1024 PNG is the launcher icon; a 1280×720 SVG-rendered crop is the Android TV banner. Unused `ic_launcher` mipmap icons were removed.
 - The repository has the upstream GPL-3.0 `LICENSE` and a minimal README with a centered transparent SVG logo and `AniTV-dot` below it. Separate dark/light SVG variants keep the logo readable in both GitHub themes.
+- The README disclaimer identifies third-party content and services, content rights, translation data sent to the selected provider, and the GPL-3.0 warranty terms.
 - Android Studio Compose previews are defined for sample home and episode screens without network requests or a TV.
 - English and Turkish app text follows the TV language by default. Settings offers System default, English, and Türkçe; Android stores an explicit choice. Source and playback errors have localized messages. English and Turkish settings previews are defined.
 - Settings supports keyed Google Cloud Translation and DeepL caption translation. Provider keys are encrypted at rest with Android Keystore. Playback fetches timed VTT cues and translates rolling batches of four ahead of the current cue; original Media3 captions return if translation fails. English and Portuguese DeepL targets use supported regional codes.
@@ -22,8 +23,9 @@ As of 2026-10-13.
 
 ## Verified
 
+- The README disclaimer was checked against the source and translation data flow and the local GPL-3.0 license. `./gradlew :app:assembleDebug --offline` passed. No app source or resource changed; this APK has not been tested on the TV.
 - `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline` passed for caption styling. All 15 unit tests passed, including default caption style and size validation.
-- Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `92248db5e7f0f3de1c444e049bc5e5e656565e8f9c23a71d628d2bbc5e2d201c`).
+- Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `5054f77cd43ccc401dfdad61ce72ae564737546a06aded0eddb7631f45d13b87`).
 - `./gradlew :app:assembleDebug --offline` passed for the User-Agent update. The previous `:app:testDebugUnitTest` run passed 14 unit tests; tests were not rerun for this request-header change.
 - The local `LICENSE` matches the original GitHub `LICENSE` blob exactly. Both README SVG variants were rendered and visually inspected against their target backgrounds. Browser rendering on GitHub was not inspected.
 - GitHub reports `master` as the default and only remote branch. The former `main` branch was deleted after confirming `master` contains the project and license.
