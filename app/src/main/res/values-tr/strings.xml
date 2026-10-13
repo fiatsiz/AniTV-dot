@@ -18,7 +18,7 @@
     <string name="language_english">English</string>
     <string name="language_turkish">Türkçe</string>
     <string name="caption_translation">Altyazı çevirisi</string>
-    <string name="translation_hint">Altyazıları uygulama diline çevirir. Anahtar TV’de şifrelenir. DeepL istemci uygulamalarında anahtar kullanımına karşı uyarır; yalnızca kişisel anahtar kullan.</string>
+    <string name="translation_hint">Google Cloud Translation ve DeepL API anahtarı gerektirir. Altyazı dilini oynatıcıda seç. Anahtar TV’de şifrelenir. DeepL istemci uygulamalarında anahtar kullanımına karşı uyarır; yalnızca kişisel anahtar kullan.</string>
     <string name="translation_off">Çeviri kapalı</string>
     <string name="translation_google">Google Translate</string>
     <string name="translation_deepl">DeepL</string>
@@ -57,6 +57,12 @@
     <string name="seek_forward">+10 sn</string>
     <string name="captions_on">Altyazı açık</string>
     <string name="captions_off">Altyazı kapalı</string>
+    <string name="captions_settings">Altyazılar</string>
+    <string name="captions_original">Orijinal altyazılar</string>
+    <string name="captions_translate">%1$s ile çevir</string>
+    <string name="captions_language">Dil: %1$s</string>
+    <string name="captions_language_title">Çeviri dili</string>
+    <string name="translation_setup_hint">Ayarlar bölümünde sağlayıcıyı seç ve API anahtarını gir.</string>
     <string name="quality">Kalite: %1$s</string>
     <string name="auto_quality">Otomatik kalite</string>
     <string name="auto">Otomatik</string>

@@ -20,21 +20,32 @@ import android.util.Base64
 
 enum class TranslationProvider { OFF, GOOGLE, DEEPL }
 
-data class TranslationSettings(val provider: TranslationProvider = TranslationProvider.OFF, val apiKey: String = "")
+data class TranslationSettings(
+    val provider: TranslationProvider = TranslationProvider.OFF,
+    val apiKey: String = "",
+    val targetLanguage: String = ""
+)
 
 internal fun subtitleBatchEnd(start: Int, cueCount: Int) = minOf(start + 4, cueCount)
 internal fun shouldPrefetchNextBatch(currentCue: Int, translatedThrough: Int) = currentCue >= translatedThrough - 2
+internal fun deeplTargetLanguage(language: String) = when (language.lowercase()) {
+    "en" -> "EN-US"
+    "pt" -> "PT-BR"
+    else -> language.uppercase()
+}
 
 class TranslationSettingsStore(context: Context) {
     private val preferences = context.getSharedPreferences("subtitle_translation", Context.MODE_PRIVATE)
 
     fun read() = TranslationSettings(
         runCatching { TranslationProvider.valueOf(preferences.getString("provider", "OFF")!!) }.getOrDefault(TranslationProvider.OFF),
-        runCatching { decrypt(preferences.getString("api_key", "").orEmpty()) }.getOrDefault("")
+        runCatching { decrypt(preferences.getString("api_key", "").orEmpty()) }.getOrDefault(""),
+        preferences.getString("target_language", "").orEmpty()
     )
 
     fun save(settings: TranslationSettings) {
-        preferences.edit().putString("provider", settings.provider.name).putString("api_key", encrypt(settings.apiKey)).apply()
+        preferences.edit().putString("provider", settings.provider.name).putString("api_key", encrypt(settings.apiKey))
+            .putString("target_language", settings.targetLanguage).apply()
     }
 
     private fun encrypt(value: String): String {
@@ -69,7 +80,7 @@ class SubtitleTranslator {
             val host = if (apiKey.endsWith(":fx", ignoreCase = true)) "api-free.deepl.com" else "api.deepl.com"
             "https://$host/v2/translate"
         } else "https://translation.googleapis.com/language/translate/v2?key=${URLEncoder.encode(apiKey, "UTF-8")}"
-        val body = if (deepl) JSONObject().put("text", JSONArray(texts)).put("target_lang", targetLanguage.uppercase())
+        val body = if (deepl) JSONObject().put("text", JSONArray(texts)).put("target_lang", deeplTargetLanguage(targetLanguage))
         else JSONObject().put("q", JSONArray(texts)).put("target", targetLanguage.lowercase()).put("format", "text")
         val connection = (URI(endpoint).toURL().openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000

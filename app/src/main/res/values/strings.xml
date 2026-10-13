@@ -18,7 +18,7 @@
     <string name="language_english">English</string>
     <string name="language_turkish">Türkçe</string>
     <string name="caption_translation">Caption translation</string>
-    <string name="translation_hint">Translate captions to the app language. Keys are encrypted on this TV. DeepL advises against client-side keys; use a personal key only.</string>
+    <string name="translation_hint">Google Cloud Translation and DeepL require an API key. Choose caption language in the player. Keys are encrypted on this TV. DeepL advises against client-side keys; use a personal key only.</string>
     <string name="translation_off">Translation off</string>
     <string name="translation_google">Google Translate</string>
     <string name="translation_deepl">DeepL</string>
@@ -57,6 +57,12 @@
     <string name="seek_forward">+10s</string>
     <string name="captions_on">Captions on</string>
     <string name="captions_off">Captions off</string>
+    <string name="captions_settings">Captions</string>
+    <string name="captions_original">Original captions</string>
+    <string name="captions_translate">Translate with %1$s</string>
+    <string name="captions_language">Language: %1$s</string>
+    <string name="captions_language_title">Translation language</string>
+    <string name="translation_setup_hint">Select a provider and enter its API key in Settings.</string>
     <string name="quality">Quality: %1$s</string>
     <string name="auto_quality">Auto quality</string>
     <string name="auto">Auto</string>

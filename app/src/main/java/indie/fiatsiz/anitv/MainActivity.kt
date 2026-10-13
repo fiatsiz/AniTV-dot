@@ -101,6 +101,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -240,7 +241,10 @@ private fun AniTV() {
         val selectedEpisode = episode!!
         val saved = library.firstOrNull { it.anime.id == selectedAnime.id }?.progress
             ?.takeIf { it.episodeId == selectedEpisode.id }?.positionMs ?: 0L
-        Playback(stream!!, saved, translationSettings, context.resources.configuration.locales[0].language, onBack = ::back, onProgress = { position, duration ->
+        Playback(stream!!, saved, translationSettings, context.resources.configuration.locales[0].language, onBack = ::back, onTranslationSettings = { next ->
+            translationSettings = next
+            translationStore.save(next)
+        }, onProgress = { position, duration ->
             save { entries -> LibraryStore.update(entries, selectedAnime) {
                 it.copy(progress = WatchProgress(selectedEpisode.id, selectedEpisode.number, position, duration))
             } }
@@ -587,17 +591,25 @@ private fun SearchField(value: String, onChange: (String) -> Unit, onSearch: () 
 }
 
 private data class QualityOption(val group: TrackGroup, val index: Int, val label: String)
+private enum class CaptionMode { OFF, ORIGINAL, TRANSLATED }
+private enum class CaptionMenu { CLOSED, OPTIONS, LANGUAGES }
+private val captionLanguages = listOf("ar", "de", "en", "es", "fr", "id", "it", "ja", "ko", "nl", "pl", "pt", "ru", "tr", "uk")
 
 @Composable
 private fun Playback(stream: Stream, savedPositionMs: Long, translation: TranslationSettings, targetLanguage: String,
-    onBack: () -> Unit, onProgress: (Long, Long) -> Unit, onError: (String) -> Unit) {
+    onBack: () -> Unit, onTranslationSettings: (TranslationSettings) -> Unit,
+    onProgress: (Long, Long) -> Unit, onError: (String) -> Unit) {
     val context = LocalContext.current
+    val displayLocale = context.resources.configuration.locales[0]
     val source = remember { HiAnimeSource() }
     val translator = remember { SubtitleTranslator() }
-    val translationOn = translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
+    val translationReady = translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
+    val effectiveTarget = translation.targetLanguage.ifBlank { targetLanguage }
+    var captionMode by remember(stream) { mutableStateOf(if (translationReady) CaptionMode.TRANSLATED else CaptionMode.ORIGINAL) }
+    val translationOn = captionMode == CaptionMode.TRANSLATED && translationReady
     var buffering by remember(stream) { mutableStateOf(true) }
     var playing by remember(stream) { mutableStateOf(true) }
-    var captions by remember(stream) { mutableStateOf(true) }
+    var captionMenu by remember(stream) { mutableStateOf(CaptionMenu.CLOSED) }
     var positionMs by remember(stream) { mutableStateOf(savedPositionMs) }
     var durationMs by remember(stream) { mutableStateOf(0L) }
     var controlsVisible by remember(stream) { mutableStateOf(true) }
@@ -605,12 +617,14 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
     var qualityOptions by remember(stream) { mutableStateOf<List<QualityOption>>(emptyList()) }
     var selectedQuality by remember(stream) { mutableStateOf(context.getString(R.string.auto)) }
     var interactionTick by remember(stream) { mutableStateOf(0) }
-    var captionCues by remember(stream) { mutableStateOf<List<SubtitleCue>>(emptyList()) }
-    var translatedTexts by remember(stream) { mutableStateOf<Map<Int, String>>(emptyMap()) }
-    var translationFailed by remember(stream, translation, targetLanguage) { mutableStateOf(false) }
+    var captionCues by remember(stream, translationOn, effectiveTarget) { mutableStateOf<List<SubtitleCue>>(emptyList()) }
+    var translatedTexts by remember(stream, translationOn, effectiveTarget) { mutableStateOf<Map<Int, String>>(emptyMap()) }
+    var translationFailed by remember(stream, translationOn, effectiveTarget) { mutableStateOf(false) }
     val controlFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val videoFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val qualityFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val captionFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val languageFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val progressCallback by androidx.compose.runtime.rememberUpdatedState(onProgress)
     val errorCallback by androidx.compose.runtime.rememberUpdatedState(onError)
     val player = remember(stream) {
@@ -623,7 +637,7 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
                 .setMimeType(MimeTypes.TEXT_VTT).setLanguage("en").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()))
             setMediaItem(builder.build())
             trackSelectionParameters = trackSelectionParameters.buildUpon()
-                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, translationOn).build()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, captionMode == CaptionMode.OFF || translationOn).build()
             if (savedPositionMs > 0) seekTo(savedPositionMs)
             addListener(object : Player.Listener {
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { playing = playWhenReady }
@@ -665,18 +679,18 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
             durationMs = player.duration.coerceAtLeast(0)
         }
     }
-    androidx.compose.runtime.LaunchedEffect(stream, translation, targetLanguage) {
+    androidx.compose.runtime.LaunchedEffect(stream, translationOn, translation.provider, translation.apiKey, effectiveTarget) {
         if (!translationOn) return@LaunchedEffect
         try {
             val cues = withContext(Dispatchers.IO) { source.subtitleCues(stream) }
             if (cues.isEmpty()) throw IllegalStateException("No subtitle cues")
             captionCues = cues
-            val firstCue = cues.indexOfFirst { it.endMs >= savedPositionMs }
+            val firstCue = cues.indexOfFirst { it.endMs >= player.currentPosition }
             var start = if (firstCue < 0) cues.size else firstCue
             while (start < cues.size) {
                 val end = subtitleBatchEnd(start, cues.size)
                 val translated = withContext(Dispatchers.IO) {
-                    translator.translate(translation.provider, translation.apiKey, targetLanguage, cues.subList(start, end).map { it.text })
+                    translator.translate(translation.provider, translation.apiKey, effectiveTarget, cues.subList(start, end).map { it.text })
                 }
                 translatedTexts = translatedTexts + (start until end).associateWith { translated[it - start] }
                 val translatedThrough = end - 1
@@ -693,9 +707,9 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
             translationFailed = true
         }
     }
-    androidx.compose.runtime.LaunchedEffect(player, captions, translationOn, translationFailed) {
+    androidx.compose.runtime.LaunchedEffect(player, captionMode, translationOn, translationFailed) {
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !captions || (translationOn && !translationFailed)).build()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, captionMode == CaptionMode.OFF || (translationOn && !translationFailed)).build()
     }
     DisposableEffect(player) {
         onDispose {
@@ -703,15 +717,24 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
             player.release()
         }
     }
-    androidx.compose.runtime.LaunchedEffect(controlsVisible, qualityOpen) {
+    BackHandler(captionMenu != CaptionMenu.CLOSED || qualityOpen) {
+        when {
+            captionMenu == CaptionMenu.LANGUAGES -> captionMenu = CaptionMenu.OPTIONS
+            captionMenu == CaptionMenu.OPTIONS -> captionMenu = CaptionMenu.CLOSED
+            else -> qualityOpen = false
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(controlsVisible, qualityOpen, captionMenu) {
         when {
             !controlsVisible -> videoFocus.requestFocus()
+            captionMenu == CaptionMenu.LANGUAGES -> languageFocus.requestFocus()
+            captionMenu == CaptionMenu.OPTIONS -> captionFocus.requestFocus()
             qualityOpen -> qualityFocus.requestFocus()
             else -> controlFocus.requestFocus()
         }
     }
-    androidx.compose.runtime.LaunchedEffect(controlsVisible, qualityOpen, playing, interactionTick) {
-        if (controlsVisible && playing && !qualityOpen) {
+    androidx.compose.runtime.LaunchedEffect(controlsVisible, qualityOpen, captionMenu, playing, interactionTick) {
+        if (controlsVisible && playing && !qualityOpen && captionMenu == CaptionMenu.CLOSED) {
             delay(6_000)
             controlsVisible = false
         }
@@ -720,7 +743,7 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
         .onPreviewKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
             when {
-                controlsVisible && !qualityOpen && event.key == Key.DirectionDown -> {
+                controlsVisible && !qualityOpen && captionMenu == CaptionMenu.CLOSED && event.key == Key.DirectionDown -> {
                     controlsVisible = false
                     true
                 }
@@ -741,7 +764,7 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
             modifier = Modifier.fillMaxSize()
         )
         val activeCue = captionCues.withIndex().firstOrNull { positionMs in it.value.startMs until it.value.endMs }
-        if (captions && translationOn && !translationFailed && activeCue != null) {
+        if (translationOn && !translationFailed && activeCue != null) {
             Text(translatedTexts[activeCue.index] ?: activeCue.value.text,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 48.dp, vertical = 52.dp)
                     .background(Color(0xCC000000), RoundedCornerShape(8.dp)).padding(horizontal = 20.dp, vertical = 12.dp),
@@ -763,9 +786,13 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
                 }
                 Button(onClick = { player.seekTo((player.currentPosition + 10_000).coerceAtMost(player.duration.coerceAtLeast(0))) }) { Text(stringResource(R.string.seek_forward)) }
                 Button(onClick = {
-                    captions = !captions
-                }) { Text(stringResource(if (captions) R.string.captions_on else R.string.captions_off)) }
-                if (qualityOptions.size > 1) Button(onClick = { qualityOpen = !qualityOpen }) { Text(stringResource(R.string.quality, selectedQuality)) }
+                    qualityOpen = false
+                    captionMenu = if (captionMenu == CaptionMenu.CLOSED) CaptionMenu.OPTIONS else CaptionMenu.CLOSED
+                }) { Text(stringResource(R.string.captions_settings)) }
+                if (qualityOptions.size > 1) Button(onClick = {
+                    captionMenu = CaptionMenu.CLOSED
+                    qualityOpen = !qualityOpen
+                }) { Text(stringResource(R.string.quality, selectedQuality)) }
                 else Text(stringResource(R.string.auto_quality), color = Color.White)
                 Text("${positionMs / 60_000}:${(positionMs / 1_000 % 60).toString().padStart(2, '0')} / " +
                     "${durationMs / 60_000}:${(durationMs / 1_000 % 60).toString().padStart(2, '0')}", color = Color.White)
@@ -785,6 +812,45 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
                         selectedQuality = option.label.substringBefore(" ·")
                         qualityOpen = false
                     }) { Text(option.label) }
+                }
+            }
+            if (captionMenu != CaptionMenu.CLOSED) Column(Modifier.align(Alignment.TopEnd).padding(top = 76.dp, end = 16.dp)
+                .width(320.dp).background(Color(0xEE0F0F23)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (captionMenu == CaptionMenu.OPTIONS) {
+                    Text(stringResource(R.string.captions_settings), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                    Button(onClick = { captionMode = CaptionMode.OFF; captionMenu = CaptionMenu.CLOSED },
+                        modifier = Modifier.fillMaxWidth().then(if (captionMode == CaptionMode.OFF) Modifier.focusRequester(captionFocus) else Modifier)
+                            .semantics { selected = captionMode == CaptionMode.OFF }) {
+                        Text(stringResource(R.string.captions_off))
+                    }
+                    Button(onClick = { captionMode = CaptionMode.ORIGINAL; captionMenu = CaptionMenu.CLOSED },
+                        modifier = Modifier.fillMaxWidth().then(if (captionMode == CaptionMode.ORIGINAL) Modifier.focusRequester(captionFocus) else Modifier)
+                            .semantics { selected = captionMode == CaptionMode.ORIGINAL }) {
+                        Text(stringResource(R.string.captions_original))
+                    }
+                    Button(onClick = { captionMode = CaptionMode.TRANSLATED; captionMenu = CaptionMenu.CLOSED }, enabled = translationReady,
+                        modifier = Modifier.fillMaxWidth().then(if (captionMode == CaptionMode.TRANSLATED) Modifier.focusRequester(captionFocus) else Modifier)
+                            .semantics { selected = captionMode == CaptionMode.TRANSLATED }) {
+                        Text(stringResource(R.string.captions_translate, stringResource(if (translation.provider == TranslationProvider.DEEPL) R.string.translation_deepl else R.string.translation_google)))
+                    }
+                    if (!translationReady) Text(stringResource(R.string.translation_setup_hint), color = Color(0xFFB9C5D8), fontSize = 14.sp)
+                    Button(onClick = { captionMenu = CaptionMenu.LANGUAGES }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.captions_language, Locale.forLanguageTag(effectiveTarget).getDisplayLanguage(displayLocale)))
+                    }
+                } else {
+                    Text(stringResource(R.string.captions_language_title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                    Column(Modifier.height(320.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        captionLanguages.forEach { language ->
+                            Button(onClick = {
+                                onTranslationSettings(translation.copy(targetLanguage = language))
+                                captionMenu = CaptionMenu.OPTIONS
+                            }, modifier = Modifier.fillMaxWidth()
+                                .then(if (language == effectiveTarget || (language == captionLanguages.first() && effectiveTarget !in captionLanguages)) Modifier.focusRequester(languageFocus) else Modifier)
+                                .semantics { selected = language == effectiveTarget }) {
+                                Text(Locale.forLanguageTag(language).getDisplayLanguage(displayLocale))
+                            }
+                        }
+                    }
                 }
             }
         }

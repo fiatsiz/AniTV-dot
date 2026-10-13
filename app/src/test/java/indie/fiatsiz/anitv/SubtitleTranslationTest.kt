@@ -17,4 +17,11 @@ class SubtitleTranslationTest {
         assertFalse(shouldPrefetchNextBatch(0, 3))
         assertTrue(shouldPrefetchNextBatch(1, 3))
     }
+
+    @Test
+    fun deeplUsesSupportedRegionalTargets() {
+        assertEquals("EN-US", deeplTargetLanguage("en"))
+        assertEquals("PT-BR", deeplTargetLanguage("pt"))
+        assertEquals("TR", deeplTargetLanguage("tr"))
+    }
 }
