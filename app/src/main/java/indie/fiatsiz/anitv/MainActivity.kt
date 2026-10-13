@@ -501,7 +501,7 @@ private fun SettingsEnglishPreview() {
 
 @Preview(name = "TV settings (Turkish)", widthDp = 960, heightDp = 540, locale = "tr")
 @Composable
-private fun SettingsPreview() {
+private fun SettingsTurkishPreview() {
     AniTVTheme(isInDarkTheme = true) {
         Surface(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
