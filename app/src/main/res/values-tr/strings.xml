@@ -119,6 +119,7 @@
     <string name="audio_dub">Dublajlı</string>
     <string name="audio_source_hint">Dublaj sesi kaynağın dilindedir. Dublaj dili değiştirilemez.</string>
     <string name="captions_unavailable">Altyazı yok</string>
+    <string name="start_watching">İzlemeye başla</string>
     <string name="continue_watching">İzlemeye devam et</string>
     <string name="continue_episode_position">Bölüm %1$s · %2$s · %3$s</string>
     <string name="continue_hint">Kaldığın yerden devam et.</string>

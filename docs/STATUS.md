@@ -40,6 +40,7 @@ As of 2026-10-13.
 
 ## Verified
 
+- Detail now shows localized Start watching when no positive saved position exists; it starts the first loaded episode and stays disabled until episodes load. A saved-progress title keeps Continue watching. `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline` passed; the APK installed and launched on the Android TV emulator, where D-pad navigation opened a progressed title and displayed Continue watching. Start watching remains unverified on-device because the emulator library has no unstarted title; no app data was cleared.
 - Reverted commits `11285cb`, `eb3a64e`, and `8cb0df1` at the user's request. `LibraryContent.kt` matches its state before those commits. `./gradlew :app:assembleDebug --offline` passed. Unit tests were not rerun; TV behavior remains unverified. No source requests or ADB installation/testing were performed.
 
 - Episode sidebar passed `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline`; all 32 unit tests passed. New tests verify current-episode targeting by ID, empty/missing-current fallback, and current indices in a 1,200-episode list. The sidebar preview compiles. Modal focus, current-row appearance, D-pad list traversal, Back/close focus restoration, switching/progress/audio, and retry while playing remain unverified on TV.

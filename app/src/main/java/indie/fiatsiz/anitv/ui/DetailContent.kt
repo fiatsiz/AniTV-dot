@@ -65,6 +65,10 @@ internal fun DetailContent(selected: Anime, entry: LibraryEntry?, episodes: List
                     }
                     if (entry != null && LibraryStore.resumeEpisode(entry) != null) item {
                         ContinueWatchingButton(entry.progress!!, onContinue)
+                    } else item {
+                        Button(onClick = { episodes.firstOrNull()?.let(onEpisode) }, enabled = episodes.isNotEmpty()) {
+                            Text(stringResource(R.string.start_watching))
+                        }
                     }
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
