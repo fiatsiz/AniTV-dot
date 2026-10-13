@@ -17,6 +17,14 @@
     <string name="language_system">Sistem varsayılanı</string>
     <string name="language_english">English</string>
     <string name="language_turkish">Türkçe</string>
+    <string name="caption_translation">Altyazı çevirisi</string>
+    <string name="translation_hint">Altyazıları uygulama diline çevirir. Anahtar TV’de şifrelenir. DeepL istemci uygulamalarında anahtar kullanımına karşı uyarır; yalnızca kişisel anahtar kullan.</string>
+    <string name="translation_off">Çeviri kapalı</string>
+    <string name="translation_google">Google Translate</string>
+    <string name="translation_deepl">DeepL</string>
+    <string name="translation_key">Sağlayıcı API anahtarı</string>
+    <string name="translation_key_hint">API anahtarını gir</string>
+    <string name="translation_unavailable">Çeviri kullanılamıyor. Özgün altyazılar gösteriliyor.</string>
     <string name="home">Ana sayfa</string>
     <string name="back">Geri</string>
     <string name="back_to_episodes">Bölümlere dön</string>

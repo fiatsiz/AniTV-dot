@@ -17,6 +17,14 @@
     <string name="language_system">System default</string>
     <string name="language_english">English</string>
     <string name="language_turkish">Türkçe</string>
+    <string name="caption_translation">Caption translation</string>
+    <string name="translation_hint">Translate captions to the app language. Keys are encrypted on this TV. DeepL advises against client-side keys; use a personal key only.</string>
+    <string name="translation_off">Translation off</string>
+    <string name="translation_google">Google Translate</string>
+    <string name="translation_deepl">DeepL</string>
+    <string name="translation_key">Provider API key</string>
+    <string name="translation_key_hint">Enter API key</string>
+    <string name="translation_unavailable">Translation unavailable. Showing original captions.</string>
     <string name="home">Home</string>
     <string name="back">Back</string>
     <string name="back_to_episodes">Back to episodes</string>

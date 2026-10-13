@@ -13,6 +13,7 @@ data class Anime(val id: String, val title: String, val detailUrl: String? = nul
 data class AnimeDetails(val description: String, val posterUrl: String, val facts: List<String>)
 data class Episode(val id: String, val number: String, val title: String)
 data class Stream(val url: String, val subtitleUrl: String, val referer: String)
+data class SubtitleCue(val startMs: Long, val endMs: Long, val text: String)
 
 enum class SourceFailure {
     DETAIL_MISSING, DETAIL_LINK_INVALID, EPISODES_LOAD, SERVERS_LOAD, NO_SUB_SERVER,
@@ -41,6 +42,8 @@ class HiAnimeSource {
     }
 
     fun poster(url: String): ByteArray = getBytes(url, maxBytes = 8_000_000)
+
+    fun subtitleCues(stream: Stream): List<SubtitleCue> = parseVtt(get(stream.subtitleUrl, stream.referer))
 
     fun episodes(anime: Anime): List<Episode> {
         val json = JSONObject(get("$base/api/theme/episode/list/${anime.id}"))
@@ -102,6 +105,28 @@ class HiAnimeSource {
 
     companion object {
         private const val KEY = "otaku-embed-v1"
+
+        fun parseVtt(vtt: String): List<SubtitleCue> = vtt.replace("\r", "").split("\n\n").mapNotNull { block ->
+            val lines = block.lines()
+            val timing = lines.indexOfFirst { it.contains(" --> ") }
+            if (timing < 0 || timing + 1 >= lines.size) return@mapNotNull null
+            val times = lines[timing].split(" --> ", limit = 2)
+            if (times.size != 2) return@mapNotNull null
+            fun parseTime(value: String): Long? {
+                val parts = value.substringBefore(' ').split(':')
+                if (parts.size !in 2..3) return null
+                val seconds = parts.last().split('.')
+                val wholeSeconds = seconds[0].toLongOrNull() ?: return null
+                val millis = seconds.getOrNull(1)?.padEnd(3, '0')?.take(3)?.toLongOrNull() ?: 0L
+                val minutes = parts[parts.lastIndex - 1].toLongOrNull() ?: return null
+                val hours = if (parts.size == 3) parts[0].toLongOrNull() ?: return null else 0L
+                return ((hours * 60 + minutes) * 60 + wholeSeconds) * 1000 + millis
+            }
+            val start = parseTime(times[0]) ?: return@mapNotNull null
+            val end = parseTime(times[1]) ?: return@mapNotNull null
+            val text = Jsoup.parse(lines.drop(timing + 1).joinToString(" ")).text().trim()
+            if (end <= start || text.isEmpty()) null else SubtitleCue(start, end, text)
+        }
 
         fun parseSearch(html: String): List<Anime> {
             if (html.contains("Just a moment", ignoreCase = true)) throw SourceException(SourceFailure.SEARCH_BLOCKED)

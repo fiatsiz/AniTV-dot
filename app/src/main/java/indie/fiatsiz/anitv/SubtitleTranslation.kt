@@ -1,0 +1,102 @@
+package indie.fiatsiz.anitv
+
+import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import org.json.JSONArray
+import org.json.JSONObject
+import org.jsoup.Jsoup
+import java.io.IOException
+import java.security.KeyStore
+import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+import android.util.Base64
+
+enum class TranslationProvider { OFF, GOOGLE, DEEPL }
+
+data class TranslationSettings(val provider: TranslationProvider = TranslationProvider.OFF, val apiKey: String = "")
+
+internal fun subtitleBatchEnd(start: Int, cueCount: Int) = minOf(start + 4, cueCount)
+internal fun shouldPrefetchNextBatch(currentCue: Int, translatedThrough: Int) = currentCue >= translatedThrough - 2
+
+class TranslationSettingsStore(context: Context) {
+    private val preferences = context.getSharedPreferences("subtitle_translation", Context.MODE_PRIVATE)
+
+    fun read() = TranslationSettings(
+        runCatching { TranslationProvider.valueOf(preferences.getString("provider", "OFF")!!) }.getOrDefault(TranslationProvider.OFF),
+        runCatching { decrypt(preferences.getString("api_key", "").orEmpty()) }.getOrDefault("")
+    )
+
+    fun save(settings: TranslationSettings) {
+        preferences.edit().putString("provider", settings.provider.name).putString("api_key", encrypt(settings.apiKey)).apply()
+    }
+
+    private fun encrypt(value: String): String {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey())
+        return Base64.encodeToString(cipher.iv + cipher.doFinal(value.toByteArray(StandardCharsets.UTF_8)), Base64.NO_WRAP)
+    }
+
+    private fun decrypt(value: String): String {
+        if (value.isEmpty()) return ""
+        val payload = Base64.decode(value, Base64.NO_WRAP)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(128, payload.copyOfRange(0, 12)))
+        return String(cipher.doFinal(payload.copyOfRange(12, payload.size)), StandardCharsets.UTF_8)
+    }
+
+    private fun secretKey(): SecretKey {
+        val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        (store.getKey("anitv-caption-translation", null) as? SecretKey)?.let { return it }
+        return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
+            init(KeyGenParameterSpec.Builder("anitv-caption-translation", KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build())
+        }.generateKey()
+    }
+}
+
+class SubtitleTranslator {
+    fun translate(provider: TranslationProvider, apiKey: String, targetLanguage: String, texts: List<String>): List<String> {
+        require(provider != TranslationProvider.OFF && apiKey.isNotBlank() && texts.isNotEmpty())
+        val deepl = provider == TranslationProvider.DEEPL
+        val endpoint = if (deepl) {
+            val host = if (apiKey.endsWith(":fx", ignoreCase = true)) "api-free.deepl.com" else "api.deepl.com"
+            "https://$host/v2/translate"
+        } else "https://translation.googleapis.com/language/translate/v2?key=${URLEncoder.encode(apiKey, "UTF-8")}"
+        val body = if (deepl) JSONObject().put("text", JSONArray(texts)).put("target_lang", targetLanguage.uppercase())
+        else JSONObject().put("q", JSONArray(texts)).put("target", targetLanguage.lowercase()).put("format", "text")
+        val connection = (URI(endpoint).toURL().openConnection() as HttpURLConnection).apply {
+            connectTimeout = 10_000
+            readTimeout = 10_000
+            requestMethod = "POST"
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            if (deepl) setRequestProperty("Authorization", "DeepL-Auth-Key $apiKey")
+        }
+        try {
+            connection.outputStream.use { it.write(body.toString().toByteArray(StandardCharsets.UTF_8)) }
+            val status = connection.responseCode
+            if (status !in 200..299) throw IOException("Translation request failed ($status)")
+            val response = connection.inputStream.use { input ->
+                val bytes = input.readNBytes(1_000_001)
+                if (bytes.size > 1_000_000) throw IOException("Translation response too large")
+                JSONObject(String(bytes, StandardCharsets.UTF_8))
+            }
+            val translated = if (deepl) response.getJSONArray("translations").let { array ->
+                (0 until array.length()).map { array.getJSONObject(it).getString("text") }
+            } else response.getJSONObject("data").getJSONArray("translations").let { array ->
+                (0 until array.length()).map { Jsoup.parseBodyFragment(array.getJSONObject(it).getString("translatedText")).text() }
+            }
+            if (translated.size != texts.size) throw IOException("Incomplete translation response")
+            return translated
+        } finally {
+            connection.disconnect()
+        }
+    }
+}

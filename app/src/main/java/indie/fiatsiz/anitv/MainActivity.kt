@@ -27,6 +27,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -61,6 +63,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -92,6 +95,7 @@ import indie.fiatsiz.anitv.source.AnimeDetails
 import indie.fiatsiz.anitv.source.Episode
 import indie.fiatsiz.anitv.source.HiAnimeSource
 import indie.fiatsiz.anitv.source.Stream
+import indie.fiatsiz.anitv.source.SubtitleCue
 import indie.fiatsiz.anitv.ui.theme.AniTVTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -117,8 +121,10 @@ private fun AniTV() {
     val source = remember { HiAnimeSource() }
     val store = remember { LibraryStore(context) }
     val detailCache = remember { AnimeDetailCache(context) }
+    val translationStore = remember { TranslationSettingsStore(context) }
     val scope = rememberCoroutineScope()
     var library by remember { mutableStateOf(store.read()) }
+    var translationSettings by remember { mutableStateOf(translationStore.read()) }
     var page by rememberSaveable { mutableStateOf(Page.HOME) }
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<Anime>>(emptyList()) }
@@ -234,7 +240,7 @@ private fun AniTV() {
         val selectedEpisode = episode!!
         val saved = library.firstOrNull { it.anime.id == selectedAnime.id }?.progress
             ?.takeIf { it.episodeId == selectedEpisode.id }?.positionMs ?: 0L
-        Playback(stream!!, saved, onBack = ::back, onProgress = { position, duration ->
+        Playback(stream!!, saved, translationSettings, context.resources.configuration.locales[0].language, onBack = ::back, onProgress = { position, duration ->
             save { entries -> LibraryStore.update(entries, selectedAnime) {
                 it.copy(progress = WatchProgress(selectedEpisode.id, selectedEpisode.number, position, duration))
             } }
@@ -331,9 +337,12 @@ private fun AniTV() {
                 val localeManager = context.getSystemService(LocaleManager::class.java)
                 val appLocales = localeManager.applicationLocales
                 val selectedLanguage = if (appLocales.isEmpty) "" else appLocales[0].language
-                SettingsContent(selectedLanguage, firstFocus, ::back) { tag ->
+                SettingsContent(selectedLanguage, translationSettings, firstFocus, ::back, { tag ->
                     if (tag != selectedLanguage)
                         localeManager.applicationLocales = if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(tag)
+                }) { next ->
+                    translationSettings = next
+                    translationStore.save(next)
                 }
             }
             else -> {
@@ -400,8 +409,11 @@ private fun LanguageChoice(label: Int, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SettingsContent(selectedLanguage: String, firstFocus: androidx.compose.ui.focus.FocusRequester,
-    onBack: () -> Unit, onSelect: (String) -> Unit) {
+private fun SettingsContent(selectedLanguage: String, translationSettings: TranslationSettings,
+    firstFocus: androidx.compose.ui.focus.FocusRequester, onBack: () -> Unit, onSelect: (String) -> Unit,
+    onTranslationSettings: (TranslationSettings) -> Unit) {
+    var keyFocused by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
     Button(onClick = onBack, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.home)) }
     Text(stringResource(R.string.settings), fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
     Text(stringResource(R.string.language_hint), color = Color(0xFFB9C5D8), fontSize = 18.sp)
@@ -410,6 +422,35 @@ private fun SettingsContent(selectedLanguage: String, firstFocus: androidx.compo
         LanguageChoice(R.string.language_system, selectedLanguage.isEmpty()) { onSelect("") }
         LanguageChoice(R.string.language_english, selectedLanguage == "en") { onSelect("en") }
         LanguageChoice(R.string.language_turkish, selectedLanguage == "tr") { onSelect("tr") }
+    }
+    Text(stringResource(R.string.caption_translation), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+    Text(stringResource(R.string.translation_hint), color = Color(0xFFB9C5D8), fontSize = 16.sp)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LanguageChoice(R.string.translation_off, translationSettings.provider == TranslationProvider.OFF) {
+            onTranslationSettings(translationSettings.copy(provider = TranslationProvider.OFF))
+        }
+        LanguageChoice(R.string.translation_google, translationSettings.provider == TranslationProvider.GOOGLE) {
+            onTranslationSettings(translationSettings.copy(provider = TranslationProvider.GOOGLE))
+        }
+        LanguageChoice(R.string.translation_deepl, translationSettings.provider == TranslationProvider.DEEPL) {
+            onTranslationSettings(translationSettings.copy(provider = TranslationProvider.DEEPL))
+        }
+    }
+    Text(stringResource(R.string.translation_key), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+    Box(Modifier.fillMaxWidth().height(54.dp)
+        .border(if (keyFocused) 3.dp else 1.dp, if (keyFocused) Color.White else Color.Gray, RoundedCornerShape(8.dp))
+        .padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
+        BasicTextField(
+            value = translationSettings.apiKey,
+            onValueChange = { onTranslationSettings(translationSettings.copy(apiKey = it)) },
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 18.sp),
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            modifier = Modifier.fillMaxWidth().onFocusChanged { keyFocused = it.isFocused }
+        )
+        if (translationSettings.apiKey.isEmpty() && !keyFocused) Text(stringResource(R.string.translation_key_hint), color = Color.LightGray)
+    }
     }
 }
 
@@ -493,7 +534,7 @@ private fun SettingsEnglishPreview() {
             Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 BrandHeader()
-                SettingsContent("en", remember { androidx.compose.ui.focus.FocusRequester() }, {}, {})
+                SettingsContent("en", TranslationSettings(), remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, {})
             }
         }
     }
@@ -507,7 +548,7 @@ private fun SettingsTurkishPreview() {
             Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 BrandHeader()
-                SettingsContent("tr", remember { androidx.compose.ui.focus.FocusRequester() }, {}, {})
+                SettingsContent("tr", TranslationSettings(), remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, {})
             }
         }
     }
@@ -548,8 +589,12 @@ private fun SearchField(value: String, onChange: (String) -> Unit, onSearch: () 
 private data class QualityOption(val group: TrackGroup, val index: Int, val label: String)
 
 @Composable
-private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, onProgress: (Long, Long) -> Unit, onError: (String) -> Unit) {
+private fun Playback(stream: Stream, savedPositionMs: Long, translation: TranslationSettings, targetLanguage: String,
+    onBack: () -> Unit, onProgress: (Long, Long) -> Unit, onError: (String) -> Unit) {
     val context = LocalContext.current
+    val source = remember { HiAnimeSource() }
+    val translator = remember { SubtitleTranslator() }
+    val translationOn = translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
     var buffering by remember(stream) { mutableStateOf(true) }
     var playing by remember(stream) { mutableStateOf(true) }
     var captions by remember(stream) { mutableStateOf(true) }
@@ -560,6 +605,9 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
     var qualityOptions by remember(stream) { mutableStateOf<List<QualityOption>>(emptyList()) }
     var selectedQuality by remember(stream) { mutableStateOf(context.getString(R.string.auto)) }
     var interactionTick by remember(stream) { mutableStateOf(0) }
+    var captionCues by remember(stream) { mutableStateOf<List<SubtitleCue>>(emptyList()) }
+    var translatedTexts by remember(stream) { mutableStateOf<Map<Int, String>>(emptyMap()) }
+    var translationFailed by remember(stream, translation, targetLanguage) { mutableStateOf(false) }
     val controlFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val videoFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val qualityFocus = remember { androidx.compose.ui.focus.FocusRequester() }
@@ -574,6 +622,8 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
             builder.setSubtitleConfigurations(listOf(MediaItem.SubtitleConfiguration.Builder(android.net.Uri.parse(stream.subtitleUrl))
                 .setMimeType(MimeTypes.TEXT_VTT).setLanguage("en").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()))
             setMediaItem(builder.build())
+            trackSelectionParameters = trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, translationOn).build()
             if (savedPositionMs > 0) seekTo(savedPositionMs)
             addListener(object : Player.Listener {
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { playing = playWhenReady }
@@ -607,6 +657,45 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
             durationMs = player.duration.coerceAtLeast(0)
             if (positionMs > 0) progressCallback(positionMs, durationMs)
         }
+    }
+    androidx.compose.runtime.LaunchedEffect(player) {
+        while (true) {
+            delay(250)
+            positionMs = player.currentPosition.coerceAtLeast(0)
+            durationMs = player.duration.coerceAtLeast(0)
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(stream, translation, targetLanguage) {
+        if (!translationOn) return@LaunchedEffect
+        try {
+            val cues = withContext(Dispatchers.IO) { source.subtitleCues(stream) }
+            if (cues.isEmpty()) throw IllegalStateException("No subtitle cues")
+            captionCues = cues
+            val firstCue = cues.indexOfFirst { it.endMs >= savedPositionMs }
+            var start = if (firstCue < 0) cues.size else firstCue
+            while (start < cues.size) {
+                val end = subtitleBatchEnd(start, cues.size)
+                val translated = withContext(Dispatchers.IO) {
+                    translator.translate(translation.provider, translation.apiKey, targetLanguage, cues.subList(start, end).map { it.text })
+                }
+                translatedTexts = translatedTexts + (start until end).associateWith { translated[it - start] }
+                val translatedThrough = end - 1
+                fun currentCue() = cues.indexOfFirst { it.endMs > player.currentPosition }.let { if (it < 0) cues.size else it }
+                while (!shouldPrefetchNextBatch(currentCue(), translatedThrough)) {
+                    delay(250)
+                }
+                val current = currentCue()
+                start = maxOf(current, end)
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            translationFailed = true
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(player, captions, translationOn, translationFailed) {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !captions || (translationOn && !translationFailed)).build()
     }
     DisposableEffect(player) {
         onDispose {
@@ -651,6 +740,19 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
             } },
             modifier = Modifier.fillMaxSize()
         )
+        val activeCue = captionCues.withIndex().firstOrNull { positionMs in it.value.startMs until it.value.endMs }
+        if (captions && translationOn && !translationFailed && activeCue != null) {
+            Text(translatedTexts[activeCue.index] ?: activeCue.value.text,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 48.dp, vertical = 52.dp)
+                    .background(Color(0xCC000000), RoundedCornerShape(8.dp)).padding(horizontal = 20.dp, vertical = 12.dp),
+                color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        }
+        if (translationOn && translationFailed) {
+            Text(stringResource(R.string.translation_unavailable),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp)
+                    .background(Color(0xCC000000), RoundedCornerShape(8.dp)).padding(12.dp), color = Color.White)
+        }
         if (controlsVisible) {
             Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().background(Color(0xDD0F0F23)).padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -662,8 +764,6 @@ private fun Playback(stream: Stream, savedPositionMs: Long, onBack: () -> Unit, 
                 Button(onClick = { player.seekTo((player.currentPosition + 10_000).coerceAtMost(player.duration.coerceAtLeast(0))) }) { Text(stringResource(R.string.seek_forward)) }
                 Button(onClick = {
                     captions = !captions
-                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !captions).build()
                 }) { Text(stringResource(if (captions) R.string.captions_on else R.string.captions_off)) }
                 if (qualityOptions.size > 1) Button(onClick = { qualityOpen = !qualityOpen }) { Text(stringResource(R.string.quality, selectedQuality)) }
                 else Text(stringResource(R.string.auto_quality), color = Color.White)

@@ -1,6 +1,6 @@
 # AniTV architecture
 
-AniTV is one Kotlin Android `app` module. Compose for TV owns navigation and screens; `LibraryStore` owns local favorites and progress; `AnimeDetailCache` owns cached title metadata and poster files; `HiAnimeSource` owns site requests and parsing; Media3 owns playback.
+AniTV is one Kotlin Android `app` module. Compose for TV owns navigation and screens; `LibraryStore` owns local favorites and progress; `AnimeDetailCache` owns cached title metadata and poster files; `HiAnimeSource` owns HiAnime requests and parsing; `SubtitleTranslator` owns Google/DeepL API requests; Media3 owns playback.
 
 ```text
 Home → Search/results or local library → detail + episodes → HLS + VTT player
@@ -8,6 +8,8 @@ Home → Search/results or local library → detail + episodes → HLS + VTT pla
                          LibraryStore ← progress/favorite/completed
                          AnimeDetailCache ← description/facts/poster/timestamp
 Home → Settings → Android LocaleManager → English or Turkish resources
+Settings → TranslationSettingsStore → Android Keystore → provider key
+Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Compose caption overlay
 ```
 
 ## Files and responsibilities
@@ -19,6 +21,7 @@ Home → Settings → Android LocaleManager → English or Turkish resources
 | `app/src/main/java/indie/fiatsiz/anitv/LibraryStore.kt` | `SharedPreferences` JSON encoding, decoding, and library rules, including saved detail links. |
 | `app/src/main/java/indie/fiatsiz/anitv/AnimeDetailCache.kt` | Timestamped detail metadata in private preferences and poster bytes in the app cache directory. |
 | `app/src/main/java/indie/fiatsiz/anitv/source/HiAnimeSource.kt` | HTTPS requests, HiAnime selectors, detail/episode/server parsing, poster download, player metadata decoding, and language-neutral source failure codes. |
+| `app/src/main/java/indie/fiatsiz/anitv/SubtitleTranslation.kt` | Translation provider settings, Android Keystore encryption for API keys, and HTTPS Google Cloud Translation Basic v2 / DeepL text requests. |
 | `app/src/main/java/indie/fiatsiz/anitv/ui/theme/` | Existing TV theme. |
 | `app/src/test/` | Library and cache rule tests, sanitized response fragments, and parser tests. |
 | `gradle/libs.versions.toml` | Dependency versions and aliases. |
@@ -33,8 +36,9 @@ Home → Settings → Android LocaleManager → English or Turkish resources
 3. `AnimeDetailCache` returns stored details and image bytes immediately. Entries under 24 hours old skip a network request. Older entries stay visible while `HiAnimeSource` fetches new metadata and poster bytes; a missing cached image also triggers refresh. The changed cache metadata key invalidates earlier wide-cover entries, so they refresh on first open. Android may evict files from the cache directory, which results in a new fetch.
 4. Selecting an episode calls `stream()`. The source reads `/api/theme/episode/servers?episodeId=...`, selects the `sub` ZokoAnime server, decodes its embed link, and reads the embed page. `parsePlayer()` decodes `window.__P` into an HTTPS HLS URL and VTT subtitle URL.
 5. `Playback` builds a Media3 `MediaItem` with an external VTT track. `DefaultHttpDataSource` sends the embed origin as `Referer` for stream and subtitle requests. `PlayerView` renders video; Compose buttons handle the remote. Media3 track groups populate the optional quality selector. Controls hide on D-pad Down or after six seconds of play, and show on D-pad Up or Select. `DisposableEffect` saves progress and releases `ExoPlayer` when playback leaves composition.
-6. `LibraryStore` saves favorites, completion, and one last episode/position per title as JSON in private `SharedPreferences`. Playback saves progress every five seconds and on exit. The completed archive changes only through the detail-screen button. Currently watching filters saved progress to non-completed titles.
-7. Settings reads and sets Android `LocaleManager.applicationLocales`. An empty locale list follows the system; explicit `en` or `tr` choices persist in Android and cause a configuration change. Android string resources localize app controls and source errors. `HiAnimeSource` emits typed failure codes without depending on Android resources.
+6. With a configured translation provider, playback fetches and parses the timed VTT through `HiAnimeSource`, disables the native text track, then shows the active cue in a Compose overlay. `SubtitleTranslator` sends up to four cue strings per HTTPS request. The app translates the current/following cues first, then advances the batch as playback approaches the end of translated cues. On VTT or API failure, playback re-enables the original Media3 subtitle track and shows a notice. Target language follows the app/TV locale.
+7. `LibraryStore` saves favorites, completion, and one last episode/position per title as JSON in private `SharedPreferences`. Playback saves progress every five seconds and on exit. The completed archive changes only through the detail-screen button. Currently watching filters saved progress to non-completed titles.
+8. Settings reads and sets Android `LocaleManager.applicationLocales`. An empty locale list follows the system; explicit `en` or `tr` choices persist in Android and cause a configuration change. `TranslationSettingsStore` encrypts the API key with Android Keystore and stores the provider choice in private preferences. Android string resources localize app controls and source errors. `HiAnimeSource` emits typed failure codes without depending on Android resources.
 
 The UI uses `remember` state for query, results, selection, loading, and errors. The page uses `rememberSaveable` so Settings remains open after a language change. A request counter ignores late responses after another selection or Back. Search query and results are not persisted across process death; library and detail cache state are.
 
@@ -42,6 +46,8 @@ The UI uses `remember` state for query, results, selection, loading, and errors.
 
 - Source calls use `HttpURLConnection` with 15-second connect and read timeouts, HTTPS validation, `User-Agent`, and `Referer`. Responses are limited to 8 MB. Jsoup parses HTML; `org.json` parses response bodies.
 - The source reports blocked requests, non-success HTTP responses, missing markup, missing subtitle servers, malformed player data, insecure links, and oversized responses. Player errors show a retry instruction. Full stream URLs, cookies, and tokens are not logged.
+- Translation uses Google Cloud Translation Basic v2 (API-key authentication) and DeepL v2. Keys are encrypted on-device and never logged. Requests go directly from the TV to the provider. DeepL advises against client-side API keys; personal users accept exposure risk if a device is compromised, while a distributed app should use a protected server proxy.
+- Translation requests use HTTPS and short timeouts. The source VTT remains the fallback if translation fails; translation responses stay in playback memory and are not persisted.
 - There is no official or stable HiAnime API contract. Update selectors and endpoints only after inspecting current responses, then update saved fixtures and tests.
 - `ani-cli` was used only as a behavior reference. No GPLv3 code was copied.
 
