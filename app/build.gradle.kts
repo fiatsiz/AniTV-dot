@@ -14,12 +14,37 @@ android {
         minSdk = 34
         targetSdk = 37
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
     }
 
+    val releaseVariables = listOf("ANITV_RELEASE_KEYSTORE", "ANITV_RELEASE_STORE_PASSWORD",
+        "ANITV_RELEASE_KEY_ALIAS", "ANITV_RELEASE_KEY_PASSWORD")
+    val releaseCredentials = releaseVariables.associateWith { System.getenv(it)?.takeIf(String::isNotBlank) }
+    signingConfigs {
+        create("ownerRelease") {
+            releaseCredentials["ANITV_RELEASE_KEYSTORE"]?.let { storeFile = file(it) }
+            storePassword = releaseCredentials["ANITV_RELEASE_STORE_PASSWORD"]
+            keyAlias = releaseCredentials["ANITV_RELEASE_KEY_ALIAS"]
+            keyPassword = releaseCredentials["ANITV_RELEASE_KEY_PASSWORD"]
+        }
+    }
+    val missingReleaseVariables = releaseVariables.filter { releaseCredentials[it] == null }
+    val ownerKeystore = releaseCredentials["ANITV_RELEASE_KEYSTORE"]?.let { file(it) }
+    val validateReleaseSigning = tasks.register("validateOwnerReleaseSigning") {
+        doLast {
+            check(missingReleaseVariables.isEmpty()) { "Release signing requires owner credentials: ${missingReleaseVariables.joinToString()}. See docs/RELEASE.md." }
+            check(ownerKeystore?.isFile == true) {
+                "ANITV_RELEASE_KEYSTORE must point to the owner's permanent keystore."
+            }
+        }
+    }
+    tasks.configureEach {
+        if (name == "validateSigningRelease" || name == "packageRelease") dependsOn(validateReleaseSigning)
+    }
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("ownerRelease")
             optimization {
                 enable = false
             }
@@ -31,6 +56,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

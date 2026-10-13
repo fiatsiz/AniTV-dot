@@ -41,6 +41,13 @@ As of 2026-10-13.
 - Settings supports keyed Google Cloud Translation and DeepL caption translation. Provider keys are encrypted at rest with Android Keystore. Playback fetches timed VTT cues and translates rolling batches of four ahead of the current cue; original Media3 captions return if translation fails. English and Portuguese DeepL targets use supported regional codes.
 - Original and translated captions use the same Media3 subtitle renderer and saved style. Default captions use white sans serif text at 100% size on an 80% opaque black rectangular background. The player caption menu offers font, 50%/75%/100%/150%/200% size, background color, and text color choices.
 
+## Release preparation
+
+- Version is 1.0.0 / versionCode 1; SDK versions and release optimization remain unchanged.
+- External owner signing variables configure release packaging. `:app:testDebugUnitTest :app:assembleDebug --offline` passed (32 tests). Missing credentials are checked explicitly by `:app:validateOwnerReleaseSigning`.
+- No APK signing credentials are available in the current process. Signed assembly and release-certificate verification remain blocked; no replacement APK key was generated.
+- Initial Git status was clean, including `.gitignore`; the handoff's unrelated-change note was stale. `.gitignore` is excluded from changes.
+
 ## Verified
 
 - Search HTTP 403 investigation (2026-10-13): the installed Android TV emulator app successfully searched `takopi` and displayed “Takopi's Original Sin,” then searched `one piece` and displayed “One Piece” and related titles. Search results are fetched through `HiAnimeSource` without a search cache. The earlier desktop-probe warning is removed as an unresolved app issue; no app change is needed for the verified flow. `./gradlew :app:assembleDebug --offline` passed with all tasks up to date; the existing APK and its recorded SHA-256 are unchanged. Unit tests were not rerun because only documentation changed.

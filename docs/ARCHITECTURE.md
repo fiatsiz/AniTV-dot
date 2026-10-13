@@ -78,3 +78,7 @@ The UI uses `remember` state for query, results, selection, loading, and errors.
 - `ani-cli` was used only as a behavior reference. No GPLv3 code was copied.
 
 Run `./gradlew :app:testDebugUnitTest :app:assembleDebug` after source or UI changes. Test D-pad focus, Select, Back, video, audio, seek, subtitles, detail caching, and quality selection on an Android TV before claiming full device support for this build.
+
+## Release configuration
+
+`app/build.gradle.kts` reads owner APK signing credentials from four external environment variables and validates them only for release packaging. BuildConfig exposes the app version for Settings. Debug builds and unit tests do not require release secrets. See `docs/RELEASE.md`.
