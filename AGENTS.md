@@ -1,6 +1,6 @@
 # AniTV
 
-AniTV is a personal Android TV app for searching anime on `https://hianime.at`, selecting an episode, and watching it with a TV remote. Extend this existing Android Studio project; do not create a second project or replace the starter files wholesale.
+AniTV is an Android TV app for searching anime on `https://hianime.at`, selecting an episode, and watching it with a TV remote. Extend this existing Android Studio project; do not create a second project or replace the starter files wholesale.
 
 ## Current project
 
