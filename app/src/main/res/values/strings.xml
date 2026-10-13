@@ -28,7 +28,7 @@
     <string name="home">Home</string>
     <string name="back">Back</string>
     <string name="back_to_episodes">Back to episodes</string>
-    <string name="loading_stream">Loading subtitled stream…</string>
+    <string name="loading_stream">Loading stream…</string>
     <string name="retry_playback">Retry playback</string>
     <string name="poster_description">%1$s poster</string>
     <string name="artwork_loading">Artwork loading…</string>
@@ -98,8 +98,8 @@
     <string name="error_detail_missing">Could not find this anime\'s detail page. Search for it again.</string>
     <string name="error_detail_link_invalid">HiAnime returned an invalid detail link.</string>
     <string name="error_episodes_load">HiAnime could not load episodes.</string>
-    <string name="error_servers_load">HiAnime could not load subtitle servers.</string>
-    <string name="error_no_sub_server">No supported subtitled server is available for this episode.</string>
+    <string name="error_servers_load">HiAnime could not load playback servers.</string>
+    <string name="error_no_supported_server">No supported subtitled or dubbed server is available for this episode.</string>
     <string name="error_server_link_changed">HiAnime changed its server link format.</string>
     <string name="error_request_blocked">HiAnime or its player blocked the request (%1$d). Try again later.</string>
     <string name="error_request_failed">Source request failed (%1$d). The link may have expired.</string>
@@ -110,8 +110,13 @@
     <string name="error_detail_changed">HiAnime changed its anime detail page.</string>
     <string name="error_description_changed">HiAnime changed its anime description.</string>
     <string name="error_no_episodes">No episodes found. HiAnime may have changed its episode list.</string>
-    <string name="error_player_page_changed">The subtitle player changed its page format.</string>
-    <string name="error_player_stream_changed">The subtitle player changed its stream format.</string>
+    <string name="error_player_page_changed">The player changed its page format.</string>
+    <string name="error_player_stream_changed">The player changed its stream format.</string>
     <string name="error_no_subtitle">This episode has no usable subtitle track.</string>
     <string name="error_insecure_link">Source returned an invalid or insecure link.</string>
+    <string name="audio_version">Choose audio</string>
+    <string name="audio_sub">Subtitled</string>
+    <string name="audio_dub">Dubbed</string>
+    <string name="audio_source_hint">Dubbed audio uses the source language. Its language cannot be changed.</string>
+    <string name="captions_unavailable">No captions</string>
 </resources>

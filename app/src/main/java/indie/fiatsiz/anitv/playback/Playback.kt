@@ -68,10 +68,11 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
     val context = LocalContext.current
     val source = remember(userAgent) { HiAnimeSource(userAgent) }
     val translator = remember { SubtitleTranslator() }
-    val translationReady = translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
+    val hasCaptions = stream.subtitleUrl != null
+    val translationReady = hasCaptions && translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
     val captionStyle = translation.captionStyle
     val effectiveTarget = translation.targetLanguage.ifBlank { targetLanguage }
-    var captionMode by remember(stream) { mutableStateOf(if (translationReady) CaptionMode.TRANSLATED else CaptionMode.ORIGINAL) }
+    var captionMode by remember(stream) { mutableStateOf(if (!hasCaptions) CaptionMode.OFF else if (translationReady) CaptionMode.TRANSLATED else CaptionMode.ORIGINAL) }
     val translationOn = captionMode == CaptionMode.TRANSLATED && translationReady
     var buffering by remember(stream) { mutableStateOf(true) }
     var playing by remember(stream) { mutableStateOf(true) }
@@ -102,8 +103,10 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
             .setDefaultRequestProperties(mapOf("Referer" to stream.referer))
         ExoPlayer.Builder(context).setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(factory)).build().apply {
             val builder = MediaItem.Builder().setUri(stream.url).setMimeType(MimeTypes.APPLICATION_M3U8)
-            builder.setSubtitleConfigurations(listOf(MediaItem.SubtitleConfiguration.Builder(android.net.Uri.parse(stream.subtitleUrl))
-                .setMimeType(MimeTypes.TEXT_VTT).setLanguage("en").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()))
+            stream.subtitleUrl?.let { subtitle ->
+                builder.setSubtitleConfigurations(listOf(MediaItem.SubtitleConfiguration.Builder(android.net.Uri.parse(subtitle))
+                    .setMimeType(MimeTypes.TEXT_VTT).setLanguage("en").setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()))
+            }
             setMediaItem(builder.build())
             trackSelectionParameters = trackSelectionParameters.buildUpon()
                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, captionMode == CaptionMode.OFF || translationOn).build()
@@ -262,7 +265,7 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
                 Button(onClick = {
                     qualityOpen = false
                     captionMenu = if (captionMenu == CaptionMenu.CLOSED) CaptionMenu.OPTIONS else CaptionMenu.CLOSED
-                }) { Text(stringResource(R.string.captions_settings)) }
+                }, enabled = hasCaptions) { Text(stringResource(if (hasCaptions) R.string.captions_settings else R.string.captions_unavailable)) }
                 if (qualityOptions.size > 1) Button(onClick = {
                     captionMenu = CaptionMenu.CLOSED
                     qualityOpen = !qualityOpen

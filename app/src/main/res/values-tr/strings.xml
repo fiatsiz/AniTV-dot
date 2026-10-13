@@ -28,7 +28,7 @@
     <string name="home">Ana sayfa</string>
     <string name="back">Geri</string>
     <string name="back_to_episodes">Bölümlere dön</string>
-    <string name="loading_stream">Altyazılı yayın yükleniyor…</string>
+    <string name="loading_stream">Yayın yükleniyor…</string>
     <string name="retry_playback">Oynatmayı yeniden dene</string>
     <string name="poster_description">%1$s afişi</string>
     <string name="artwork_loading">Afiş yükleniyor…</string>
@@ -98,8 +98,8 @@
     <string name="error_detail_missing">Bu animenin ayrıntı sayfası bulunamadı. Yeniden ara.</string>
     <string name="error_detail_link_invalid">HiAnime geçersiz bir ayrıntı bağlantısı döndürdü.</string>
     <string name="error_episodes_load">HiAnime bölümleri yükleyemedi.</string>
-    <string name="error_servers_load">HiAnime altyazı sunucularını yükleyemedi.</string>
-    <string name="error_no_sub_server">Bu bölüm için desteklenen altyazılı sunucu yok.</string>
+    <string name="error_servers_load">HiAnime oynatma sunucularını yükleyemedi.</string>
+    <string name="error_no_supported_server">Bu bölüm için desteklenen altyazılı veya dublajlı sunucu bulunamadı.</string>
     <string name="error_server_link_changed">HiAnime sunucu bağlantısı biçimini değiştirdi.</string>
     <string name="error_request_blocked">HiAnime veya oynatıcı isteği engelledi (%1$d). Daha sonra tekrar dene.</string>
     <string name="error_request_failed">Kaynak isteği başarısız (%1$d). Bağlantının süresi dolmuş olabilir.</string>
@@ -110,8 +110,13 @@
     <string name="error_detail_changed">HiAnime anime ayrıntı sayfasını değiştirdi.</string>
     <string name="error_description_changed">HiAnime anime açıklaması biçimini değiştirdi.</string>
     <string name="error_no_episodes">Bölüm bulunamadı. HiAnime bölüm listesini değiştirmiş olabilir.</string>
-    <string name="error_player_page_changed">Altyazılı oynatıcının sayfa biçimi değişti.</string>
-    <string name="error_player_stream_changed">Altyazılı oynatıcının yayın biçimi değişti.</string>
+    <string name="error_player_page_changed">Oynatıcının sayfa biçimi değişti.</string>
+    <string name="error_player_stream_changed">Oynatıcının yayın biçimi değişti.</string>
     <string name="error_no_subtitle">Bu bölümde kullanılabilir altyazı yok.</string>
     <string name="error_insecure_link">Kaynak geçersiz veya güvenli olmayan bir bağlantı döndürdü.</string>
+    <string name="audio_version">Ses seçimi</string>
+    <string name="audio_sub">Altyazılı</string>
+    <string name="audio_dub">Dublajlı</string>
+    <string name="audio_source_hint">Dublaj sesi kaynağın dilindedir. Dublaj dili değiştirilemez.</string>
+    <string name="captions_unavailable">Altyazı yok</string>
 </resources>

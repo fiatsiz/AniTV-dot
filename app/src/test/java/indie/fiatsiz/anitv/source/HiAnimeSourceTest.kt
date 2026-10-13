@@ -37,4 +37,41 @@ class HiAnimeSourceTest {
             HiAnimeSource.parsePlayer(fixture("hianime-player.html"), "https://zokoanime.video/")
         )
     }
+    @Test fun parsesAvailableAudioWithoutInventingADub() {
+        val sub = EpisodeServer(AudioVersion.SUB, "https://player.example/episode-1/sub")
+        val dub = EpisodeServer(AudioVersion.DUB, "https://player.example/episode-1/dub")
+        assertEquals(listOf(sub, dub), HiAnimeSource.parseServers(fixture("hianime-servers.html")))
+        assertEquals(listOf(sub), HiAnimeSource.parseServers(fixture("hianime-servers-sub-only.html")))
+        val dubOnly = fixture("hianime-servers.html").lines().filter { it.contains("data-type=\"dub\"") }.joinToString("\n")
+        assertEquals(listOf(dub), HiAnimeSource.parseServers(dubOnly))
+    }
+
+    @Test fun reportsUnsupportedServersAndMalformedOrInsecureEmbeds() {
+        assertEquals(SourceFailure.NO_SUPPORTED_SERVER, assertThrows(SourceException::class.java) {
+            HiAnimeSource.parseServers("<div class=\"server-item\" data-type=\"dub\" data-server-name=\"HD-1\"></div>")
+        }.failure)
+        assertEquals(SourceFailure.SERVER_LINK_CHANGED, assertThrows(SourceException::class.java) {
+            HiAnimeSource.parseServers("<div class=\"server-item\" data-type=\"dub\" data-server-name=\"ZokoAnime\" data-hash=\"!\"></div>")
+        }.failure)
+        val insecure = java.util.Base64.getEncoder().encodeToString("http://player.example/dub".toByteArray())
+        assertEquals(SourceFailure.INSECURE_LINK, assertThrows(SourceException::class.java) {
+            HiAnimeSource.parseServers("<div class=\"server-item\" data-type=\"dub\" data-server-name=\"ZokoAnime\" data-hash=\"$insecure\"></div>")
+        }.failure)
+    }
+
+    @Test fun allowsDubWithoutSubtitlesButPreservesSubtitleRequirementForSub() {
+        assertEquals(Stream("https://video.example/dub.m3u8", null, "https://player.example/", AudioVersion.DUB),
+            HiAnimeSource.parsePlayer(fixture("hianime-dub-player.html"), "https://player.example/", AudioVersion.DUB))
+        assertEquals(SourceFailure.NO_SUBTITLE, assertThrows(SourceException::class.java) {
+            HiAnimeSource.parsePlayer(fixture("hianime-dub-player.html"), "https://player.example/", AudioVersion.SUB)
+        }.failure)
+        assertEquals(SourceFailure.NO_SUBTITLE, assertThrows(SourceException::class.java) {
+            HiAnimeSource("test").subtitleCues(Stream("https://video.example/dub.m3u8", null, "https://player.example/", AudioVersion.DUB))
+        }.failure)
+    }
+
+    @Test fun keepsAvailableDubCaptions() {
+        assertEquals(Stream("https://video.example/master.m3u8", "https://video.example/en.vtt", "https://player.example/", AudioVersion.DUB),
+            HiAnimeSource.parsePlayer(fixture("hianime-player.html"), "https://player.example/", AudioVersion.DUB))
+    }
 }

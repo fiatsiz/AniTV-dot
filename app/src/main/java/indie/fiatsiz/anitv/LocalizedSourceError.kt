@@ -12,7 +12,7 @@ internal fun localizedError(context: Context, error: Exception, @StringRes fallb
         SourceFailure.DETAIL_LINK_INVALID -> R.string.error_detail_link_invalid
         SourceFailure.EPISODES_LOAD -> R.string.error_episodes_load
         SourceFailure.SERVERS_LOAD -> R.string.error_servers_load
-        SourceFailure.NO_SUB_SERVER -> R.string.error_no_sub_server
+        SourceFailure.NO_SUPPORTED_SERVER -> R.string.error_no_supported_server
         SourceFailure.SERVER_LINK_CHANGED -> R.string.error_server_link_changed
         SourceFailure.REQUEST_BLOCKED -> R.string.error_request_blocked
         SourceFailure.REQUEST_FAILED -> R.string.error_request_failed

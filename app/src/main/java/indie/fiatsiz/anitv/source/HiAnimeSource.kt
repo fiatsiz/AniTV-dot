@@ -12,11 +12,13 @@ import java.util.Base64
 data class Anime(val id: String, val title: String, val detailUrl: String? = null)
 data class AnimeDetails(val description: String, val posterUrl: String, val facts: List<String>)
 data class Episode(val id: String, val number: String, val title: String)
-data class Stream(val url: String, val subtitleUrl: String, val referer: String)
+enum class AudioVersion { SUB, DUB }
+data class EpisodeServer(val audio: AudioVersion, val embedUrl: String)
+data class Stream(val url: String, val subtitleUrl: String?, val referer: String, val audio: AudioVersion = AudioVersion.SUB)
 data class SubtitleCue(val startMs: Long, val endMs: Long, val text: String)
 
 enum class SourceFailure {
-    DETAIL_MISSING, DETAIL_LINK_INVALID, EPISODES_LOAD, SERVERS_LOAD, NO_SUB_SERVER,
+    DETAIL_MISSING, DETAIL_LINK_INVALID, EPISODES_LOAD, SERVERS_LOAD, NO_SUPPORTED_SERVER,
     SERVER_LINK_CHANGED, REQUEST_BLOCKED, REQUEST_FAILED, RESPONSE_TOO_LARGE, NETWORK,
     SEARCH_BLOCKED, SEARCH_CHANGED, DETAIL_CHANGED, DESCRIPTION_CHANGED, NO_EPISODES,
     PLAYER_PAGE_CHANGED, PLAYER_STREAM_CHANGED, NO_SUBTITLE, INSECURE_LINK
@@ -42,7 +44,8 @@ class HiAnimeSource(private val userAgent: String) {
 
     fun poster(url: String): ByteArray = getBytes(url, maxBytes = 8_000_000)
 
-    fun subtitleCues(stream: Stream): List<SubtitleCue> = parseVtt(get(stream.subtitleUrl, stream.referer))
+    fun subtitleCues(stream: Stream): List<SubtitleCue> =
+        parseVtt(get(stream.subtitleUrl ?: throw SourceException(SourceFailure.NO_SUBTITLE), stream.referer))
 
     fun episodes(anime: Anime): List<Episode> {
         val json = JSONObject(get("$base/api/theme/episode/list/${anime.id}"))
@@ -50,20 +53,16 @@ class HiAnimeSource(private val userAgent: String) {
         return parseEpisodes(json.getString("html"))
     }
 
-    fun stream(episode: Episode): Stream {
+    fun servers(episode: Episode): List<EpisodeServer> {
         val json = JSONObject(get("$base/api/theme/episode/servers?episodeId=${episode.id}"))
         if (!json.optBoolean("status")) throw SourceException(SourceFailure.SERVERS_LOAD)
-        val server = Jsoup.parse(json.getString("html"))
-            .select(".server-item[data-type=sub][data-server-name=ZokoAnime]").firstOrNull()
-            ?: throw SourceException(SourceFailure.NO_SUB_SERVER)
-        val embed = try {
-            String(Base64.getDecoder().decode(server.attr("data-hash")), StandardCharsets.UTF_8)
-        } catch (_: IllegalArgumentException) {
-            throw SourceException(SourceFailure.SERVER_LINK_CHANGED)
-        }
-        requireHttps(embed)
-        val player = get(embed, "$base/")
-        return parsePlayer(player, URI(embed).let { "${it.scheme}://${it.authority}/" })
+        return parseServers(json.getString("html"))
+    }
+
+    fun stream(server: EpisodeServer): Stream {
+        requireHttps(server.embedUrl)
+        val player = get(server.embedUrl, "$base/")
+        return parsePlayer(player, URI(server.embedUrl).let { "${it.scheme}://${it.authority}/" }, server.audio)
     }
 
     private fun get(url: String, referer: String = "$base/"): String =
@@ -172,7 +171,25 @@ class HiAnimeSource(private val userAgent: String) {
             return episodes
         }
 
-        fun parsePlayer(html: String, referer: String): Stream {
+        fun parseServers(html: String): List<EpisodeServer> {
+            val document = Jsoup.parse(html)
+            val servers = AudioVersion.entries.mapNotNull { audio ->
+                val type = audio.name.lowercase()
+                val server = document.selectFirst(".server-item[data-type=$type][data-server-name=ZokoAnime]")
+                    ?: return@mapNotNull null
+                val embed = try {
+                    String(Base64.getDecoder().decode(server.attr("data-hash")), StandardCharsets.UTF_8)
+                } catch (_: IllegalArgumentException) {
+                    throw SourceException(SourceFailure.SERVER_LINK_CHANGED)
+                }
+                requireHttps(embed)
+                EpisodeServer(audio, embed)
+            }
+            if (servers.isEmpty()) throw SourceException(SourceFailure.NO_SUPPORTED_SERVER)
+            return servers
+        }
+
+        fun parsePlayer(html: String, referer: String, audio: AudioVersion = AudioVersion.SUB): Stream {
             val blob = Regex("window\\.__P=\"([^\"]+)\"").find(html)?.groupValues?.get(1)
                 ?: throw SourceException(SourceFailure.PLAYER_PAGE_CHANGED)
             val data = try {
@@ -190,8 +207,8 @@ class HiAnimeSource(private val userAgent: String) {
                 ?.optString("src")
                 ?: (0 until (tracks?.length() ?: 0)).map { tracks!!.getJSONObject(it) }
                     .firstOrNull { it.optString("src").startsWith("https://") }?.optString("src")
-            if (subtitle == null) throw SourceException(SourceFailure.NO_SUBTITLE)
-            return Stream(url, subtitle, referer)
+            if (subtitle == null && audio == AudioVersion.SUB) throw SourceException(SourceFailure.NO_SUBTITLE)
+            return Stream(url, subtitle, referer, audio)
         }
 
         private fun requireHttps(url: String) {

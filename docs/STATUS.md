@@ -4,6 +4,8 @@ As of 2026-10-13.
 
 ## Implemented
 
+- Episode audio selection offers Subtitled and Dubbed when both supported versions exist. A single available version starts directly. Dubs use the source audio language with no language picker. Dub streams can play without subtitles; caption controls and translation are disabled when no caption track exists. Existing captions still work when supplied. English and Turkish labels/errors cover both playback versions.
+
 - Foreground-only player lifecycle: Activity Stop pauses, saves progress, and releases Media3 synchronously. Returning restores the position and prior play/pause state. Stream responses arriving while stopped cannot start background playback.
 
 - Modular Compose UI: `MainActivity` only starts the themed app; `ui/AniTVApp.kt` coordinates state and navigation; home, search, library, detail, Settings, and previews live in separate files. Playback and caption settings live under `playback/`.
@@ -27,28 +29,31 @@ As of 2026-10-13.
 
 ## Verified
 
+- Dub milestone passed `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline`; all 21 unit tests passed. New sanitized source fixtures cover SUB+DUB, SUB-only with an unsupported DUB provider, DUB-only, malformed/insecure embeds, and DUB without captions while preserving SUB caption validation. The audio choice preview compiles; its render and D-pad behavior remain unverified.
+- Live probes on 2026-10-13: episode 1 server metadata and both ZokoAnime SUB/DUB embed pages returned HTTP 200. Both decoded players exposed HTTPS stream URLs and one caption track. A separate local `search?keyword=takopi` probe returned HTTP 403. No video, audio, subtitle rendering, or TV source flow was exercised.
+
 - Foreground lifecycle unit tests cover immediate Stop release, saved progress, return/resume, paused-state preservation, late stream handling, and idempotent disposal. `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline` passed with 17 tests. Physical Home/return behavior is not yet verified on TV.
 
 - UI extraction passed `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline`; all 15 existing unit tests passed. Screen layout, callbacks, source behavior, and storage formats were preserved. Device behavior remains unverified for this build.
 
 - The README disclaimer was checked against the source and translation data flow and the local GPL-3.0 license. `./gradlew :app:assembleDebug --offline` passed. No app source or resource changed; this APK has not been tested on the TV.
 - `./gradlew :app:testDebugUnitTest :app:assembleDebug --offline` passed for caption styling. All 15 unit tests passed, including default caption style and size validation.
-- Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `6b8d6a1e7a5b8d074f2f5f66b6809d23611bf768ec0f92ab990c0685c224ba4c`).
+- Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `f63c8702e0e2c5083719421cd22f63305f185f985ede1643bc25654a51287c52`).
 - `./gradlew :app:assembleDebug --offline` passed for the User-Agent update. The previous `:app:testDebugUnitTest` run passed 14 unit tests; tests were not rerun for this request-header change.
 - The local `LICENSE` matches the original GitHub `LICENSE` blob exactly. Both README SVG variants were rendered and visually inspected against their target backgrounds. Browser rendering on GitHub was not inspected.
 - GitHub reports `master` as the default and only remote branch. The former `main` branch was deleted after confirming `master` contains the project and license.
-- All 115 English and Turkish string keys match. The APK contains Turkish strings and declares its locale configuration. VTT parser and four-cue lookahead tests pass.
-- The 1280×720 TV banner was visually inspected. The APK packages the new vector, icon, and banner; no `ic_launcher` resources remain. All four `@Preview` functions compiled, but their Android Studio renders were not inspected.
+- All 120 English and Turkish string keys match. The APK contains Turkish strings and declares its locale configuration. VTT parser and four-cue lookahead tests pass.
+- The 1280×720 TV banner was visually inspected. The APK packages the new vector, icon, and banner; no `ic_launcher` resources remain. The four original `@Preview` functions compiled, but their Android Studio renders were not inspected.
 - Live HiAnime search and One Piece detail responses were inspected on 2026-10-12. The page exposed a description, facts, and HTTPS portrait poster. A sampled 385×600 poster returned HTTP 200 as a WebP image.
 - Previous APK (SHA-256 `b16b051bdc92ef158d201dc3394c3c755c46f5c5e8545f094843f94178bb1bd9`) was manually installed and tested by the user on a Beko Google TV (API 34). The user reported search, focus, result → episode → playback, video, audio, subtitles, controls, seeking, Back, favorites, progress after restart, and completed archive working.
 
 ## Open verification and limits
 
-- **Current APK device status: NOT TESTED.** Physical Home during playback must stop all sound; return/resume, paused-state restoration, late stream responses after Home, and Back cleanup await TV testing. Caption style appearance, each style choice, persistence, D-pad focus and Back, and matching original/translated rendering await TV verification. Actual User-Agent selection and HiAnime/stream response on the TV, in-app vector rendering, launcher icon and TV banner appearance, language selection and persistence, translation provider/key entry, translated captions and rolling lookahead, translation failure fallback, Settings focus and Back, system-language selection, playback, and cache behavior also await TV verification. Settings previews have not been rendered. No ADB device test or installation was done, per the repository instructions.
-- HiAnime titles, descriptions, metadata values, most episode names, and subtitle tracks remain in the source language. Generic “Episode N” labels are localized. The source was not contacted for this build; its site behavior remains unverified.
+- **Current APK device status: NOT TESTED.** Test both audio choices on a dubbed title and direct playback on a title without a supported dub. Dub audio, optional captions, translation, audio-choice focus/Select/Back, retry, and video/audio/seek require TV verification. Physical Home during playback must stop all sound; return/resume, paused-state restoration, late stream responses after Home, and Back cleanup await TV testing. Caption style appearance, each style choice, persistence, D-pad focus and Back, and matching original/translated rendering await TV verification. Actual User-Agent selection and HiAnime/stream response on the TV, in-app vector rendering, launcher icon and TV banner appearance, language selection and persistence, translation provider/key entry, translated captions and rolling lookahead, translation failure fallback, Settings focus and Back, system-language selection, playback, and cache behavior also await TV verification. Settings previews have not been rendered. No ADB device test or installation was done, per the repository instructions.
+- HiAnime titles, descriptions, metadata values, most episode names, and subtitle tracks remain in the source language. Generic “Episode N” labels are localized. Server and embed metadata were probed for this build; a local search request was blocked with HTTP 403. End-to-end site behavior on TV remains unverified.
 - Quality options appear only when Media3 reports multiple supported HLS video tracks. A single-variant stream stays on Auto.
 - Translation API requests were not exercised with real provider keys. Google Cloud Translation Basic v2 requires an API key. Google ML Kit is keyless, but its terms prohibit TV app use without prior written permission, so it is not integrated. DeepL documents advise against using API keys in client-side code; this direct TV client sends the user's key to DeepL over HTTPS, so use a personal key and account for runtime extraction risk on a compromised device. Android Keystore protects the saved key at rest.
-- Search reads one result page. Playback supports one HiAnime subtitle server and requires an HTTPS subtitle track. There is no server fallback.
+- Search reads one result page. Playback supports ZokoAnime SUB and DUB entries only. SUB requires an HTTPS subtitle track; DUB captions are optional. Other providers are ignored and there is no server fallback. Audio selection is per episode; library progress remains shared between audio versions.
 - HiAnime is unofficial and changeable. Markup, player encoding, blocks, and expiring links can break this flow; the app reports those failures.
 - No login, downloads, recommendations, other sources, or publishing are included.
 

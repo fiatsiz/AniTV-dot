@@ -19,18 +19,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.Text
 import indie.fiatsiz.anitv.source.Anime
 import indie.fiatsiz.anitv.source.AnimeDetails
+import indie.fiatsiz.anitv.source.EpisodeServer
 import indie.fiatsiz.anitv.source.Episode
 import indie.fiatsiz.anitv.source.HiAnimeSource
 import indie.fiatsiz.anitv.source.Stream
@@ -72,6 +68,8 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
     var poster by remember { mutableStateOf<ImageBitmap?>(null) }
     var detailError by remember { mutableStateOf<String?>(null) }
     var episode by remember { mutableStateOf<Episode?>(null) }
+    var episodeServers by remember { mutableStateOf<List<EpisodeServer>>(emptyList()) }
+    var selectedServer by remember { mutableStateOf<EpisodeServer?>(null) }
     var stream by remember { mutableStateOf<Stream?>(null) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -145,8 +143,8 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
         }
     }
 
-    fun selectEpisode(selected: Episode) {
-        episode = selected
+    fun playServer(selected: EpisodeServer) {
+        selectedServer = selected
         stream = null
         error = null
         loading = true
@@ -160,12 +158,31 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
         }
     }
 
+    fun selectEpisode(selected: Episode) {
+        episode = selected
+        episodeServers = emptyList()
+        selectedServer = null
+        stream = null
+        error = null
+        loading = true
+        val current = ++request
+        scope.launch {
+            try {
+                val available = withContext(Dispatchers.IO) { source.servers(selected) }
+                if (current != request) return@launch
+                episodeServers = available
+                if (available.size == 1) playServer(available.single())
+            } catch (e: Exception) { if (current == request) error = localizedError(context, e, R.string.stream_failed) }
+            finally { if (current == request) loading = false }
+        }
+    }
+
     fun back() {
         request++
         error = null
         loading = false
         when {
-            episode != null -> { episode = null; stream = null }
+            episode != null -> { episode = null; stream = null; episodeServers = emptyList(); selectedServer = null }
             anime != null -> { anime = null; episodes = emptyList() }
             page != Page.HOME -> page = Page.HOME
         }
@@ -201,11 +218,10 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
         BrandHeader()
         when {
             episode != null -> {
-                Button(onClick = ::back, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.back_to_episodes)) }
-                Text("${anime?.title} · ${localizedEpisodeTitle(episode!!)}", fontSize = 26.sp)
-                if (loading) Text(stringResource(R.string.loading_stream))
-                error?.let { Text(it, color = Color(0xFFFF9999)) }
-                if (error != null) Button(onClick = { selectEpisode(episode!!) }) { Text(stringResource(R.string.retry_playback)) }
+                EpisodeContent(anime?.title.orEmpty(), episode!!, episodeServers, loading, error, firstFocus,
+                    onBack = ::back, onPlay = ::playServer, onRetry = {
+                        selectedServer?.let(::playServer) ?: selectEpisode(episode!!)
+                    })
             }
             anime != null -> {
                 val selected = anime!!

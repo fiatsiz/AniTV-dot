@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import indie.fiatsiz.anitv.source.AudioVersion
+import indie.fiatsiz.anitv.source.EpisodeServer
 import indie.fiatsiz.anitv.source.Episode
 import indie.fiatsiz.anitv.ui.theme.AniTVTheme
 import indie.fiatsiz.anitv.TranslationSettings
@@ -75,6 +77,23 @@ private fun SettingsTurkishPreview() {
                 verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 BrandHeader()
                 SettingsContent("tr", TranslationSettings(), remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, {})
+            }
+        }
+    }
+}
+
+@Preview(name = "TV audio choice", widthDp = 960, heightDp = 540)
+@Composable
+private fun AudioChoicePreview() {
+    AniTVTheme(isInDarkTheme = true) {
+        Surface(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                BrandHeader()
+                EpisodeContent("Sample anime", Episode("1", "1", "Episode 1"),
+                    listOf(EpisodeServer(AudioVersion.SUB, "https://player.example/sub"),
+                        EpisodeServer(AudioVersion.DUB, "https://player.example/dub")),
+                    false, null, remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, {})
             }
         }
     }
