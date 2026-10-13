@@ -128,4 +128,13 @@
     <string name="now_playing_episode">Now playing: Episode %1$s</string>
     <string name="episode_playing">Playing</string>
     <string name="close_episodes">Close episodes</string>
+    <string name="app_version">App version: %1$s</string>
+    <string name="rules_revision">Source rules revision: %1$d</string>
+    <string name="rules_checking">Checking source rules…</string>
+    <string name="rules_updated">Signed source rules updated.</string>
+    <string name="rules_current">Source rules are up to date.</string>
+    <string name="rules_offline">Update unavailable. Using saved source rules.</string>
+    <string name="rules_timeout">Update timed out. Using saved source rules.</string>
+    <string name="rules_rejected">Update rejected. Using verified source rules.</string>
+    <string name="rules_cache_failed">Source rules selected; could not save for next startup.</string>
 </resources>

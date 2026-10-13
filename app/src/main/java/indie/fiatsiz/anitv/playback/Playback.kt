@@ -61,14 +61,18 @@ import indie.fiatsiz.anitv.subtitleBatchEnd
 import indie.fiatsiz.anitv.shouldPrefetchNextBatch
 import indie.fiatsiz.anitv.R
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private data class QualityOption(val group: TrackGroup, val index: Int, val label: String)
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Long, translation: TranslationSettings, targetLanguage: String, userAgent: String,
     animeTitle: String, currentEpisode: Episode, episodes: List<Episode>, episodesLoading: Boolean, episodesError: String?,
     onReloadEpisodes: () -> Unit, onSelectEpisode: (Episode) -> Unit, onTranslationSettings: (TranslationSettings) -> Unit,
     onProgress: (Long, Long) -> Unit, onError: (String) -> Unit) {
     val context = LocalContext.current
-    val source = remember(userAgent) { HiAnimeSource(userAgent) }
+    val resources = androidx.compose.ui.platform.LocalResources.current
+    val rules = remember { indie.fiatsiz.anitv.source.ProcessRules.get(context) }
+    val source = remember(userAgent, rules) { HiAnimeSource(userAgent, rules::snapshot) }
     val translator = remember { SubtitleTranslator() }
     val hasCaptions = stream.subtitleUrl != null
     val translationReady = hasCaptions && translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
@@ -86,7 +90,7 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
     var episodesOpen by remember(stream) { mutableStateOf(false) }
     var restoreEpisodesFocus by remember(stream) { mutableStateOf(false) }
     var qualityOptions by remember(stream) { mutableStateOf<List<QualityOption>>(emptyList()) }
-    var selectedQuality by remember(stream) { mutableStateOf(context.getString(R.string.auto)) }
+    var selectedQuality by remember(stream) { mutableStateOf(resources.getString(R.string.auto)) }
     var interactionTick by remember(stream) { mutableStateOf(0) }
     var captionCues by remember(stream, translationOn, effectiveTarget) { mutableStateOf<List<SubtitleCue>>(emptyList()) }
     var translatedTexts by remember(stream, translationOn, effectiveTarget) { mutableStateOf<Map<Int, String>>(emptyMap()) }
@@ -122,7 +126,7 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
                     qualityOptions = tracks.groups.filter { it.type == C.TRACK_TYPE_VIDEO }.flatMap { group ->
                         (0 until group.length).filter { group.isTrackSupported(it) }.map { index ->
                             val format = group.getTrackFormat(index)
-                            val name = if (format.height > 0) "${format.height}p" else context.getString(R.string.video_track, index + 1)
+                            val name = if (format.height > 0) "${format.height}p" else resources.getString(R.string.video_track, index + 1)
                             val bitrate = if (format.bitrate > 0) " · ${format.bitrate / 1000} kb/s" else ""
                             QualityOption(group.mediaTrackGroup, index, name + bitrate)
                         }
@@ -134,7 +138,7 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
                 }
                 private fun playerPosition() = currentPosition.coerceAtLeast(0)
                 override fun onPlayerError(error: PlaybackException) {
-                    errorCallback(context.getString(R.string.playback_failed))
+                    errorCallback(resources.getString(R.string.playback_failed))
                 }
             })
             prepare()
@@ -294,7 +298,7 @@ internal fun Playback(lifecycle: Lifecycle, stream: Stream, savedPositionMs: Lon
                 Button(onClick = {
                     player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
                         .clearOverridesOfType(C.TRACK_TYPE_VIDEO).build()
-                    selectedQuality = context.getString(R.string.auto)
+                    selectedQuality = resources.getString(R.string.auto)
                     qualityOpen = false
                 }, modifier = Modifier.focusRequester(qualityFocus)) { Text(stringResource(R.string.auto)) }
                 qualityOptions.forEach { option ->

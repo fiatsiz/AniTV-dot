@@ -48,6 +48,12 @@ As of 2026-10-13.
 - No APK signing credentials are available in the current process. Signed assembly and release-certificate verification remain blocked; no replacement APK key was generated.
 - Initial Git status was clean, including `.gitignore`; the handoff's unrelated-change note was stale. `.gitignore` is excluded from changes.
 
+- Signed rule configuration and startup repository are implemented. Full unit/debug/lint verification passed; new tests cover changed selectors/attributes/endpoints/JSON paths/decoding, signature tampering, schema/version incompatibility, revision conflicts, cache recovery, ETags, offline fallback, the startup deadline, and discarded late downloads.
+- The same compiled source instance accepted an injected newer signed revision and parsed changed search/detail/episode/server/player fixtures without recompilation. Existing parser/library tests remain intact.
+- Initial RSA-3072 rules key was generated separately from APK signing at `/home/badico/.local/share/anitv-signing/rules-private.pk8`, mode 0600, outside both worktrees. Only its public key is bundled. The owner must back it up securely.
+- The local publication command passed against sanitized fixtures using the shipping Kotlin parser. Initial bundled/published envelopes match byte for byte. Remote publication and final emulator regression results are recorded in the subsequent release report.
+- Emulator startup exposed an ICU regex difference not caught by JVM tests; endpoint placeholder matching now escapes both braces. Release lint's existing Media3 opt-in and Compose resource/configuration errors were fixed without disabling checks. No dependencies or SDK versions changed.
+
 ## Verified
 
 - Search HTTP 403 investigation (2026-10-13): the installed Android TV emulator app successfully searched `takopi` and displayed “Takopi's Original Sin,” then searched `one piece` and displayed “One Piece” and related titles. Search results are fetched through `HiAnimeSource` without a search cache. The earlier desktop-probe warning is removed as an unresolved app issue; no app change is needed for the verified flow. `./gradlew :app:assembleDebug --offline` passed with all tasks up to date; the existing APK and its recorded SHA-256 are unchanged. Unit tests were not rerun because only documentation changed.

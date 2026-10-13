@@ -1,6 +1,6 @@
 # AniTV architecture
 
-AniTV is one Kotlin Android `app` module. Compose for TV owns navigation and screens; `LibraryStore` owns local favorites and progress; `AnimeDetailCache` owns cached title metadata and poster files; `HiAnimeSource` owns HiAnime requests and parsing; `SubtitleTranslator` owns Google/DeepL API requests; Media3 owns playback.
+AniTV is one Kotlin Android `app` module. Compose for TV owns navigation and screens; `LibraryStore` owns local favorites and progress; `AnimeDetailCache` owns cached title metadata and poster files; `HiAnimeSource` owns HiAnime requests and parsing; `ProcessRules` owns one startup `RulesRepository`; `SubtitleTranslator` owns Google/DeepL API requests; Media3 owns playback.
 
 ```text
 Home → Search/results or local library → detail + episodes → available SUB/DUB → HLS + optional VTT player
@@ -35,7 +35,7 @@ Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Med
 | `app/src/main/java/indie/fiatsiz/anitv/LocalizedSourceError.kt` | Maps source failure codes to localized Android string resources. |
 | `app/src/main/java/indie/fiatsiz/anitv/LibraryStore.kt` | `SharedPreferences` JSON encoding, decoding, and library rules, including saved detail links, optional progress audio/watch time, featured title selection, and saved episode targeting. |
 | `app/src/main/java/indie/fiatsiz/anitv/AnimeDetailCache.kt` | Timestamped detail metadata in private preferences and poster bytes in the app cache directory. |
-| `app/src/main/java/indie/fiatsiz/anitv/source/HiAnimeSource.kt` | HTTPS requests, HiAnime selectors, detail/episode/server parsing, poster download, player metadata decoding, and language-neutral source failure codes. |
+| `app/src/main/java/indie/fiatsiz/anitv/source/HiAnimeSource.kt` | HTTPS requests, rule-driven detail/episode/server parsing, poster download, compiled player decoding algorithms, and language-neutral source failure codes. |
 | `app/src/main/java/indie/fiatsiz/anitv/SubtitleTranslation.kt` | Translation provider and caption style settings, Android Keystore encryption for API keys, and HTTPS Google Cloud Translation Basic v2 / DeepL text requests. |
 | `app/src/main/java/indie/fiatsiz/anitv/ui/theme/` | Existing TV theme. |
 | `app/src/test/` | Library and cache rule tests, sanitized response fragments, and parser tests. |
@@ -82,3 +82,21 @@ Run `./gradlew :app:testDebugUnitTest :app:assembleDebug` after source or UI cha
 ## Release configuration
 
 `app/build.gradle.kts` reads owner APK signing credentials from four external environment variables and validates them only for release packaging. BuildConfig exposes the app version for Settings. Debug builds and unit tests do not require release secrets. See `docs/RELEASE.md`.
+
+## Signed source rules
+
+`source/SourceRules.kt` validates schema 1 into typed immutable configuration. Selectors, extraction attributes, relative endpoint templates, named-property JSON paths, server/audio matching values, player variable, Base64/XOR flags, and the public obfuscation key are data. HTML and JSON-wrapped HTML are supported. There is no script engine, downloaded code, arbitrary array path language, new provider abstraction, or APK updater. Fixed HiAnime origin, numeric IDs, HTTPS, response limits, subtitle selection/requirements, and VTT parsing remain compiled.
+
+`SignedRules` verifies RSA-3072 / SHA256withRSA signatures over exact Base64-decoded payload bytes before parsing. `app/src/main/resources/` bundles only the public DER key and initial signed envelope. Revision ordering rejects downgrades and different payload bytes at an unchanged revision. Schema and minimum APK version checks precede activation.
+
+`MainActivity.onCreate` obtains `ProcessRules`, a process singleton reused after language/Activity recreation and by both coordinator and playback source instances. It starts one background check. Home does not await the network. `RulesRepository.snapshot()` waits only for the remainder of the single three-second startup window; each source operation captures it once, including detail's search fallback. A scheduled deadline freezes validated cached rules or bundled defaults. A newer verified download selected before the deadline freezes the process snapshot; late results cannot activate or write cache. The injected `RulesTransport` supports fixture/deadline tests without publishing test rules.
+
+`GitHubRulesTransport` reads the fixed HTTPS GitHub Contents endpoint with raw media type, descriptive User-Agent, and conditional ETag. Redirects are rejected, downloads are bounded to 256 KiB, and read/connect waits respect the startup window. Non-success HTTP, offline, malformed, incompatible, bad-signature, revision conflict, and timeout outcomes retain usable local rules.
+
+`RulesCache` stores a signed envelope and its accepted ETag together in private `files/source-rules/current.json`. Temporary files are flushed and atomically renamed on the same filesystem. A previous validated envelope/ETag remains in `previous.json`; interrupted temporary files are ignored. Cache reads verify signatures again and prefer the highest compatible local revision. A cache write failure retains the selected in-memory snapshot and reports that it could not persist. No library/progress preference keys change.
+
+A read-only StateFlow exposes revision/outcome to existing Settings. English and Turkish strings report app version, rules revision, and checking/current/updated/unavailable/timeout/rejected/cache-write states. Existing focusable controls and Back stay in place; no manual update action is added.
+
+`tools/publish-rules` runs `RulesPublicationTest` against the actual Kotlin parser and a separate `rules` worktree's sanitized fixtures/expected models. It signs exact editable bytes with the external PKCS#8 DER key, verifies against the bundled public key, checks revision ordering, and atomically writes the envelope. The rules branch has an independent orphan history and contains rules, fixtures, license, and publishing instructions. See `docs/RELEASE.md`.
+
+Release lint required scoped Media3 `UnstableApi` opt-ins and `LocalResources`/`LocalConfiguration` reads in existing playback/caption/coordinator code. These fixes do not alter stream, progress, or library formats.

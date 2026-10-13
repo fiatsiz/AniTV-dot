@@ -26,43 +26,59 @@ enum class SourceFailure {
 
 class SourceException(val failure: SourceFailure, val status: Int = 0) : IOException(failure.name)
 
-class HiAnimeSource(private val userAgent: String) {
+class HiAnimeSource(private val userAgent: String, private val rulesProvider: () -> SourceRules = { SourceRules.bundled },
+    private val request: ((String, String, Int) -> ByteArray)? = null) {
     private val base = "https://hianime.at"
 
     fun search(query: String): List<Anime> {
-        val html = get("$base/search?keyword=${URLEncoder.encode(query.trim(), "UTF-8")}")
-        return parseSearch(html)
+        val rules = rulesProvider()
+        return search(query, rules)
+    }
+
+    private fun search(query: String, rules: SourceRules): List<Anime> {
+        val endpoint = rules.search.endpoint.replace("{query}", URLEncoder.encode(query.trim(), "UTF-8"))
+        return parseSearch(get(base + endpoint), rules)
     }
 
     fun details(anime: Anime): AnimeDetails {
-        val url = anime.detailUrl ?: search(anime.title).firstOrNull { it.id == anime.id }?.detailUrl
+        val rules = rulesProvider()
+        val url = anime.detailUrl ?: search(anime.title, rules).firstOrNull { it.id == anime.id }?.detailUrl
             ?: throw SourceException(SourceFailure.DETAIL_MISSING)
         if (!runCatching { URI(url).let { it.scheme == "https" && it.host == "hianime.at" } }.getOrDefault(false))
             throw SourceException(SourceFailure.DETAIL_LINK_INVALID)
-        return parseDetails(get(url))
+        return parseDetails(get(url), rules)
     }
 
-    fun poster(url: String): ByteArray = getBytes(url, maxBytes = 8_000_000)
+    fun poster(url: String): ByteArray {
+        rulesProvider()
+        return getBytes(url, maxBytes = 8_000_000)
+    }
 
-    fun subtitleCues(stream: Stream): List<SubtitleCue> =
-        parseVtt(get(stream.subtitleUrl ?: throw SourceException(SourceFailure.NO_SUBTITLE), stream.referer))
+    fun subtitleCues(stream: Stream): List<SubtitleCue> {
+        val subtitle = stream.subtitleUrl ?: throw SourceException(SourceFailure.NO_SUBTITLE)
+        rulesProvider()
+        return parseVtt(get(subtitle, stream.referer))
+    }
 
     fun episodes(anime: Anime): List<Episode> {
-        val json = JSONObject(get("$base/api/theme/episode/list/${anime.id}"))
-        if (!json.optBoolean("status")) throw SourceException(SourceFailure.EPISODES_LOAD)
-        return parseEpisodes(json.getString("html"))
+        val rules = rulesProvider()
+        requireNumericId(anime.id)
+        val body = get(base + rules.episodes.endpoint.replace("{animeId}", anime.id))
+        return parseEpisodes(rules.episodes.response.html(body, SourceFailure.EPISODES_LOAD), rules)
     }
 
     fun servers(episode: Episode): List<EpisodeServer> {
-        val json = JSONObject(get("$base/api/theme/episode/servers?episodeId=${episode.id}"))
-        if (!json.optBoolean("status")) throw SourceException(SourceFailure.SERVERS_LOAD)
-        return parseServers(json.getString("html"))
+        val rules = rulesProvider()
+        requireNumericId(episode.id)
+        val body = get(base + rules.servers.endpoint.replace("{episodeId}", episode.id))
+        return parseServers(rules.servers.response.html(body, SourceFailure.SERVERS_LOAD), rules)
     }
 
     fun stream(server: EpisodeServer): Stream {
+        val rules = rulesProvider()
         requireHttps(server.embedUrl)
         val player = get(server.embedUrl, "$base/")
-        return parsePlayer(player, URI(server.embedUrl).let { "${it.scheme}://${it.authority}/" }, server.audio)
+        return parsePlayer(player, URI(server.embedUrl).let { "${it.scheme}://${it.authority}/" }, server.audio, rules)
     }
 
     private fun get(url: String, referer: String = "$base/"): String =
@@ -70,6 +86,7 @@ class HiAnimeSource(private val userAgent: String) {
 
     private fun getBytes(url: String, referer: String = "$base/", maxBytes: Int = 8_000_000): ByteArray {
         requireHttps(url)
+        request?.let { return it(url, referer, maxBytes) }
         val connection = (URI(url).toURL().openConnection() as HttpURLConnection).apply {
             connectTimeout = 15_000
             readTimeout = 15_000
@@ -102,7 +119,9 @@ class HiAnimeSource(private val userAgent: String) {
     }
 
     companion object {
-        private const val KEY = "otaku-embed-v1"
+        private fun requireNumericId(id: String) {
+            if (!id.matches(Regex("[0-9]+"))) throw SourceException(SourceFailure.DETAIL_LINK_INVALID)
+        }
 
         fun parseVtt(vtt: String): List<SubtitleCue> = vtt.replace("\r", "").split("\n\n").mapNotNull { block ->
             val lines = block.lines()
@@ -126,59 +145,63 @@ class HiAnimeSource(private val userAgent: String) {
             if (end <= start || text.isEmpty()) null else SubtitleCue(start, end, text)
         }
 
-        fun parseSearch(html: String): List<Anime> {
+        fun parseSearch(html: String, rules: SourceRules = SourceRules.bundled): List<Anime> {
             if (html.contains("Just a moment", ignoreCase = true)) throw SourceException(SourceFailure.SEARCH_BLOCKED)
-            val document = Jsoup.parse(html)
-            val results = document.select(".film_list-wrap .flw-item").mapNotNull { item ->
-                val link = item.selectFirst(".film-poster-ahref[data-id]") ?: return@mapNotNull null
-                val title = item.selectFirst(".film-name .dynamic-name")?.text().orEmpty()
-                val id = link.attr("data-id")
-                val url = item.selectFirst(".film-name .dynamic-name[href]")?.attr("href")
+            val config = rules.search
+            val document = Jsoup.parse(config.response.html(html, SourceFailure.SEARCH_CHANGED))
+            val results = document.select(config.items).mapNotNull { item ->
+                val title = config.title.read(item)
+                val id = config.id.read(item)
+                val url = config.link.read(item).takeIf { it.isNotBlank() }
                     ?.let { runCatching { URI("https://hianime.at").resolve(it).toString() }.getOrNull() }
                     ?.takeIf { runCatching { URI(it).let { uri -> uri.scheme == "https" && uri.host == "hianime.at" } }.getOrDefault(false) }
                 if (title.isBlank() || !id.matches(Regex("[0-9]+"))) null else Anime(id, title, url)
             }
-            if (results.isEmpty() && document.selectFirst(".film_list-wrap") == null)
+            if (results.isEmpty() && document.selectFirst(config.container) == null)
                 throw SourceException(SourceFailure.SEARCH_CHANGED)
             return results
         }
 
-        fun parseDetails(html: String): AnimeDetails {
-            val detail = Jsoup.parse(html).selectFirst("#ani_detail")
+        fun parseDetails(html: String, rules: SourceRules = SourceRules.bundled): AnimeDetails {
+            val config = rules.detail
+            val detail = Jsoup.parse(config.response.html(html, SourceFailure.DETAIL_CHANGED)).selectFirst(config.root)
                 ?: throw SourceException(SourceFailure.DETAIL_CHANGED)
-            val description = detail.selectFirst(".film-description .text")?.text().orEmpty()
-            val poster = detail.selectFirst(".anisc-poster img[src]")?.attr("src").orEmpty()
+            val description = config.description.read(detail)
+            val poster = config.poster.read(detail)
             requireHttps(poster)
             if (description.isBlank()) throw SourceException(SourceFailure.DESCRIPTION_CHANGED)
-            val facts = detail.select(".anisc-info .item").mapNotNull { item ->
-                val name = item.selectFirst(".item-head")?.text()?.trimEnd(':') ?: return@mapNotNull null
-                if (name !in setOf("Aired", "Status", "Genres", "MAL Score")) return@mapNotNull null
+            val facts = detail.select(config.facts).mapNotNull { item ->
+                val name = item.selectFirst(config.factName)?.text()?.trimEnd(':') ?: return@mapNotNull null
+                if (name !in config.factNames) return@mapNotNull null
                 val value = item.text().removePrefix("$name:").trim()
                 if (value.isBlank()) null else "$name: $value"
             }
             return AnimeDetails(description, poster, facts)
         }
 
-        fun parseEpisodes(html: String): List<Episode> {
+        fun parseEpisodes(html: String, rules: SourceRules = SourceRules.bundled): List<Episode> {
             val document = Jsoup.parse(html)
-            val episodes = document.select("a.ep-item[data-id]").mapNotNull { item ->
-                val id = item.attr("data-id")
-                val number = item.attr("data-number")
+            val episodes = document.select(rules.episodes.items).mapNotNull { item ->
+                val id = item.attr(rules.episodes.idAttribute)
+                val number = item.attr(rules.episodes.numberAttribute)
                 if (!id.matches(Regex("[0-9]+")) || number.isBlank()) null
-                else Episode(id, number, item.attr("title").ifBlank { "Episode $number" })
+                else Episode(id, number, item.attr(rules.episodes.titleAttribute).ifBlank { "Episode $number" })
             }
             if (episodes.isEmpty()) throw SourceException(SourceFailure.NO_EPISODES)
             return episodes
         }
 
-        fun parseServers(html: String): List<EpisodeServer> {
+        fun parseServers(html: String, rules: SourceRules = SourceRules.bundled): List<EpisodeServer> {
             val document = Jsoup.parse(html)
             val servers = AudioVersion.entries.mapNotNull { audio ->
-                val type = audio.name.lowercase()
-                val server = document.selectFirst(".server-item[data-type=$type][data-server-name=ZokoAnime]")
-                    ?: return@mapNotNull null
+                val config = rules.servers
+                val type = if (audio == AudioVersion.SUB) config.sub else config.dub
+                val server = document.select(config.items).firstOrNull {
+                    it.attr(config.audioAttribute) == type && it.attr(config.nameAttribute) == config.name
+                } ?: return@mapNotNull null
                 val embed = try {
-                    String(Base64.getDecoder().decode(server.attr("data-hash")), StandardCharsets.UTF_8)
+                    val value = server.attr(config.embedAttribute)
+                    if (config.base64) String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8) else value
                 } catch (_: IllegalArgumentException) {
                     throw SourceException(SourceFailure.SERVER_LINK_CHANGED)
                 }
@@ -189,30 +212,38 @@ class HiAnimeSource(private val userAgent: String) {
             return servers
         }
 
-        fun parsePlayer(html: String, referer: String, audio: AudioVersion = AudioVersion.SUB): Stream {
-            val blob = Regex("window\\.__P=\"([^\"]+)\"").find(html)?.groupValues?.get(1)
+        fun parsePlayer(html: String, referer: String, audio: AudioVersion = AudioVersion.SUB,
+            rules: SourceRules = SourceRules.bundled): Stream {
+            val config = rules.player
+            val match = Regex(Regex.escape(config.variable) + "\\s*=\\s*(?:\"([^\"]+)\"|'([^']+)')").find(html)
                 ?: throw SourceException(SourceFailure.PLAYER_PAGE_CHANGED)
+            val blob = match.groupValues[1].ifEmpty { match.groupValues[2] }
             val data = try {
-                val bytes = Base64.getDecoder().decode(blob)
-                val clear = ByteArray(bytes.size) { i -> (bytes[i].toInt() xor KEY[i % KEY.length].code).toByte() }
+                val bytes = if (config.base64) Base64.getDecoder().decode(blob) else blob.toByteArray(StandardCharsets.UTF_8)
+                val clear = if (config.xor) ByteArray(bytes.size) { i ->
+                    (bytes[i].toInt() xor config.key[i % config.key.length].code).toByte()
+                } else bytes
                 JSONObject(String(clear, StandardCharsets.UTF_8))
             } catch (_: Exception) {
                 throw SourceException(SourceFailure.PLAYER_STREAM_CHANGED)
             }
-            val url = data.optString("src")
+            val url = jsonValue(data, config.streamPath) as? String ?: throw SourceException(SourceFailure.PLAYER_STREAM_CHANGED)
             requireHttps(url)
-            val tracks = data.optJSONArray("subtitles")
-            val subtitle = (0 until (tracks?.length() ?: 0)).map { tracks!!.getJSONObject(it) }
-                .firstOrNull { it.optBoolean("default") && it.optString("src").startsWith("https://") }
-                ?.optString("src")
-                ?: (0 until (tracks?.length() ?: 0)).map { tracks!!.getJSONObject(it) }
-                    .firstOrNull { it.optString("src").startsWith("https://") }?.optString("src")
+            val tracks = jsonValue(data, config.subtitlesPath) as? org.json.JSONArray
+            val captions = (0 until (tracks?.length() ?: 0)).mapNotNull { tracks?.optJSONObject(it) }
+                .filter { isHttps(jsonValue(it, config.subtitleUrlPath) as? String ?: "") }
+            val subtitle = (captions.firstOrNull { jsonValue(it, config.subtitleDefaultPath) == true }
+                ?: captions.firstOrNull())?.let { jsonValue(it, config.subtitleUrlPath) as String }
             if (subtitle == null && audio == AudioVersion.SUB) throw SourceException(SourceFailure.NO_SUBTITLE)
             return Stream(url, subtitle, referer, audio)
         }
 
+        private fun isHttps(url: String) = runCatching {
+            URI(url).let { it.scheme == "https" && it.host != null && it.userInfo == null }
+        }.getOrDefault(false)
+
         private fun requireHttps(url: String) {
-            if (runCatching { URI(url).scheme == "https" && URI(url).host != null }.getOrDefault(false)) return
+            if (isHttps(url)) return
             throw SourceException(SourceFailure.INSECURE_LINK)
         }
     }

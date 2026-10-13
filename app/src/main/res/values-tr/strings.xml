@@ -128,4 +128,13 @@
     <string name="now_playing_episode">Şimdi oynatılıyor: Bölüm %1$s</string>
     <string name="episode_playing">Oynatılıyor</string>
     <string name="close_episodes">Bölümleri kapat</string>
+    <string name="app_version">Uygulama sürümü: %1$s</string>
+    <string name="rules_revision">Kaynak kuralları revizyonu: %1$d</string>
+    <string name="rules_checking">Kaynak kuralları denetleniyor…</string>
+    <string name="rules_updated">İmzalı kaynak kuralları güncellendi.</string>
+    <string name="rules_current">Kaynak kuralları güncel.</string>
+    <string name="rules_offline">Güncelleme kullanılamıyor. Kayıtlı kaynak kuralları kullanılıyor.</string>
+    <string name="rules_timeout">Güncelleme zaman aşımına uğradı. Kayıtlı kaynak kuralları kullanılıyor.</string>
+    <string name="rules_rejected">Güncelleme reddedildi. Doğrulanmış kaynak kuralları kullanılıyor.</string>
+    <string name="rules_cache_failed">Kaynak kuralları seçildi; sonraki başlangıç için kaydedilemedi.</string>
 </resources>

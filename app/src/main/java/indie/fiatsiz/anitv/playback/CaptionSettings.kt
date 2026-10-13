@@ -52,6 +52,7 @@ private fun captionColorLabel(color: CaptionColor) = when (color) {
     CaptionColor.BLUE -> R.string.caption_color_blue
     CaptionColor.CYAN -> R.string.caption_color_cyan
 }
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun styleCaptionView(view: SubtitleView, style: CaptionStyleSettings) {
     val typeface = when (style.font) {
         CaptionFont.SANS -> Typeface.SANS_SERIF
@@ -72,7 +73,7 @@ internal fun CaptionSettings(captionMenu: CaptionMenu, captionMode: CaptionMode,
     choiceFocus: androidx.compose.ui.focus.FocusRequester, modifier: Modifier = Modifier,
     onMenu: (CaptionMenu) -> Unit, onMode: (CaptionMode) -> Unit,
     onTranslationSettings: (TranslationSettings) -> Unit) {
-    val displayLocale = LocalContext.current.resources.configuration.locales[0]
+    val displayLocale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     val captionStyle = translation.captionStyle
     val translationReady = translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
     Column(modifier.width(320.dp).background(Color(0xEE0F0F23)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

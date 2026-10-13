@@ -67,7 +67,7 @@ private fun SettingsEnglishPreview() {
             Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 BrandHeader()
-                SettingsContent("en", TranslationSettings(), remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, {})
+                SettingsContent("en", TranslationSettings(), remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, onTranslationSettings = {})
             }
         }
     }
@@ -81,7 +81,7 @@ private fun SettingsTurkishPreview() {
             Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 BrandHeader()
-                SettingsContent("tr", TranslationSettings(), remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, {})
+                SettingsContent("tr", TranslationSettings(), remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, onTranslationSettings = {})
             }
         }
     }

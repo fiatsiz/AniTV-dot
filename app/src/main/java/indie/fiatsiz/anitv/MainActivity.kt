@@ -12,6 +12,7 @@ import indie.fiatsiz.anitv.ui.AniTVApp
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        indie.fiatsiz.anitv.source.ProcessRules.get(applicationContext)
         setContent {
             AniTVTheme {
                 Surface(Modifier.fillMaxSize()) { AniTVApp(lifecycle) }

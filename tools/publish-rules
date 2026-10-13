@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ $# -ne 1 || -z "${ANITV_RULES_KEY:-}" ]]; then
+  echo 'Usage: ANITV_RULES_KEY=/private/rules-private.pk8 tools/publish-rules /path/to/rules-worktree' >&2
+  exit 2
+fi
+export ANITV_RULES_DIR
+ANITV_RULES_DIR="$(realpath "$1")"
+cd "$(dirname "$0")/.."
+# Environment changes must rerun publication even if the Kotlin sources did not change.
+./gradlew :app:testDebugUnitTest --tests indie.fiatsiz.anitv.source.RulesPublicationTest --rerun-tasks --no-configuration-cache

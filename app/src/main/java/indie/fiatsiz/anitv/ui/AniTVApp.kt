@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
@@ -48,12 +49,16 @@ internal enum class Page { HOME, SEARCH, FAVORITES, WATCHING, COMPLETED, SETTING
 @Composable
 internal fun AniTVApp(lifecycle: Lifecycle) {
     val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val userAgent = remember(context) {
         runCatching { WebSettings.getDefaultUserAgent(context) }.getOrNull()?.takeIf { it.isNotBlank() }
             ?: System.getProperty("http.agent")?.takeIf { it.isNotBlank() }
             ?: "AniTV (Android ${android.os.Build.VERSION.RELEASE}; ${android.os.Build.MODEL})"
     }
-    val source = remember(userAgent) { HiAnimeSource(userAgent) }
+    val rules = remember { indie.fiatsiz.anitv.source.ProcessRules.get(context) }
+    val source = remember(userAgent, rules) { HiAnimeSource(userAgent, rules::snapshot) }
+    val rulesState by rules.states.collectAsState()
     val store = remember { LibraryStore(context) }
     val detailCache = remember { AnimeDetailCache(context) }
     val translationStore = remember { TranslationSettingsStore(context) }
@@ -145,7 +150,7 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
                 val bytes = withContext(Dispatchers.IO) { source.poster(fresh.posterUrl) }
                 val decoded = withContext(Dispatchers.IO) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
                 if (decoded == null) {
-                    if (detailCurrent == detailRequest) detailError = context.getString(R.string.poster_unreadable)
+                    if (detailCurrent == detailRequest) detailError = resources.getString(R.string.poster_unreadable)
                     return@launch
                 }
                 withContext(Dispatchers.IO) { detailCache.save(selected, fresh, bytes, System.currentTimeMillis()) }
@@ -187,7 +192,7 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
                 val preferred = available.firstOrNull { it.audio == preferredAudio }
                 when {
                     preferred != null -> playServer(preferred)
-                    preferredAudio != null -> error = context.getString(R.string.resume_audio_unavailable)
+                    preferredAudio != null -> error = resources.getString(R.string.resume_audio_unavailable)
                     available.size == 1 -> playServer(available.single())
                 }
             } catch (e: Exception) { if (current == request) error = localizedError(context, e, R.string.stream_failed) }
@@ -221,7 +226,7 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
         val saved = library.firstOrNull { it.anime.id == selectedAnime.id }?.progress
             ?.takeIf { it.episodeId == selectedEpisode.id }?.positionMs ?: 0L
         androidx.compose.runtime.key(selectedAnime.id, selectedEpisode.id) {
-            Playback(lifecycle, selectedStream, saved, translationSettings, context.resources.configuration.locales[0].language, userAgent,
+            Playback(lifecycle, selectedStream, saved, translationSettings, configuration.locales[0].language, userAgent,
                 animeTitle = selectedAnime.title, currentEpisode = selectedEpisode, episodes = episodes,
                 episodesLoading = episodesLoading, episodesError = episodesError,
                 onReloadEpisodes = { if (!episodesLoading) loadEpisodes(selectedAnime) },
@@ -279,7 +284,7 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
                 SettingsContent(selectedLanguage, translationSettings, firstFocus, ::back, { tag ->
                     if (tag != selectedLanguage)
                         localeManager.applicationLocales = if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(tag)
-                }) { next ->
+                }, rulesState = rulesState) { next ->
                     translationSettings = next
                     translationStore.save(next)
                 }
