@@ -38,6 +38,7 @@ Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Med
 | `app/src/main/java/indie/fiatsiz/anitv/source/HiAnimeSource.kt` | HTTPS requests, rule-driven detail/episode/server parsing, poster download, compiled player decoding algorithms, and language-neutral source failure codes. |
 | `app/src/main/java/indie/fiatsiz/anitv/SubtitleTranslation.kt` | Translation provider and caption style settings, Android Keystore encryption for API keys, and HTTPS Google Cloud Translation Basic v2 / DeepL text requests. |
 | `app/src/main/java/indie/fiatsiz/anitv/ui/theme/` | Existing TV theme. |
+| `app/src/androidTest/` | Runs the installed parser on Android JSON/regex/crypto; verifies an injected newer signed revision and changed fixture without recompiling the APK. |
 | `app/src/test/` | Library and cache rule tests, sanitized response fragments, and parser tests. |
 | `gradle/libs.versions.toml` | Dependency versions and aliases. |
 | `app/src/main/AndroidManifest.xml` | Leanback launcher, Internet permission, and Android per-app locale configuration. |
