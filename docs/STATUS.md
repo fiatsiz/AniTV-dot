@@ -11,6 +11,7 @@ As of 2026-10-13.
 - Anime detail screen shows a portrait poster at the top left, with the title, description, and facts to its right. Metadata and poster bytes are cached locally for 24 hours. Old wide-cover cache entries refresh on first open. A stale entry remains visible during refresh; missing artwork triggers a new fetch. Episode loading continues if details fail.
 - Search field routes D-pad Down to the Search button. Back unwinds playback, detail, section, then home.
 - Search, results, episodes, source errors, and the subtitled ZokoAnime path remain in place, including the player `Referer` header.
+- HiAnime and stream requests use the TV's default WebView User-Agent. If WebView is unavailable, they use the TV's Android HTTP User-Agent, then a device-labeled fallback.
 - Home buttons use 10 dp corners and labeled Material icons. Episode buttons change background color on focus without growing.
 - The updated AniTV SVG paths render as a scalable vector in the app header. The new 1024×1024 PNG is the launcher icon; a 1280×720 SVG-rendered crop is the Android TV banner. Unused `ic_launcher` mipmap icons were removed.
 - The repository has the upstream GPL-3.0 `LICENSE` and a minimal README with a centered transparent SVG logo and `AniTV-dot` below it. Separate dark/light SVG variants keep the logo readable in both GitHub themes.
@@ -20,10 +21,10 @@ As of 2026-10-13.
 
 ## Verified
 
-- `./gradlew :app:assembleDebug --offline` passed for the logo update. The previous `:app:testDebugUnitTest` run passed 14 unit tests; tests were not rerun for this artwork-only change.
+- `./gradlew :app:assembleDebug --offline` passed for the User-Agent update. The previous `:app:testDebugUnitTest` run passed 14 unit tests; tests were not rerun for this request-header change.
 - The local `LICENSE` matches the original GitHub `LICENSE` blob exactly. Both README SVG variants were rendered and visually inspected against their target backgrounds. Browser rendering on GitHub was not inspected.
 - GitHub reports `master` as the default and only remote branch. The former `main` branch was deleted after confirming `master` contains the project and license.
-- Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `acaef3a6e5828b87914fb52e6a98ba82493f5ea5bf637a21a44f4e8a7fcfa3e8`).
+- Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `7736e2972f2afd4f1e1d7e4214f81b0accc7edbec4a5265754e4057a000b2bfe`).
 - All 98 English and Turkish string keys match. The APK contains Turkish strings and declares its locale configuration. VTT parser and four-cue lookahead tests pass.
 - The 1280×720 TV banner was visually inspected. The APK packages the new vector, icon, and banner; no `ic_launcher` resources remain. All four `@Preview` functions compiled, but their Android Studio renders were not inspected.
 - Live HiAnime search and One Piece detail responses were inspected on 2026-10-12. The page exposed a description, facts, and HTTPS portrait poster. A sampled 385×600 poster returned HTTP 200 as a WebP image.
@@ -31,7 +32,7 @@ As of 2026-10-13.
 
 ## Open verification and limits
 
-- **Current APK device status: NOT TESTED.** In-app vector rendering, launcher icon and TV banner appearance, caption menu focus and Back, language selection and persistence, translation provider/key entry, translated captions and rolling lookahead, translation failure fallback, Settings focus and Back, system-language selection, playback, and cache behavior await TV verification. Settings previews have not been rendered. No ADB device test or installation was done, per the repository instructions.
+- **Current APK device status: NOT TESTED.** Actual User-Agent selection and HiAnime/stream response on the TV, in-app vector rendering, launcher icon and TV banner appearance, caption menu focus and Back, language selection and persistence, translation provider/key entry, translated captions and rolling lookahead, translation failure fallback, Settings focus and Back, system-language selection, playback, and cache behavior await TV verification. Settings previews have not been rendered. No ADB device test or installation was done, per the repository instructions.
 - HiAnime titles, descriptions, metadata values, most episode names, and subtitle tracks remain in the source language. Generic “Episode N” labels are localized. The source was not contacted for this build; its site behavior remains unverified.
 - Quality options appear only when Media3 reports multiple supported HLS video tracks. A single-variant stream stays on Auto.
 - Translation API requests were not exercised with real provider keys. Google Cloud Translation Basic v2 requires an API key. Google ML Kit is keyless, but its terms prohibit TV app use without prior written permission, so it is not integrated. DeepL documents advise against using API keys in client-side code; this direct TV client sends the user's key to DeepL over HTTPS, so use a personal key and account for runtime extraction risk on a compromised device. Android Keystore protects the saved key at rest.

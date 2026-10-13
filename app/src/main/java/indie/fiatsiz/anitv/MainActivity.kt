@@ -4,6 +4,7 @@ import android.app.LocaleManager
 import android.os.LocaleList
 import android.os.Bundle
 import android.graphics.BitmapFactory
+import android.webkit.WebSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -119,7 +120,12 @@ private enum class Page { HOME, SEARCH, FAVORITES, WATCHING, COMPLETED, SETTINGS
 @Composable
 private fun AniTV() {
     val context = LocalContext.current
-    val source = remember { HiAnimeSource() }
+    val userAgent = remember(context) {
+        runCatching { WebSettings.getDefaultUserAgent(context) }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?: System.getProperty("http.agent")?.takeIf { it.isNotBlank() }
+            ?: "AniTV (Android ${android.os.Build.VERSION.RELEASE}; ${android.os.Build.MODEL})"
+    }
+    val source = remember(userAgent) { HiAnimeSource(userAgent) }
     val store = remember { LibraryStore(context) }
     val detailCache = remember { AnimeDetailCache(context) }
     val translationStore = remember { TranslationSettingsStore(context) }
@@ -241,7 +247,7 @@ private fun AniTV() {
         val selectedEpisode = episode!!
         val saved = library.firstOrNull { it.anime.id == selectedAnime.id }?.progress
             ?.takeIf { it.episodeId == selectedEpisode.id }?.positionMs ?: 0L
-        Playback(stream!!, saved, translationSettings, context.resources.configuration.locales[0].language, onBack = ::back, onTranslationSettings = { next ->
+        Playback(stream!!, saved, translationSettings, context.resources.configuration.locales[0].language, userAgent, onBack = ::back, onTranslationSettings = { next ->
             translationSettings = next
             translationStore.save(next)
         }, onProgress = { position, duration ->
@@ -596,12 +602,12 @@ private enum class CaptionMenu { CLOSED, OPTIONS, LANGUAGES }
 private val captionLanguages = listOf("ar", "de", "en", "es", "fr", "id", "it", "ja", "ko", "nl", "pl", "pt", "ru", "tr", "uk")
 
 @Composable
-private fun Playback(stream: Stream, savedPositionMs: Long, translation: TranslationSettings, targetLanguage: String,
+private fun Playback(stream: Stream, savedPositionMs: Long, translation: TranslationSettings, targetLanguage: String, userAgent: String,
     onBack: () -> Unit, onTranslationSettings: (TranslationSettings) -> Unit,
     onProgress: (Long, Long) -> Unit, onError: (String) -> Unit) {
     val context = LocalContext.current
     val displayLocale = context.resources.configuration.locales[0]
-    val source = remember { HiAnimeSource() }
+    val source = remember(userAgent) { HiAnimeSource(userAgent) }
     val translator = remember { SubtitleTranslator() }
     val translationReady = translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
     val effectiveTarget = translation.targetLanguage.ifBlank { targetLanguage }
@@ -629,7 +635,7 @@ private fun Playback(stream: Stream, savedPositionMs: Long, translation: Transla
     val errorCallback by androidx.compose.runtime.rememberUpdatedState(onError)
     val player = remember(stream) {
         val factory = DefaultHttpDataSource.Factory()
-            .setUserAgent("Mozilla/5.0 (Linux; Android 14; TV)")
+            .setUserAgent(userAgent)
             .setDefaultRequestProperties(mapOf("Referer" to stream.referer))
         ExoPlayer.Builder(context).setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(factory)).build().apply {
             val builder = MediaItem.Builder().setUri(stream.url).setMimeType(MimeTypes.APPLICATION_M3U8)

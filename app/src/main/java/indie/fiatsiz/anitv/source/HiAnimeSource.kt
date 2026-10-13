@@ -24,9 +24,8 @@ enum class SourceFailure {
 
 class SourceException(val failure: SourceFailure, val status: Int = 0) : IOException(failure.name)
 
-class HiAnimeSource {
+class HiAnimeSource(private val userAgent: String) {
     private val base = "https://hianime.at"
-    private val userAgent = "Mozilla/5.0 (Linux; Android 14; TV) AppleWebKit/537.36 Chrome/120.0 Safari/537.36"
 
     fun search(query: String): List<Anime> {
         val html = get("$base/search?keyword=${URLEncoder.encode(query.trim(), "UTF-8")}")
