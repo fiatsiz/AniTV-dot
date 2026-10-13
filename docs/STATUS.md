@@ -21,7 +21,8 @@ As of 2026-10-13.
 ## Verified
 
 - `./gradlew :app:assembleDebug --offline` passed for the logo update. The previous `:app:testDebugUnitTest` run passed 14 unit tests; tests were not rerun for this artwork-only change.
-- The local `LICENSE` matches the `origin/main:LICENSE` Git blob exactly. Both README SVG variants were rendered and visually inspected against their target backgrounds. README layout on GitHub remains unverified until pushed.
+- The local `LICENSE` matches the original GitHub `LICENSE` blob exactly. Both README SVG variants were rendered and visually inspected against their target backgrounds. Browser rendering on GitHub was not inspected.
+- GitHub reports `master` as the default and only remote branch. The former `main` branch was deleted after confirming `master` contains the project and license.
 - Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `acaef3a6e5828b87914fb52e6a98ba82493f5ea5bf637a21a44f4e8a7fcfa3e8`).
 - All 98 English and Turkish string keys match. The APK contains Turkish strings and declares its locale configuration. VTT parser and four-cue lookahead tests pass.
 - The 1280×720 TV banner was visually inspected. The APK packages the new vector, icon, and banner; no `ic_launcher` resources remain. All four `@Preview` functions compiled, but their Android Studio renders were not inspected.
