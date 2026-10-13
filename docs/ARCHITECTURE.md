@@ -101,3 +101,7 @@ A read-only StateFlow exposes revision/outcome to existing Settings. English and
 `tools/publish-rules` runs `RulesPublicationTest` against the actual Kotlin parser and a separate `rules` worktree's sanitized fixtures/expected models. It signs exact editable bytes with the external PKCS#8 DER key, verifies against the bundled public key, checks revision ordering, and atomically writes the envelope. The rules branch has an independent orphan history and contains rules, fixtures, license, and publishing instructions. See `docs/RELEASE.md`.
 
 Release lint required scoped Media3 `UnstableApi` opt-ins and `LocalResources`/`LocalConfiguration` reads in existing playback/caption/coordinator code. These fixes do not alter stream, progress, or library formats.
+
+## Release distribution
+
+GitHub tag `v1.0.0` distributes the owner's signed, non-debuggable APK, SHA256SUMS, certificate/provenance information, GPL-3.0 license, and source archived from the APK's embedded commit `bf044b8c471c58c41df279cdf757a8d77f72a35e`. The tag's additional changes document publication only; application code and build configuration match the supplied APK. The rules branch remains independent. Release publication adds no APK update checking, downloading, installation, network permission, or application data migration. See `docs/RELEASE-VERIFICATION.md` for artifact fingerprints and test limits.

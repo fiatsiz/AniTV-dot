@@ -25,13 +25,13 @@ Proje geliştirme aşamasında, ancak aşağıdaki özellikler kullanılabilir d
 - Minimum SDK versiyonu: 34 (Android 14)
 - Hedef SDK versiyonu: 37 (Android 17)
 
-## Kurulum ve yerel sürümler
+## Kurulum ve sürümler
 
-AniTV, Android 14 veya daha yeni Android TV / Google TV gerektirir. Bu hazırlıkta sürüm `1.0.0`, Android versionCode `1` kullanılır. İmzalı HiAnime kuralları, herkese açık [rules dalından](https://github.com/fiatsiz/AniTV-dot/tree/rules) otomatik güncellenir.
+[AniTV 1.0.0 sürümünden](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0) `AniTV-1.0.0.apk` dosyasını indirin. Android 14 veya daha yeni Android TV / Google TV gereklidir. VersionName `1.0.0`, Android versionCode `1` değerindedir. İmzalı HiAnime ayrıştırma kuralları, ayrı ve herkese açık [rules dalından](https://github.com/fiatsiz/AniTV-dot/tree/rules) otomatik güncellenir.
 
-[Sürüm kılavuzundaki](docs/RELEASE.md) harici imzalama bilgileriyle sahibin anahtarı kullanılarak APK oluşturun, ardından APK'yı TV'ye kopyalayıp seçtiğiniz APK yükleyicisiyle kurun. Önce sağlama toplamını ve imza sertifikasını kontrol edin. Farklı sertifikayla imzalanmış debug kurulumu genellikle yerinde güncellenemez; kaldırmak favorileri ve ilerlemeyi silebilir. Verileri otomatik temizlemeyin veya uygulamayı otomatik kaldırmayın.
+Sürümün `SHA256SUMS` dosyasını ve imza sertifikasını kontrol edin, ardından APK'yı TV'ye kopyalayıp seçtiğiniz APK yükleyicisiyle kurun. Farklı sertifikayla imzalanmış debug kurulumu genellikle yerinde güncellenemez; kaldırmak favorileri ve ilerlemeyi silebilir. Verileri otomatik temizlemeyin veya uygulamayı otomatik kaldırmayın.
 
-[Doğrulama raporu](docs/RELEASE-VERIFICATION.md), `7d0f3db56e5e7b4686dcbcd11dc43a83624e8d9b` kaynak commit'ini, test sonuçlarını ve mevcut debug APK'nın sağlama toplamını içerir. **Kalıcı APK imzalama bilgileri hâlâ gereklidir; sahibin anahtarıyla imzalanmış release APK henüz oluşturulmadı.** Yalnızca kurallar yayımlandı. APK güncelleme denetimi, indirme, kurulum veya GitHub APK sürümü bulunmaz. Dağıtılan APK'larla eşleşen kaynak kod ve [GPL-3.0 lisansı](LICENSE) sağlanmalıdır.
+Sürüm, APK'nın `bf044b8c471c58c41df279cdf757a8d77f72a35e` derleme commit'iyle eşleşen GPL-3.0 kaynak kodunu ve [lisansı](LICENSE) içerir. İmzalar ve test edilen/edilmeyen davranışlar için [doğrulama raporuna](docs/RELEASE-VERIFICATION.md), yerel derleme için [sürüm kılavuzuna](docs/RELEASE.md) bakın. Otomatik APK güncelleme denetimi, indirme veya kurulum bulunmaz.
 
 ## İlham Kaynağı
 

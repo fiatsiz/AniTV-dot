@@ -1,8 +1,34 @@
-# AniTV 1.0.0 preparation verification
+# AniTV 1.0.0 release verification
 
-Verified on 2026-10-13. Application implementation and rules publication are complete. **An owner-signed release APK is not available: the permanent APK signing credentials are missing. This is not a release-readiness claim.**
+## Signed release artifact
 
-## Provenance and artifacts
+Verified on 2026-10-13 after the owner supplied a signed APK. Release: [AniTV 1.0.0](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0). The APK's embedded Git provenance identifies `bf044b8c471c58c41df279cdf757a8d77f72a35e`; the release tag adds documentation only, with no application/build-configuration changes. The source asset is archived from that exact embedded commit.
+
+| Item | Verified value |
+| --- | --- |
+| Release asset | `AniTV-1.0.0.apk` |
+| Local owner-built APK | `app/build/outputs/apk/release/app-release.apk` |
+| APK size | 27,261,480 bytes |
+| APK SHA-256 | `3c629c2e932b723e94a1de492ffbf06da30f00216b443bcb6f071c6345309969` |
+| Owner certificate SHA-256 | `9a65e9f457a546bd65d51146f1e4ab611f44c57be68e089c000d4431fb805854` |
+| Signing key | RSA-3072, certificate CN `fiatsiz`; different from the debug certificate |
+| Package/version | `indie.fiatsiz.anitv`, versionName `1.0.0`, versionCode `1` |
+| Minimum / target / compile SDK | 34 / 37 / 37 |
+| Debuggable / testOnly | Neither enabled in the packaged manifest |
+| Embedded source commit | `bf044b8c471c58c41df279cdf757a8d77f72a35e` |
+| Rules | Initial signed revision 1 and public DER key match tracked source byte for byte |
+
+SDK `apksigner` verified the v2 signature. SDK `aapt` verified version/package/SDKs and the compiled non-debuggable manifest. No private keystore, credentials, or private rules key are included in the APK or source assets. The user requested a rebuild check; the release APK SHA-256 and certificate remained unchanged.
+
+The shared-source unit suite and release lint passed again: 51 unit tests passed, one publication-only test skipped, and lint had no errors. The owner-built APK was copied unchanged into release staging; no substitute signing key or rebuild was used by the agent. A fresh, separate Android TV API 34 emulator (`AniTV_Release_1_0_0`, `emulator-5556`, `ro.kernel.qemu=1`) installed the signed APK, rendered Home/Settings with version 1.0.0 and current rules revision 1, and successfully searched `takopi`, loaded details/episodes, offered SUB/DUB, and rendered SUB full-screen video with original subtitles. The timer advanced, forward seeking worked, and Android reported an active audio track; audible output was not checked (`-no-audio`). Back returned to episode details. Existing `Television_1080p` app data was not touched or uninstalled.
+
+Release assets include the signed APK, matching source archive, GPL-3.0 license, certificate/provenance text, and SHA256SUMS. The existing rules branch remains independently versioned. No APK updater was added. Physical-TV behavior and audible sound remain unverified; the earlier complete debug emulator flow below remains separately identified.
+
+## Earlier preparation record
+
+The following record describes the initial debug verification before the owner created the release APK. Its signing blocker is now resolved by the supplied artifact.
+
+## Debug preparation provenance and artifacts
 
 | Item | Value |
 | --- | --- |
@@ -52,8 +78,8 @@ Only `Television_1080p` / `emulator-5554` was controlled; `ro.kernel.qemu=1`, An
 - Favorites displayed the existing Overgeared artwork/detail card and saved Episode 2. Back navigated out of playback/detail/search and Settings. The original library preferences were backed up before testing and restored byte for byte afterward; Home again showed the original two watching titles and one favorite. Test progress did not replace the user's saved progress.
 - Settings passed visual inspection at normal font scale and `font_scale=2.0` with motion scales disabled. Version/revision/outcome stayed readable; D-pad scrolled the focused language choice fully into view. Normal text size and motion defaults were restored. Only Android TV landscape was applicable; phone/portrait layouts were not tested.
 
-## Remaining release gate
+## Initial signing gate (resolved)
 
-The owner must supply the permanent APK keystore and `ANITV_RELEASE_KEYSTORE`, `ANITV_RELEASE_STORE_PASSWORD`, `ANITV_RELEASE_KEY_ALIAS`, and `ANITV_RELEASE_KEY_PASSWORD` to the Gradle process. Follow `docs/RELEASE.md`, rerun signed release assembly, verify package/version/certificate/non-debuggable status, and record the release checksum/fingerprint. Do not uninstall the existing debug install automatically: certificate mismatch can prevent in-place updates, and uninstalling can erase saved data.
+At the initial preparation stage, the owner still needed to supply the permanent APK keystore and `ANITV_RELEASE_KEYSTORE`, `ANITV_RELEASE_STORE_PASSWORD`, `ANITV_RELEASE_KEY_ALIAS`, and `ANITV_RELEASE_KEY_PASSWORD` to the Gradle process. Follow `docs/RELEASE.md`, rerun signed release assembly, verify package/version/certificate/non-debuggable status, and record the release checksum/fingerprint. Do not uninstall the existing debug install automatically: certificate mismatch can prevent in-place updates, and uninstalling can erase saved data.
 
-Physical-TV operation, audible audio, translation provider requests, caption style variants, quality changes, full offline link loss on-device, forced episode-list failures, large-title sidebar scrolling, and broad site/network compatibility remain unverified for this build. No APK release, APK updater, application push, or history rewrite was performed.
+Physical-TV operation, audible audio, translation provider requests, caption style variants, quality changes, full offline link loss on-device, forced episode-list failures, large-title sidebar scrolling, and broad site/network compatibility remain unverified for this build. During initial preparation, no APK release, APK updater, application push, or history rewrite was performed. The owner subsequently authorized GitHub 1.0.0 publication; no APK updater or history rewrite is part of that publication.

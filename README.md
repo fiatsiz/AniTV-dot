@@ -25,13 +25,13 @@ The project is still in development, but the following features are already impl
 - Minimum SDK version: 34 (Android 14)
 - Target SDK version: 37 (Android 17)
 
-## Installation and local releases
+## Installation and releases
 
-AniTV requires Android TV / Google TV with Android 14 or newer. The current preparation uses version `1.0.0` and Android versionCode `1`, with automatic signed HiAnime rule updates from the public [rules branch](https://github.com/fiatsiz/AniTV-dot/tree/rules).
+Download `AniTV-1.0.0.apk` from [AniTV 1.0.0](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0). Android TV / Google TV with Android 14 or newer is required. VersionName is `1.0.0`; Android versionCode is `1`. Signed HiAnime parsing rules update automatically from the separate public [rules branch](https://github.com/fiatsiz/AniTV-dot/tree/rules).
 
-Build an owner-signed APK using the external credentials in the [release guide](docs/RELEASE.md), then copy that APK to your TV and install it with your chosen APK installer. Check its checksum and signing certificate first. A differently signed debug installation normally cannot update in place; uninstalling can erase Favorites and progress. Never clear data or uninstall automatically.
+Check the release's `SHA256SUMS` and signing certificate, then copy the APK to your TV and install it with your chosen APK installer. A differently signed debug installation normally cannot update in place; uninstalling can erase Favorites and progress. Never clear data or uninstall automatically.
 
-The [verification report](docs/RELEASE-VERIFICATION.md) records source commit `7d0f3db56e5e7b4686dcbcd11dc43a83624e8d9b`, test results, and the available debug APK's checksum. **Owner signing credentials are still required; this preparation has not produced an owner-signed release APK.** Only rules were published. No APK update checker, downloader, installer, or GitHub APK release is included. Distributed APKs must include the matching source and [GPL-3.0 license](LICENSE).
+The release includes matching GPL-3.0 source from APK build commit `bf044b8c471c58c41df279cdf757a8d77f72a35e` and the [license](LICENSE). See the [verification report](docs/RELEASE-VERIFICATION.md) for fingerprints and tested/untested behavior, or the [release guide](docs/RELEASE.md) to build locally. No automatic APK update checker, downloader, or installer is included.
 
 ## Inspiration
 

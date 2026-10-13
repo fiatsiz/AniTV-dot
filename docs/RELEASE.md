@@ -1,6 +1,6 @@
 # Local APK releases
 
-The release target is AniTV 1.0.0, application ID `indie.fiatsiz.anitv`, versionCode 1, Android 14/API 34 minimum. No APK updater or GitHub APK release is included.
+The release target is AniTV 1.0.0, application ID `indie.fiatsiz.anitv`, versionCode 1, Android 14/API 34 minimum. The [GitHub 1.0.0 release](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0) distributes an owner-signed APK and matching source. No APK updater is included.
 
 ## Versioning
 
@@ -30,7 +30,7 @@ Missing credentials fail release packaging clearly while debug builds, tests, an
 
 A release signed with a different certificate normally cannot update an installed debug build in place. Never automatically uninstall, clear app data, or replace a user's signing key. Uninstalling can erase Favorites, progress, metadata, and translation settings. Keep the existing install until the owner has chosen a data-preserving transition or accepted manual data loss. There is currently no supported library export/import feature.
 
-Before distribution, verify with SDK `apksigner verify --verbose --print-certs`, `aapt dump badging`, and `apkanalyzer manifest debuggable`; record SHA-256, certificate SHA-256, source commit, and tested/untested device flows. Ship the matching GPL-3.0 source and license with any redistributed APK. Do not publish application commits or an APK release as part of this preparation.
+Before distribution, verify with SDK `apksigner verify --verbose --print-certs`, `aapt dump badging`, and `apkanalyzer manifest debuggable`; record SHA-256, certificate SHA-256, source commit, and tested/untested device flows. Ship the matching GPL-3.0 source and license with any redistributed APK. The owner subsequently authorized GitHub 1.0.0 publication. Future publication still requires an explicit release request; rule publication remains a separate workflow.
 
 ## Signed source rules
 
@@ -46,7 +46,7 @@ Create the separate worktree from the existing branch on another workstation wit
 ANITV_RULES_KEY=/absolute/private/path/rules-private.pk8 tools/publish-rules /absolute/path/to/AniTV-rules
 ```
 
-This command validates configuration and runs the actual Kotlin parser against fixtures before signing exact payload bytes. It verifies the envelope against the bundled public key, rejects revision rollback/conflicts, and atomically writes the envelope. Review/commit the rules worktree, then push only `git push origin rules`. Application changes remain local. Initial publication additionally uses `ANITV_RULES_INITIAL=1` to enforce identical bundled/published payload/signature and envelope bytes.
+This command validates configuration and runs the actual Kotlin parser against fixtures before signing exact payload bytes. It verifies the envelope against the bundled public key, rejects revision rollback/conflicts, and atomically writes the envelope. Review/commit the rules worktree, then push only `git push origin rules`. Do not push application changes as part of a rules-only update. Initial publication additionally uses `ANITV_RULES_INITIAL=1` to enforce identical bundled/published payload/signature and envelope bytes.
 
 Rollback restores previous known-good rule content with a revision higher than all published revisions, followed by the same validation/signing/publication. Never rewrite history or decrease revision. Private cache stores accepted content and its ETag atomically and retains a validated previous copy. Bad signatures, malformed/incompatible data, unavailable GitHub, rate limits, and late downloads retain local rules. Key rotation has no remote mechanism; ship a new APK if trust must change.
 
@@ -54,7 +54,7 @@ Production endpoint: `https://api.github.com/repos/fiatsiz/AniTV-dot/contents/hi
 
 ## Verification record and Android smoke test
 
-See [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md) for matching source/rules commits, debug artifact metadata, verified emulator flows, and the missing owner-signing gate.
+See [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md) for matching source/rules commits, debug artifact metadata, verified emulator flows, and owner-certificate verification.
 
 To repeat the focused Android parser proof, build `:app:assembleDebugAndroidTest`. On an emulator only, verify `ro.kernel.qemu=1`, install the debug application and `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk` with `adb -s <emulator-serial> install -r`, then run:
 
