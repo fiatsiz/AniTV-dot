@@ -30,6 +30,8 @@ Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Com
 | `app/src/main/res/values*/strings.xml`, `res/xml/locales_config.xml` | English defaults, Turkish translations, and advertised app languages. |
 | `app/src/main/res/drawable/anitv_logo_vector.xml` | Scalable Android vector generated from the updated transparent SVG for the in-app header. |
 | `app/src/main/res/drawable-nodpi/` | Updated PNG launcher icon and 1280×720 TV banner rendered from the supplied SVG. |
+| `resources/anitv-logo*.svg` | Transparent README logos for GitHub dark and light themes; not packaged in the Android app. |
+| `README.md`, `LICENSE` | Minimal repository identity and upstream GPL-3.0 license text. |
 
 ## Flow
 

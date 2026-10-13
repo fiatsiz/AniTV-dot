@@ -13,6 +13,7 @@ As of 2026-10-13.
 - Search, results, episodes, source errors, and the subtitled ZokoAnime path remain in place, including the player `Referer` header.
 - Home buttons use 10 dp corners and labeled Material icons. Episode buttons change background color on focus without growing.
 - The updated AniTV SVG paths render as a scalable vector in the app header. The new 1024×1024 PNG is the launcher icon; a 1280×720 SVG-rendered crop is the Android TV banner. Unused `ic_launcher` mipmap icons were removed.
+- The repository has the upstream GPL-3.0 `LICENSE` and a minimal README with a centered transparent SVG logo and `AniTV-dot` below it. Separate dark/light SVG variants keep the logo readable in both GitHub themes.
 - Android Studio Compose previews are defined for sample home and episode screens without network requests or a TV.
 - English and Turkish app text follows the TV language by default. Settings offers System default, English, and Türkçe; Android stores an explicit choice. Source and playback errors have localized messages. English and Turkish settings previews are defined.
 - Settings supports keyed Google Cloud Translation and DeepL caption translation. Provider keys are encrypted at rest with Android Keystore. Playback fetches timed VTT cues and translates rolling batches of four ahead of the current cue; original Media3 captions return if translation fails. English and Portuguese DeepL targets use supported regional codes.
@@ -20,6 +21,7 @@ As of 2026-10-13.
 ## Verified
 
 - `./gradlew :app:assembleDebug --offline` passed for the logo update. The previous `:app:testDebugUnitTest` run passed 14 unit tests; tests were not rerun for this artwork-only change.
+- The local `LICENSE` matches the `origin/main:LICENSE` Git blob exactly. Both README SVG variants were rendered and visually inspected against their target backgrounds. README layout on GitHub remains unverified until pushed.
 - Current debug APK: `app/build/outputs/apk/debug/app-debug.apk` (SHA-256 `acaef3a6e5828b87914fb52e6a98ba82493f5ea5bf637a21a44f4e8a7fcfa3e8`).
 - All 98 English and Turkish string keys match. The APK contains Turkish strings and declares its locale configuration. VTT parser and four-cue lookahead tests pass.
 - The 1280×720 TV banner was visually inspected. The APK packages the new vector, icon, and banner; no `ic_launcher` resources remain. All four `@Preview` functions compiled, but their Android Studio renders were not inspected.
