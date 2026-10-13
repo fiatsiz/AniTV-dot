@@ -26,15 +26,8 @@ AniTV is a personal Android TV app for searching anime on `https://hianime.at`, 
 - Search, results, episode selection, subtitled playback, and loading/error states already exist. Preserve them.
 - Every screen and playback control must work with D-pad, Select, and Back. Show visible focus.
 - Do not claim the APK works until it builds and the relevant flow has been exercised. State what could not be tested.
-
-## Next milestone
-
-- Make a TV-friendly home screen with clear access to search, favorites, currently watching, and a completed-anime archive.
-- Store favorites, watch progress, and completed status locally so they survive app restarts. Make progress and completion rules explicit; do not mark a title completed merely because playback started.
-- Let playback fill the screen, with remote-accessible controls and a reliable path back to the episode list.
-- Fix focus or navigation defects found while building these screens. Keep focused items visible and make Back behavior predictable.
-- Optimize player setup or playback only where a measured problem or concrete code issue warrants it. Preserve working streams, subtitles, and `Referer` handling.
-- Keep login, downloads, recommendations, multiple sources, and publishing outside this milestone.
+- Do not use adb to install or test the application, instead tell the user to do the installation and test for you.
+- Before doing anything, read the docs inside docs/
 
 ## Implementation
 
