@@ -38,31 +38,34 @@ internal class UpdateRepository(
         Thread(runnable, "anitv-updater").apply { isDaemon = true }
     }
 ) {
-    private var record = store.read()
+    private var record = UpdateRecord()
     private var identity = installed()
-    private val mutable = MutableStateFlow(UpdateState(identity.versionName,
-        release = record.metadata?.let { Release.parse(it.toByteArray()) },
-        lastSuccess = record.lastSuccess, retryAt = record.retryAt, problem = record.problem))
+    private val mutable = MutableStateFlow(UpdateState(identity.versionName))
     val states = mutable.asStateFlow()
     private var checking = false
     private var active: DownloadCancellation? = null
     private var foreground = false
 
     init {
-        mutable.value = mutable.value.copy(check = when {
-            record.problem == UpdateProblem.RATE_LIMIT -> CheckStatus.RATE_LIMIT
-            record.problem != null -> CheckStatus.ERROR
-            record.lastSuccess == null -> CheckStatus.NEVER
-            else -> successStatus(mutable.value.release)
-        })
         // Startup cleanup/revalidation shares the download lock so it cannot race a new transfer.
         synchronized(this) {
             val cancellation = DownloadCancellation()
             active = cancellation
             executor.execute {
                 try {
+                    val cached = store.read()
+                    val release = cached.metadata?.let { Release.parse(it.toByteArray()) }
+                    synchronized(this) {
+                        record = cached
+                        mutable.value = mutable.value.copy(release = release, lastSuccess = record.lastSuccess,
+                            retryAt = record.retryAt, problem = record.problem, check = when {
+                                record.problem == UpdateProblem.RATE_LIMIT -> CheckStatus.RATE_LIMIT
+                                record.problem != null -> CheckStatus.ERROR
+                                record.lastSuccess == null -> CheckStatus.NEVER
+                                else -> successStatus(release)
+                            })
+                    }
                     directory.listFiles()?.filter { it.extension == "part" }?.forEach { it.delete() }
-                    val release = states.value.release
                     if (release != null && states.value.available && apk(release).isFile) {
                         verify(release, apk(release), cancellation)
                         synchronized(this) { mutable.value = mutable.value.copy(download = DownloadStatus.READY) }
@@ -150,7 +153,8 @@ internal class UpdateRepository(
                         }
                         else -> throw UpdateException(UpdateProblem.HTTP)
                     }
-                    if (result != mutable.value.release) {
+                    // Release-note edits do not replace a verified APK.
+                    if (result?.copy(notes = "") != mutable.value.release?.copy(notes = "")) {
                         clearApks()
                         mutable.value = mutable.value.copy(download = DownloadStatus.IDLE, bytes = 0,
                             downloadProblem = null, install = InstallStatus.IDLE)
@@ -188,7 +192,10 @@ internal class UpdateRepository(
                     verify(release, apk(release), cancellation)
                 } else {
                     transport.download(release, partial, cancellation) { bytes ->
-                        synchronized(this) { mutable.value = mutable.value.copy(bytes = bytes) }
+                        synchronized(this) {
+                            if (bytes == release.size || bytes * 100 / release.size != mutable.value.bytes * 100 / release.size)
+                                mutable.value = mutable.value.copy(bytes = bytes)
+                        }
                     }
                     synchronized(this) { mutable.value = mutable.value.copy(download = DownloadStatus.VERIFYING) }
                     verify(release, partial, cancellation)
@@ -220,7 +227,12 @@ internal class UpdateRepository(
         cancellation.check()
     }
 
-    @Synchronized fun cancelDownload() { active?.cancel() }
+    @Synchronized fun cancelDownload() {
+        val cancellation = active ?: return
+        cancellation.cancel()
+        // Closing a network connection must not block TV input or Activity Stop.
+        executor.execute { cancellation.disconnect() }
+    }
     @Synchronized fun installStatus(status: InstallStatus) { mutable.value = mutable.value.copy(install = status) }
 
     @Synchronized fun forInstall(ready: (File) -> Unit) {

@@ -72,6 +72,11 @@ internal fun SettingsContent(
     onBack: () -> Unit,
     onSelect: (String) -> Unit,
     rulesState: RulesState = RulesState(1, RulesOutcome.CHECKING),
+    updateState: indie.fiatsiz.anitv.update.UpdateState = indie.fiatsiz.anitv.update.UpdateState(BuildConfig.VERSION_NAME),
+    onCheckUpdate: () -> Unit = {},
+    onDownloadUpdate: () -> Unit = {},
+    onCancelUpdate: () -> Unit = {},
+    onInstallUpdate: () -> Unit = {},
     onTranslationSettings: (TranslationSettings) -> Unit
 ) {
     var keyFocused by remember { mutableStateOf(false) }
@@ -102,6 +107,7 @@ internal fun SettingsContent(
                 }
             ), color = Color(0xFFB9C5D8), fontSize = 18.sp
         )
+        UpdateContent(updateState, onCheckUpdate, onDownloadUpdate, onCancelUpdate, onInstallUpdate)
         Spacer(modifier = Modifier.height(8.dp))
         Text(stringResource(R.string.language_hint), color = Color(0xFFB9C5D8), fontSize = 18.sp)
         Text(stringResource(R.string.language), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)

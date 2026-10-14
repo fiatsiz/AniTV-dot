@@ -1,6 +1,6 @@
 # AniTV architecture
 
-AniTV is one Kotlin Android `app` module. Compose for TV owns navigation and screens; `LibraryStore` owns local favorites and progress; `AnimeDetailCache` owns cached title metadata and poster files; `HiAnimeSource` owns HiAnime requests and parsing; `ProcessRules` owns one startup `RulesRepository`; `SubtitleTranslator` owns Google/DeepL API requests; Media3 owns playback.
+AniTV is one Kotlin Android `app` module. Compose for TV owns navigation and screens; `LibraryStore` owns local favorites and progress; `AnimeDetailCache` owns cached title metadata and poster files; `HiAnimeSource` owns HiAnime requests and parsing; `ProcessRules` owns one startup `RulesRepository`; `ProcessUpdates` owns one foreground release updater; `SubtitleTranslator` owns Google/DeepL API requests; Media3 owns playback.
 
 ```text
 Home → Search/results or local library → detail + episodes → available SUB/DUB → HLS + optional VTT player
@@ -20,7 +20,7 @@ Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Med
 
 | File | Responsibility |
 | --- | --- |
-| `app/src/main/java/indie/fiatsiz/anitv/MainActivity.kt` | Activity entry point and themed Compose host; passes its lifecycle to the app coordinator. |
+| `app/src/main/java/indie/fiatsiz/anitv/MainActivity.kt` | Activity entry point and themed Compose host; passes its lifecycle to the app coordinator, triggers updater resume checks, and cancels unfinished transfers at Stop except configuration recreation. |
 | `app/src/main/java/indie/fiatsiz/anitv/ui/AniTVApp.kt` | Transient app state, source requests, stores, navigation, Back, and screen dispatch. Owns episode-list loading/error/retry independently of stream preparation and keys playback by anime/episode. |
 | `app/src/main/java/indie/fiatsiz/anitv/ui/{Home,Search,Library,Detail,Settings}Content.kt` | Screen layout and D-pad controls; receive state and callbacks from the app coordinator. Detail owns episode buttons, localized episode labels, and the resume action. Home uses a keyed LazyColumn with one focus group for its heading/Settings/main buttons, followed by the resume section. A Home-only `HomeBringIntoViewSpec` uses the standard minimum-distance behavior instead of the TV pivot; visible buttons stay stationary. Entering the main group resets the list to item zero; entering the resume card retains normal bring-into-view scrolling. |
 | `app/src/main/java/indie/fiatsiz/anitv/ui/ContinueWatchingContent.kt` | Detail resume button and home artwork card; timestamp/audio labels and resume callbacks to the app coordinator. Reads artwork through `rememberAnimeArtwork`. |
@@ -38,10 +38,10 @@ Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Med
 | `app/src/main/java/indie/fiatsiz/anitv/source/HiAnimeSource.kt` | HTTPS requests, rule-driven detail/episode/server parsing, poster download, compiled player decoding algorithms, and language-neutral source failure codes. |
 | `app/src/main/java/indie/fiatsiz/anitv/SubtitleTranslation.kt` | Translation provider and caption style settings, Android Keystore encryption for API keys, and HTTPS Google Cloud Translation Basic v2 / DeepL text requests. |
 | `app/src/main/java/indie/fiatsiz/anitv/ui/theme/` | Existing TV theme. |
-| `app/src/androidTest/` | Runs the installed parser on Android JSON/regex/crypto; verifies an injected newer signed revision and changed fixture without recompiling the APK. |
-| `app/src/test/` | Library and cache rule tests, sanitized response fragments, and parser tests. |
+| `app/src/androidTest/` | Runs the installed parser on Android JSON/regex/crypto and verifies a newer signed revision; updater tests cover real APK identity, provider scope, notice Select/focus, and download-action focus. |
+| `app/src/test/` | Library/cache rules, sanitized source fragments/parsers, and updater timing, persistence, transport, download, and APK identity rules. |
 | `gradle/libs.versions.toml` | Dependency versions and aliases. |
-| `app/src/main/AndroidManifest.xml` | Leanback launcher, Internet permission, and Android per-app locale configuration. |
+| `app/src/main/AndroidManifest.xml` | Leanback launcher, Internet/installation permissions, per-app locales, and restricted updater FileProvider. |
 | `app/src/main/res/values*/strings.xml`, `res/xml/locales_config.xml` | English defaults, Turkish translations, and advertised app languages. |
 | `app/src/main/res/drawable/anitv_logo_vector.xml` | Scalable Android vector generated from the updated transparent SVG for the in-app header. |
 | `app/src/main/res/drawable-nodpi/` | Updated PNG launcher icon and 1280×720 TV banner rendered from the supplied SVG. |
@@ -96,7 +96,7 @@ Run `./gradlew :app:testDebugUnitTest :app:assembleDebug` after source or UI cha
 
 `RulesCache` stores a signed envelope and its accepted ETag together in private `files/source-rules/current.json`. Temporary files are flushed and atomically renamed on the same filesystem. A previous validated envelope/ETag remains in `previous.json`; interrupted temporary files are ignored. Cache reads verify signatures again and prefer the highest compatible local revision. A cache write failure retains the selected in-memory snapshot and reports that it could not persist. No library/progress preference keys change.
 
-A read-only StateFlow exposes revision/outcome to existing Settings. English and Turkish strings report app version, rules revision, and checking/current/updated/unavailable/timeout/rejected/cache-write states. Existing focusable controls and Back stay in place; no manual update action is added.
+A read-only StateFlow exposes revision/outcome to existing Settings. English and Turkish strings report app version, rules revision, and checking/current/updated/unavailable/timeout/rejected/cache-write states. Existing focusable controls and Back stay in place. Signed rules have no manual rule-update action; APK actions belong to the separate updater.
 
 `tools/publish-rules` runs `RulesPublicationTest` against the actual Kotlin parser and a separate `rules` worktree's sanitized fixtures/expected models. It signs exact editable bytes with the external PKCS#8 DER key, verifies against the bundled public key, checks revision ordering, and atomically writes the envelope. The rules branch has an independent orphan history and contains rules, fixtures, license, and publishing instructions. See `docs/RELEASE.md`.
 
@@ -106,10 +106,16 @@ Release lint required scoped Media3 `UnstableApi` opt-ins and `LocalResources`/`
 
 GitHub tag `v1.0.0` distributes the owner's signed, non-debuggable APK, SHA256SUMS, certificate/provenance information, GPL-3.0 license, and source archived from the APK's embedded commit `bf044b8c471c58c41df279cdf757a8d77f72a35e`. The tag's additional changes document publication only; application code and build configuration match the supplied APK. The rules branch remains independent. Release publication adds no APK update checking, downloading, installation, network permission, or application data migration. See `docs/RELEASE-VERIFICATION.md` for artifact fingerprints and test limits.
 
-## GitHub APK updater core
+## GitHub APK updater
 
 `update/Release.kt` owns stable numeric versions, exact release-asset contracts, HTTPS URL restrictions, and pure APK identity validation. `UpdateTransport.kt` owns the fixed latest-release endpoint, conditional requests, finite timeouts, 1 MiB metadata / 100 MiB APK limits, at most five allowed HTTPS redirects, streaming progress, cancellation, byte count, SHA-256, and server retry deadlines. It does not use `HiAnimeSource` or the signed-rules transport.
 
 `UpdateRepository` owns observable check/download/install state and injected transport, clock, installed identity, and APK inspection. An executor performs requests and file validation. Synchronization deduplicates checks and downloads; foreground transitions cancel unfinished work. The first automatic attempt is due immediately, later attempts are daily even after failure, clock rollback is due, manual checks have a persisted 60-second debounce, and server deadlines override both. A 304 reuses validated cached metadata; failures preserve earlier information and successful timestamps with an error status.
 
-`UpdateStore` atomically persists release metadata, ETag, attempts, successful check time, retry deadline, and last check problem under private `files/update`. APKs use only `cache/update`; partial files are removed on startup and after unfinished transfers. Ready files must pass byte/digest and injected identity validation again before reuse. Existing library, translation, detail cache, and rules storage are untouched. Android process ownership, lifecycle/UI, and installer integration follow in the next milestone.
+`UpdateStore` atomically persists release metadata, ETag, attempts, successful check time, retry deadline, and last check problem under private `files/update`. APKs use only `cache/update`; partial files are removed on startup and after unfinished transfers. Ready files must pass byte/digest and injected identity validation again before reuse. Existing library, translation, detail cache, and rules storage are untouched. `ProcessUpdates` holds one repository per process, independent of the Activity and signed rules. Startup loads metadata, cleans partials, and revalidates cached APKs off the main thread. `MainActivity.onResume` rereads installed identity and installation permission, then asks for a due automatic check. Stop cancels unfinished transfer/validation; configuration recreation retains it. No worker, service, alarm, or background scheduler is registered.
+
+`AniTVApp` observes updater state before the playback early return. Home inserts a keyed focusable notice after the main menu without requesting focus. Settings embeds `UpdateContent`, using existing TV Buttons, stable download-action identity, text/progress semantics, English/Turkish resources, and expandable plain-text notes. Short focusable note sections adapt to font scale so D-pad scrolling can expose long notes. Search, playback, translation, and source requests do not wait for updater requests.
+
+`AndroidApkInspector` reads `GET_SIGNING_CERTIFICATES` package/archive information. The pure validator requires the fixed package, matching release versionName, newer versionCode and semantic version, compatible minimum SDK, and exact nonempty current signer set. `UpdateInstaller` revalidates bytes and identity off the main thread before posting a foreground-only Android action. It opens per-app unknown-source settings when permission is missing; return offers Install explicitly. Otherwise it sends `ACTION_VIEW`, APK MIME type, content URI/ClipData, and temporary read permission. `UpdateFileProvider` is non-exported and exposes only `cache/update/`. Missing activities/permission rejection are visible states. Returning from the installer reports an unchanged version without claiming success; startup/resume handles the real installed identity.
+
+`src/debug/.../UpdateFixtureActivity` provides a local fixture transport, isolated metadata store, and `cache/update/fixture` directory for emulator-only verification. It reuses the shipping updater UI, inspector, FileProvider, lifecycle, and installer. Its Activity/manifest and local APK bytes are absent from release builds. Android tests inspect a same-debug-signer higher-code fixture and verify content-provider scope and focus; JVM tests cover transport, timing, persistence, cancellation, and identity rejection. No production endpoint or trust source is replaced.

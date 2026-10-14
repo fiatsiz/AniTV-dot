@@ -32,10 +32,8 @@ internal class DownloadCancellation {
         check()
         connection = value
     }
-    @Synchronized fun cancel() {
-        cancelled = true
-        connection?.disconnect()
-    }
+    fun cancel() { cancelled = true }
+    @Synchronized fun disconnect() { connection?.disconnect() }
     fun check() { if (cancelled) throw CancellationException() }
 }
 

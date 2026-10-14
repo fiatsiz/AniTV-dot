@@ -78,6 +78,7 @@ internal fun HomeContent(
     library: List<LibraryEntry>,
     firstFocus: androidx.compose.ui.focus.FocusRequester,
     modifier: Modifier = Modifier,
+    updateVersion: String? = null,
     onNavigate: (Page) -> Unit,
     continueWatching: @Composable (LibraryEntry) -> Unit
 ) {
@@ -160,6 +161,15 @@ internal fun HomeContent(
                             Icons.Filled.CheckCircle,
                             Modifier.weight(1f)
                         ) { onNavigate(Page.COMPLETED) }
+                    }
+                }
+            }
+            if (updateVersion != null) {
+                item(key = "app_update") {
+                    Button(onClick = { onNavigate(Page.SETTINGS) }, modifier = Modifier.fillMaxWidth(),
+                        scale = ButtonDefaults.scale(focusedScale = 1f),
+                        shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))) {
+                        Text(stringResource(R.string.update_notice, updateVersion), fontSize = 18.sp)
                     }
                 }
             }

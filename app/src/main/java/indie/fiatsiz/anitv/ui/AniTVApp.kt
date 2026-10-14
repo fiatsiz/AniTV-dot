@@ -47,7 +47,11 @@ import indie.fiatsiz.anitv.playback.Playback
 internal enum class Page { HOME, SEARCH, FAVORITES, WATCHING, COMPLETED, SETTINGS }
 
 @Composable
-internal fun AniTVApp(lifecycle: Lifecycle) {
+internal fun AniTVApp(
+    lifecycle: Lifecycle,
+    updates: indie.fiatsiz.anitv.update.UpdateRepository,
+    onInstallUpdate: () -> Unit
+) {
     val context = LocalContext.current
     val resources = androidx.compose.ui.platform.LocalResources.current
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
@@ -60,6 +64,7 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
     val rules = remember { indie.fiatsiz.anitv.source.ProcessRules.get(context) }
     val source = remember(userAgent, rules) { HiAnimeSource(userAgent, rules::snapshot) }
     val rulesState by rules.states.collectAsState()
+    val updateState by updates.states.collectAsState()
     val store = remember { LibraryStore(context) }
     val detailCache = remember { AnimeDetailCache(context) }
     val translationStore = remember { TranslationSettingsStore(context) }
@@ -364,6 +369,7 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
                     library,
                     firstFocus,
                     Modifier.weight(1f),
+                    updateVersion = updateState.release?.version?.name?.takeIf { updateState.available },
                     onNavigate = { page = it }) { entry ->
                     ContinueWatchingSection(entry, detailCache, source) { continueWatching(entry) }
                 }
@@ -394,7 +400,11 @@ internal fun AniTVApp(lifecycle: Lifecycle) {
                             if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(
                                 tag
                             )
-                }, rulesState = rulesState) { next ->
+                }, rulesState = rulesState, updateState = updateState,
+                    onCheckUpdate = { updates.check(true) },
+                    onDownloadUpdate = { updates.download() },
+                    onCancelUpdate = { updates.cancelDownload() },
+                    onInstallUpdate = onInstallUpdate) { next ->
                     translationSettings = next
                     translationStore.save(next)
                 }

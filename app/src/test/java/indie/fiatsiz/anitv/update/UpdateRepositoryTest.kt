@@ -34,6 +34,8 @@ class UpdateRepositoryTest {
         var gate: CountDownLatch? = null
         var downloadGate: CountDownLatch? = null
         val downloadStarted = CountDownLatch(1)
+        var inspectGate: CountDownLatch? = null
+        val inspectStarted = CountDownLatch(1)
         val transport = object : UpdateTransport {
             override fun latest(etag: String?): ReleaseResponse {
                 calls.incrementAndGet()
@@ -52,8 +54,11 @@ class UpdateRepositoryTest {
                 progress(3)
             }
         }
-        fun repository() = UpdateRepository(UpdateStore(File(directory, "metadata")), File(directory, "apk"),
-            { identity }, { _, _, _ -> }, transport, { now }, executor).also { idle() }
+        fun repository(wait: Boolean = true) = UpdateRepository(UpdateStore(File(directory, "metadata")), File(directory, "apk"),
+            { identity }, { _, _, _ ->
+                if (inspectGate != null) inspectStarted.countDown()
+                inspectGate?.await(5, TimeUnit.SECONDS)
+            }, transport, { now }, executor).also { if (wait) idle() }
         fun idle() { executor.submit {}.get(6, TimeUnit.SECONDS) }
         fun close() { executor.shutdownNow(); directory.deleteRecursively() }
     }
@@ -97,6 +102,36 @@ class UpdateRepositoryTest {
             assertEquals(1, f.calls.get())
             assertEquals(CheckStatus.AVAILABLE, repository.states.value.check)
         } finally { f.close() }
+    }
+
+    @Test fun resumeWhileStartupStorageLoadsStillMakesFirstCheck() {
+        val f = Fixture()
+        val gate = CountDownLatch(1)
+        try {
+            f.executor.execute { gate.await(5, TimeUnit.SECONDS) }
+            val repository = f.repository(wait = false)
+            repository.resume(false)
+            gate.countDown()
+            f.idle(); f.idle()
+            assertEquals(1, f.calls.get())
+            assertEquals(CheckStatus.AVAILABLE, repository.states.value.check)
+        } finally { gate.countDown(); f.close() }
+    }
+
+    @Test fun backgroundDuringInstallRevalidationRetainsVerifiedDownload() {
+        val f = Fixture()
+        try {
+            val repository = f.repository()
+            repository.resume(false); f.idle()
+            repository.download(); f.idle()
+            f.inspectGate = CountDownLatch(1)
+            repository.forInstall { fail("Must not open installer in background") }
+            assertTrue(f.inspectStarted.await(2, TimeUnit.SECONDS))
+            repository.background()
+            f.inspectGate!!.countDown(); f.idle()
+            assertEquals(DownloadStatus.READY, repository.states.value.download)
+            assertTrue(File(f.directory, "apk/AniTV-1.2.0.apk").isFile)
+        } finally { f.inspectGate?.countDown(); f.close() }
     }
 
     @Test fun conditional304OfflineMalformedAndRateLimitsRetainInformation() {
@@ -170,6 +205,9 @@ class UpdateRepositoryTest {
             assertTrue(File(f.directory, "apk").listFiles()!!.isEmpty())
             repository.resume(false)
             assertTrue(repository.download()); f.idle()
+            assertEquals(DownloadStatus.READY, repository.states.value.download)
+            f.response = ReleaseResponse(200, releaseJson().put("body", "Edited notes").toString().toByteArray())
+            repository.check(true); f.idle()
             assertEquals(DownloadStatus.READY, repository.states.value.download)
             var ready: File? = null
             repository.forInstall { ready = it }; f.idle()
