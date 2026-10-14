@@ -6,7 +6,8 @@ As of 2026-10-14.
 
 - On 2026-10-14, the owner requested installing the existing signed release APK on the connected Beko Google TV (Android API 34). Both adb connections identify the same physical TV; only one connection was used for installation.
 - The local `app/build/outputs/apk/release/app-release.apk` still matches the published 1.0.0 SHA-256 and owner certificate recorded in [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md). Its v2 signature, package/version, API minimum, and non-debuggable manifest were rechecked.
-- `adb install -r` failed with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`: the TV has a debug-signed AniTV 1.0 installation with the same application ID and a different certificate. No uninstall or data clear was performed. Release installation remains blocked pending the owner's choice about preserving or removing existing data.
+- `adb install -r` initially failed with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`: the TV had a debug-signed AniTV 1.0 installation with the same application ID and a different certificate.
+- The owner then explicitly approved uninstalling the debug app and losing its data. The uninstall command stalled without returning a result; its local client was terminated, and the release install guarded by its success did not run. Both previously listed adb connections failed bounded read-only probes. Reconnecting removed the stale connections; the advertised wireless endpoint refused a new connection. Release installation is blocked until wireless adb responds again. Whether the uninstall reached the TV remains unknown and must be checked before retrying.
 - No TV controls, launch, playback, or live source checks were exercised. Application code, architecture, and the release APK are unchanged; no rebuild or unit-test rerun was needed for this installation attempt.
 
 ## Implemented
