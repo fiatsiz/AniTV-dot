@@ -1,4 +1,34 @@
-# AniTV 1.0.0 release verification
+# AniTV release verification
+
+## Owner-signed 1.1.0 — 2026-10-14
+
+The owner supplied the signed APK and requested code/release publication. The APK was copied unchanged into release staging; no replacement signing key or rebuild was used. Publication is prepared after the checks below.
+
+| Item | Verified value |
+| --- | --- |
+| Release asset | `AniTV-1.1.0.apk` |
+| Owner-built APK | `app/build/outputs/apk/release/app-release.apk` |
+| Size | 27,369,152 bytes |
+| APK SHA-256 | `e606e4a02f0be45c7b93eb7de144e56fac7d7deac76a9e0b07665a6ddc23b613` |
+| Owner certificate SHA-256 | `9a65e9f457a546bd65d51146f1e4ab611f44c57be68e089c000d4431fb805854` |
+| Signature | APK v2, RSA-3072, CN `fiatsiz`; same certificate as 1.0.0 |
+| Package/version | `indie.fiatsiz.anitv`, versionName `1.1.0`, versionCode `2` |
+| Minimum / target / compile SDK | 34 / 37 / 37 |
+| Debuggable / testOnly | Neither enabled |
+| Embedded Git base | `d5b916fd8e80f05a98828cbf71a1d985bfd80bec` |
+| Formatted source archive commit | `55a50bccab909ca5b0ada1a857a383ed24d857df` |
+| Rules / updater provider | Bundled rule/public-key bytes match source; FileProvider exposes only `cache/update/` |
+| Debug fixture | No `UpdateFixtureActivity` in APK manifest or DEX |
+
+All 26 owner-pending source/manifest/test changes were formatting only. A token comparison against the embedded Git base preserved string/comment contents and every non-whitespace token. The source archive captures the formatted worktree; its commit differs from embedded provenance for this documented reason. No private keystore/credentials or synthetic APK fixtures are included in the tracked archive.
+
+`./gradlew :app:testDebugUnitTest :app:lintRelease --offline` passed again: 67 tests passed, one publication-only test skipped, release lint had no errors. The earlier debug feature verification included five Android tests, synthetic higher-code updater installation with byte-identical library/caption settings, progress/Cancel/background/configuration behavior, permission/installer cancellation, languages/large text, and live SUB playback/subtitles/seek/resume. These are earlier debug results, not repeated claims for every signed-build flow.
+
+Only fresh `AniTV_Release_1_1_0` / `emulator-5554` was controlled (`ro.kernel.qemu=1`, Android API 34). The published 1.0.0 APK first passed its recorded checksum and installed; live `takopi` search, detail/episodes, and saving a Favorite worked. The supplied 1.1.0 then installed with `adb install -r` and the existing Favorite/artwork remained visible. Home/Settings showed version 1.1.0, source rules revision 1/current, and a successful GitHub check that did not offer older 1.0.0. No uninstall or app-data clear occurred. No physical TV was controlled.
+
+The signed-build smoke test did not repeat video, audible sound (`-no-audio`), subtitles/seek, DeepL/Google requests, quality, large text, or installer failure cases. Physical-TV 1.1.0 behavior remains unverified. The first updater-enabled owner-signed APK requires manual installation over 1.0.0; future newer stable releases can use the updater. See [RELEASE.md](RELEASE.md).
+
+## Earlier 1.0.0 release verification
 
 ## Signed release artifact
 
