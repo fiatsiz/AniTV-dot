@@ -1,6 +1,13 @@
 # AniTV status
 
-As of 2026-10-13.
+As of 2026-10-14.
+
+## Physical TV release installation
+
+- On 2026-10-14, the owner requested installing the existing signed release APK on the connected Beko Google TV (Android API 34). Both adb connections identify the same physical TV; only one connection was used for installation.
+- The local `app/build/outputs/apk/release/app-release.apk` still matches the published 1.0.0 SHA-256 and owner certificate recorded in [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md). Its v2 signature, package/version, API minimum, and non-debuggable manifest were rechecked.
+- `adb install -r` failed with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`: the TV has a debug-signed AniTV 1.0 installation with the same application ID and a different certificate. No uninstall or data clear was performed. Release installation remains blocked pending the owner's choice about preserving or removing existing data.
+- No TV controls, launch, playback, or live source checks were exercised. Application code, architecture, and the release APK are unchanged; no rebuild or unit-test rerun was needed for this installation attempt.
 
 ## Implemented
 
