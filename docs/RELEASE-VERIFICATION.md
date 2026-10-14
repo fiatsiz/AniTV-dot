@@ -2,7 +2,7 @@
 
 ## Owner-signed 1.1.0 — 2026-10-14
 
-The owner supplied the signed APK and requested code/release publication. The APK was copied unchanged into release staging; no replacement signing key or rebuild was used. Publication is prepared after the checks below.
+The owner supplied the signed APK and requested code/release publication. The APK was copied unchanged into release staging; no replacement signing key or rebuild was used. Published as [public Latest](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.1.0) at 2026-10-14 18:15:35 UTC, with draft/prerelease disabled. Tag `v1.1.0` points to `36c28f84ae57e61678e43730404a4b17ef6b52c2`; its changes after the source archive commit are verification documentation only.
 
 | Item | Verified value |
 | --- | --- |
@@ -27,6 +27,12 @@ All 26 owner-pending source/manifest/test changes were formatting only. A token 
 Only fresh `AniTV_Release_1_1_0` / `emulator-5554` was controlled (`ro.kernel.qemu=1`, Android API 34). The published 1.0.0 APK first passed its recorded checksum and installed; live `takopi` search, detail/episodes, and saving a Favorite worked. The supplied 1.1.0 then installed with `adb install -r` and the existing Favorite/artwork remained visible. Home/Settings showed version 1.1.0, source rules revision 1/current, and a successful GitHub check that did not offer older 1.0.0. No uninstall or app-data clear occurred. No physical TV was controlled.
 
 The signed-build smoke test did not repeat video, audible sound (`-no-audio`), subtitles/seek, DeepL/Google requests, quality, large text, or installer failure cases. Physical-TV 1.1.0 behavior remains unverified. The first updater-enabled owner-signed APK requires manual installation over 1.0.0; future newer stable releases can use the updater. See [RELEASE.md](RELEASE.md).
+
+### 1.1.0 publication verification
+
+All five assets (APK, source archive, LICENSE, RELEASE-INFO.txt, SHA256SUMS) were downloaded through the release API and matched staging byte-for-byte. GitHub asset `sha256:` digests matched each local file, and downloaded SHA256SUMS passed. The unauthenticated latest-release endpoint returned published stable `v1.1.0` and the exact uploaded APK name, byte count, browser URL, and SHA-256 digest. An unauthenticated public APK download returned HTTP 200 and matched the supplied owner APK. The installed signed 1.1.0 emulator app's manual check then displayed latest 1.1.0 / up to date.
+
+Application changes, owner formatting, and verification documentation were pushed to `origin/master` with the immutable `v1.1.0` tag. The rules branch remains `e97e669715f09b71e1713ec464b010083d226279`. Subsequent publication-record documentation does not change the tag, APK, or source assets.
 
 ## Earlier 1.0.0 release verification
 

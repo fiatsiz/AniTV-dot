@@ -2,13 +2,19 @@
 
 As of 2026-10-14.
 
+## Published 1.1.0 — 2026-10-14
+
+- Published [AniTV 1.1.0](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.1.0) at 18:15:35 UTC as public Latest, with draft/prerelease disabled. Tag `v1.1.0` points to `36c28f84ae57e61678e43730404a4b17ef6b52c2`; the code and owner formatting updates are pushed to `origin/master`. The rules branch remains `e97e669715f09b71e1713ec464b010083d226279`.
+- All five release assets were downloaded and matched staging byte-for-byte. GitHub asset digests matched local SHA-256; downloaded SHA256SUMS passed. Unauthenticated Latest API returned stable `v1.1.0` with the exact uploaded `AniTV-1.1.0.apk` contract; an unauthenticated APK download returned HTTP 200 and matched the owner APK SHA-256.
+- The installed owner-signed 1.1.0 emulator app manually checked GitHub after publication and displayed latest 1.1.0 / up to date. Publication adds no app-code changes; the signed-build test limits below remain unchanged. Physical-TV 1.1.0 behavior is still unverified.
+
 ## Signed 1.1.0 verification and publication preparation
 
 - The owner supplied `app/build/outputs/apk/release/app-release.apk` and explicitly requested publication with the code updates. It is AniTV 1.1.0 / versionCode 2, package `indie.fiatsiz.anitv`, SDK minimum/target/compile 34/37/37, 27,369,152 bytes, non-debuggable and not testOnly. APK SHA-256: `e606e4a02f0be45c7b93eb7de144e56fac7d7deac76a9e0b07665a6ddc23b613`.
 - SDK `apksigner` verified its v2 signature and permanent owner certificate `9a65e9f457a546bd65d51146f1e4ab611f44c57be68e089c000d4431fb805854`, identical to published 1.0.0. Bundled signed rules/public key match tracked bytes. Packaged FileProvider exposes only `cache/update/`; the debug fixture Activity is absent from manifest and DEX. No APK rebuild, new signing key, private credentials, or APK modification was used.
 - Fresh `AniTV_Release_1_1_0` / `emulator-5554` (`ro.kernel.qemu=1`, API 34) installed the published owner-signed 1.0.0, searched `takopi`, loaded details/episodes, and saved a Favorite. `adb install -r` then installed the supplied owner-signed 1.1.0 without uninstall/data clear. Favorites/artwork remained visible; Home, Settings, rules revision 1, installed version 1.1.0, and a successful GitHub release check were verified. The older published release correctly produced no downgrade offer.
 - `:app:testDebugUnitTest :app:lintRelease --offline` passed again: 67 tests passed, one publication-only test skipped, no lint errors. Earlier five Android tests and the debug updater/installation/playback regression remain separate evidence. This signed-APK smoke test did not repeat playback, audible audio, translation, quality, large text, installer failure cases, or physical-TV checks. No physical TV was controlled.
-- APK provenance embeds `d5b916fd8e80f05a98828cbf71a1d985bfd80bec`. The owner's pending edits were formatting only; source archive commit `55a50bccab909ca5b0ada1a857a383ed24d857df` preserves the formatted worktree with identical non-whitespace tokens. Release assets will include the unchanged signed APK, source archive, license, provenance, and checksums. The earlier missing-password gate is resolved by the supplied signed artifact. Publication is being prepared under the current user request; the rules branch is outside this publication.
+- APK provenance embeds `d5b916fd8e80f05a98828cbf71a1d985bfd80bec`. The owner's pending edits were formatting only; source archive commit `55a50bccab909ca5b0ada1a857a383ed24d857df` preserves the formatted worktree with identical non-whitespace tokens. Published release assets include the unchanged signed APK, source archive, license, provenance, and checksums. The earlier missing-password gate is resolved by the supplied signed artifact. Publication completed under the current user request; the rules branch was not changed.
 
 ## Owner build source formatting — 1.1.0
 

@@ -1,6 +1,6 @@
 # Local APK releases
 
-The verified owner-signed release target is AniTV **1.1.0 / versionCode 2**, application ID `indie.fiatsiz.anitv`, Android 14/API 34 minimum. It adds a stable GitHub release updater. The published [1.0.0 release](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0) has no APK updater; install the first updater-enabled, owner-signed APK manually. The owner requested 1.1.0 publication on 2026-10-14; assets are being prepared after signature and emulator verification.
+The published owner-signed [AniTV 1.1.0 release](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.1.0) is **1.1.0 / versionCode 2**, application ID `indie.fiatsiz.anitv`, Android 14/API 34 minimum. It adds a stable GitHub release updater. The published [1.0.0 release](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0) has no APK updater; install the first updater-enabled, owner-signed APK manually. The owner authorized publication on 2026-10-14. It is public Latest; APK, matching formatted source, GPL-3.0 license, provenance, and checksums were downloaded and verified after upload.
 
 ## Versioning
 
