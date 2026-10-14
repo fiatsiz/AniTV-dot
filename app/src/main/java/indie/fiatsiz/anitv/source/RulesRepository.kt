@@ -152,6 +152,7 @@ class RulesRepository(
     private val lock = Any()
     private val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(deadlineMillis)
     private val selected = CompletableFuture<CachedRules>()
+
     @Volatile
     private var local = CachedRules(bundled, null)
     private val mutableState = kotlinx.coroutines.flow.MutableStateFlow(

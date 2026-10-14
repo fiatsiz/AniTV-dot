@@ -12,14 +12,29 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-internal fun releaseJson(version: String = "1.2.0", bytes: ByteArray = byteArrayOf(1, 2, 3)): JSONObject =
+internal fun releaseJson(
+    version: String = "1.2.0",
+    bytes: ByteArray = byteArrayOf(1, 2, 3)
+): JSONObject =
     JSONObject().put("tag_name", "v$version").put("draft", false).put("prerelease", false)
         .put("body", "Release notes\nPlain text")
-        .put("assets", JSONArray().put(JSONObject().put("name", "AniTV-$version.apk")
-            .put("state", "uploaded").put("size", bytes.size)
-            .put("digest", "sha256:" + MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) })
-            .put("browser_download_url", "https://github.com/fiatsiz/AniTV-dot/releases/download/v$version/AniTV-$version.apk")))
-internal fun release(version: String = "1.2.0", bytes: ByteArray = byteArrayOf(1, 2, 3)) = Release.parse(releaseJson(version, bytes).toString().toByteArray())!!
+        .put(
+            "assets", JSONArray().put(
+                JSONObject().put("name", "AniTV-$version.apk")
+                    .put("state", "uploaded").put("size", bytes.size)
+                    .put(
+                        "digest",
+                        "sha256:" + MessageDigest.getInstance("SHA-256").digest(bytes)
+                            .joinToString("") { "%02x".format(it) })
+                    .put(
+                        "browser_download_url",
+                        "https://github.com/fiatsiz/AniTV-dot/releases/download/v$version/AniTV-$version.apk"
+                    )
+            )
+        )
+
+internal fun release(version: String = "1.2.0", bytes: ByteArray = byteArrayOf(1, 2, 3)) =
+    Release.parse(releaseJson(version, bytes).toString().toByteArray())!!
 
 class UpdateRepositoryTest {
     private class Fixture {
@@ -44,7 +59,13 @@ class UpdateRepositoryTest {
                 if (failure) throw java.io.IOException("offline")
                 return response
             }
-            override fun download(release: Release, target: File, cancellation: DownloadCancellation, progress: (Long) -> Unit) {
+
+            override fun download(
+                release: Release,
+                target: File,
+                cancellation: DownloadCancellation,
+                progress: (Long) -> Unit
+            ) {
                 target.writeBytes(byteArrayOf(1))
                 progress(1)
                 downloadStarted.countDown()
@@ -54,16 +75,27 @@ class UpdateRepositoryTest {
                 progress(3)
             }
         }
-        fun repository(wait: Boolean = true) = UpdateRepository(UpdateStore(File(directory, "metadata")), File(directory, "apk"),
-            { identity }, { _, _, _ ->
-                if (inspectGate != null) inspectStarted.countDown()
-                inspectGate?.await(5, TimeUnit.SECONDS)
-            }, transport, { now }, executor).also { if (wait) idle() }
-        fun idle() { executor.submit {}.get(6, TimeUnit.SECONDS) }
-        fun close() { executor.shutdownNow(); directory.deleteRecursively() }
+
+        fun repository(wait: Boolean = true) =
+            UpdateRepository(
+                UpdateStore(File(directory, "metadata")), File(directory, "apk"),
+                { identity }, { _, _, _ ->
+                    if (inspectGate != null) inspectStarted.countDown()
+                    inspectGate?.await(5, TimeUnit.SECONDS)
+                }, transport, { now }, executor
+            ).also { if (wait) idle() }
+
+        fun idle() {
+            executor.submit {}.get(6, TimeUnit.SECONDS)
+        }
+
+        fun close() {
+            executor.shutdownNow(); directory.deleteRecursively()
+        }
     }
 
-    @Test fun timingPersistenceFailuresRollbackAndManualDebounce() {
+    @Test
+    fun timingPersistenceFailuresRollbackAndManualDebounce() {
         val f = Fixture()
         try {
             var repository = f.repository()
@@ -88,10 +120,13 @@ class UpdateRepositoryTest {
             assertTrue(restarted.check(false)); f.idle()
             f.now += 24 * 60 * 60 * 1000L
             assertTrue(restarted.check(false)); f.idle()
-        } finally { f.close() }
+        } finally {
+            f.close()
+        }
     }
 
-    @Test fun firstResumeChecksAfterStartupCleanupAndDeduplicates() {
+    @Test
+    fun firstResumeChecksAfterStartupCleanupAndDeduplicates() {
         val f = Fixture()
         try {
             f.gate = CountDownLatch(1)
@@ -101,10 +136,13 @@ class UpdateRepositoryTest {
             f.gate!!.countDown(); f.idle()
             assertEquals(1, f.calls.get())
             assertEquals(CheckStatus.AVAILABLE, repository.states.value.check)
-        } finally { f.close() }
+        } finally {
+            f.close()
+        }
     }
 
-    @Test fun resumeWhileStartupStorageLoadsStillMakesFirstCheck() {
+    @Test
+    fun resumeWhileStartupStorageLoadsStillMakesFirstCheck() {
         val f = Fixture()
         val gate = CountDownLatch(1)
         try {
@@ -115,10 +153,13 @@ class UpdateRepositoryTest {
             f.idle(); f.idle()
             assertEquals(1, f.calls.get())
             assertEquals(CheckStatus.AVAILABLE, repository.states.value.check)
-        } finally { gate.countDown(); f.close() }
+        } finally {
+            gate.countDown(); f.close()
+        }
     }
 
-    @Test fun backgroundDuringInstallRevalidationRetainsVerifiedDownload() {
+    @Test
+    fun backgroundDuringInstallRevalidationRetainsVerifiedDownload() {
         val f = Fixture()
         try {
             val repository = f.repository()
@@ -131,10 +172,13 @@ class UpdateRepositoryTest {
             f.inspectGate!!.countDown(); f.idle()
             assertEquals(DownloadStatus.READY, repository.states.value.download)
             assertTrue(File(f.directory, "apk/AniTV-1.2.0.apk").isFile)
-        } finally { f.inspectGate?.countDown(); f.close() }
+        } finally {
+            f.inspectGate?.countDown(); f.close()
+        }
     }
 
-    @Test fun conditional304OfflineMalformedAndRateLimitsRetainInformation() {
+    @Test
+    fun conditional304OfflineMalformedAndRateLimitsRetainInformation() {
         val f = Fixture()
         try {
             val repository = f.repository()
@@ -151,7 +195,11 @@ class UpdateRepositoryTest {
             assertEquals(CheckStatus.ERROR, repository.states.value.check)
             assertEquals(previous, repository.states.value.release)
             f.now += 60_000
-            f.response = ReleaseResponse(429, retryAfter = "120", rateReset = ((f.now + 180_000) / 1000).toString())
+            f.response = ReleaseResponse(
+                429,
+                retryAfter = "120",
+                rateReset = ((f.now + 180_000) / 1000).toString()
+            )
             repository.check(true); f.idle()
             val retry = repository.states.value.retryAt
             assertEquals(f.now + 180_000, retry)
@@ -162,10 +210,13 @@ class UpdateRepositoryTest {
             f.response = ReleaseResponse(304)
             assertTrue(repository.check(true)); f.idle()
             assertEquals(CheckStatus.AVAILABLE, repository.states.value.check)
-        } finally { f.close() }
+        } finally {
+            f.close()
+        }
     }
 
-    @Test fun currentOlderAndIgnoredPrereleasesAreNeverOffered() {
+    @Test
+    fun currentOlderAndIgnoredPrereleasesAreNeverOffered() {
         for (version in listOf("1.1.0", "1.0.99")) {
             val f = Fixture()
             try {
@@ -175,21 +226,27 @@ class UpdateRepositoryTest {
                 assertEquals(CheckStatus.CURRENT, repository.states.value.check)
                 assertFalse(repository.states.value.available)
                 assertFalse(repository.download())
-            } finally { f.close() }
+            } finally {
+                f.close()
+            }
         }
         val f = Fixture()
         try {
-            f.response = ReleaseResponse(200, releaseJson().put("prerelease", true).toString().toByteArray())
+            f.response =
+                ReleaseResponse(200, releaseJson().put("prerelease", true).toString().toByteArray())
             val repository = f.repository()
             repository.check(false); f.idle()
             assertEquals(CheckStatus.NO_STABLE, repository.states.value.check)
             f.now += 60_000; f.response = ReleaseResponse(304)
             repository.check(true); f.idle()
             assertEquals(CheckStatus.NO_STABLE, repository.states.value.check)
-        } finally { f.close() }
+        } finally {
+            f.close()
+        }
     }
 
-    @Test fun downloadProgressCancelBackgroundRetryReuseAndInstallationReturn() {
+    @Test
+    fun downloadProgressCancelBackgroundRetryReuseAndInstallationReturn() {
         val f = Fixture()
         try {
             val repository = f.repository()
@@ -206,7 +263,10 @@ class UpdateRepositoryTest {
             repository.resume(false)
             assertTrue(repository.download()); f.idle()
             assertEquals(DownloadStatus.READY, repository.states.value.download)
-            f.response = ReleaseResponse(200, releaseJson().put("body", "Edited notes").toString().toByteArray())
+            f.response = ReleaseResponse(
+                200,
+                releaseJson().put("body", "Edited notes").toString().toByteArray()
+            )
             repository.check(true); f.idle()
             assertEquals(DownloadStatus.READY, repository.states.value.download)
             var ready: File? = null
@@ -226,10 +286,13 @@ class UpdateRepositoryTest {
             repository.forInstall { fail("Tampered file must not install") }; f.idle()
             assertEquals(UpdateProblem.DIGEST, repository.states.value.downloadProblem)
             assertFalse(ready!!.exists())
-        } finally { f.close() }
+        } finally {
+            f.close()
+        }
     }
 
-    @Test fun obsoleteDownloadsAndStartupPartialsAreRemoved() {
+    @Test
+    fun obsoleteDownloadsAndStartupPartialsAreRemoved() {
         val f = Fixture()
         try {
             val repository = f.repository()
@@ -243,6 +306,8 @@ class UpdateRepositoryTest {
             assertFalse(repository.states.value.available)
             assertEquals(DownloadStatus.IDLE, repository.states.value.download)
             assertTrue(File(f.directory, "apk").listFiles()!!.isEmpty())
-        } finally { f.close() }
+        } finally {
+            f.close()
+        }
     }
 }

@@ -27,9 +27,14 @@ class MainActivity : ComponentActivity() {
         indie.fiatsiz.anitv.source.ProcessRules.get(applicationContext)
         setContent {
             AniTVTheme {
-                Surface(Modifier.fillMaxSize()) { AniTVApp(lifecycle, updates) {
-                    indie.fiatsiz.anitv.update.UpdateInstaller.install(this@MainActivity, updates)
-                } }
+                Surface(Modifier.fillMaxSize()) {
+                    AniTVApp(lifecycle, updates) {
+                        indie.fiatsiz.anitv.update.UpdateInstaller.install(
+                            this@MainActivity,
+                            updates
+                        )
+                    }
+                }
             }
         }
     }

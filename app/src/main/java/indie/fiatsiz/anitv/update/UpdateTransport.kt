@@ -22,19 +22,37 @@ internal data class ReleaseResponse(
 
 internal interface UpdateTransport {
     fun latest(etag: String?): ReleaseResponse
-    fun download(release: Release, target: File, cancellation: DownloadCancellation, progress: (Long) -> Unit)
+    fun download(
+        release: Release,
+        target: File,
+        cancellation: DownloadCancellation,
+        progress: (Long) -> Unit
+    )
 }
 
 internal class DownloadCancellation {
-    @Volatile private var cancelled = false
+    @Volatile
+    private var cancelled = false
     private var connection: HttpURLConnection? = null
-    @Synchronized fun attach(value: HttpURLConnection?) {
+
+    @Synchronized
+    fun attach(value: HttpURLConnection?) {
         check()
         connection = value
     }
-    fun cancel() { cancelled = true }
-    @Synchronized fun disconnect() { connection?.disconnect() }
-    fun check() { if (cancelled) throw CancellationException() }
+
+    fun cancel() {
+        cancelled = true
+    }
+
+    @Synchronized
+    fun disconnect() {
+        connection?.disconnect()
+    }
+
+    fun check() {
+        if (cancelled) throw CancellationException()
+    }
 }
 
 internal class GitHubUpdateTransport(
@@ -56,16 +74,31 @@ internal class GitHubUpdateTransport(
             etag?.let { connection.setRequestProperty("If-None-Match", it) }
             val status = connection.responseCode
             val body = if (status == 200) {
-                requireUpdate(connection.contentLengthLong <= MAX_METADATA_BYTES, UpdateProblem.METADATA)
+                requireUpdate(
+                    connection.contentLengthLong <= MAX_METADATA_BYTES,
+                    UpdateProblem.METADATA
+                )
                 connection.inputStream.use { readMetadata(it) }
             } else byteArrayOf()
-            return ReleaseResponse(status, body, connection.getHeaderField("ETag"),
-                connection.getHeaderField("Retry-After"), connection.getHeaderField("X-RateLimit-Reset"),
-                connection.getHeaderField("X-RateLimit-Remaining"))
-        } finally { connection.disconnect() }
+            return ReleaseResponse(
+                status,
+                body,
+                connection.getHeaderField("ETag"),
+                connection.getHeaderField("Retry-After"),
+                connection.getHeaderField("X-RateLimit-Reset"),
+                connection.getHeaderField("X-RateLimit-Remaining")
+            )
+        } finally {
+            connection.disconnect()
+        }
     }
 
-    override fun download(release: Release, target: File, cancellation: DownloadCancellation, progress: (Long) -> Unit) {
+    override fun download(
+        release: Release,
+        target: File,
+        cancellation: DownloadCancellation,
+        progress: (Long) -> Unit
+    ) {
         validateInitialUrl(release.url, release.version)
         var url = release.url
         var redirects = 0
@@ -96,7 +129,10 @@ internal class GitHubUpdateTransport(
                             val count = input.read(buffer)
                             if (count == -1) break
                             total += count
-                            requireUpdate(total <= release.size && total <= MAX_APK_BYTES, UpdateProblem.SIZE)
+                            requireUpdate(
+                                total <= release.size && total <= MAX_APK_BYTES,
+                                UpdateProblem.SIZE
+                            )
                             output.write(buffer, 0, count)
                             progress(total)
                         }
@@ -124,8 +160,15 @@ internal fun readMetadata(input: InputStream): ByteArray {
     }
 }
 
-internal fun verifyBytes(file: File, release: Release, cancellation: DownloadCancellation = DownloadCancellation()) {
-    requireUpdate(file.isFile && file.length() == release.size && file.length() <= MAX_APK_BYTES, UpdateProblem.SIZE)
+internal fun verifyBytes(
+    file: File,
+    release: Release,
+    cancellation: DownloadCancellation = DownloadCancellation()
+) {
+    requireUpdate(
+        file.isFile && file.length() == release.size && file.length() <= MAX_APK_BYTES,
+        UpdateProblem.SIZE
+    )
     val digest = MessageDigest.getInstance("SHA-256")
     file.inputStream().use { input ->
         val buffer = ByteArray(32 * 1024)
@@ -140,13 +183,22 @@ internal fun verifyBytes(file: File, release: Release, cancellation: DownloadCan
         }
         requireUpdate(total == release.size, UpdateProblem.SIZE)
     }
-    requireUpdate(digest.digest().joinToString("") { "%02x".format(it) } == release.sha256, UpdateProblem.DIGEST)
+    requireUpdate(digest.digest().joinToString("") { "%02x".format(it) } == release.sha256,
+        UpdateProblem.DIGEST)
 }
 
 internal fun retryDeadline(response: ReleaseResponse, now: Long): Long {
-    fun seconds(value: String?): Long? = value?.toLongOrNull()?.takeIf { it >= 0 && it <= Long.MAX_VALUE / 1000 }?.times(1000)
-    val delay = seconds(response.retryAfter)?.let { if (it <= Long.MAX_VALUE - now) now + it else Long.MAX_VALUE }
-        ?: runCatching { ZonedDateTime.parse(response.retryAfter, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() }.getOrNull()
+    fun seconds(value: String?): Long? =
+        value?.toLongOrNull()?.takeIf { it >= 0 && it <= Long.MAX_VALUE / 1000 }?.times(1000)
+
+    val delay =
+        seconds(response.retryAfter)?.let { if (it <= Long.MAX_VALUE - now) now + it else Long.MAX_VALUE }
+            ?: runCatching {
+                ZonedDateTime.parse(
+                    response.retryAfter,
+                    DateTimeFormatter.RFC_1123_DATE_TIME
+                ).toInstant().toEpochMilli()
+            }.getOrNull()
     val reset = seconds(response.rateReset)
     return maxOf(now + 60_000, delay ?: 0, reset ?: 0)
 }

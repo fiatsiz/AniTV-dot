@@ -68,10 +68,12 @@ internal fun DetailContent(
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                Box(Modifier
-                    .width(180.dp)
-                    .height(280.dp)
-                    .background(Color(0xFF27273B))) {
+                Box(
+                    Modifier
+                        .width(180.dp)
+                        .height(280.dp)
+                        .background(Color(0xFF27273B))
+                ) {
                     poster?.let {
                         Image(
                             it,

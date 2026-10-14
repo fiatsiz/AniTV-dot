@@ -22,9 +22,10 @@ internal data class UpdateState(
     val downloadProblem: UpdateProblem? = null,
     val install: InstallStatus = InstallStatus.IDLE
 ) {
-    val available: Boolean get() = release?.version?.let { latest ->
-        StableVersion.parse(installedVersion)?.let { latest > it }
-    } == true
+    val available: Boolean
+        get() = release?.version?.let { latest ->
+            StableVersion.parse(installedVersion)?.let { latest > it }
+        } == true
 }
 
 internal class UpdateRepository(
@@ -57,74 +58,107 @@ internal class UpdateRepository(
                     val release = cached.metadata?.let { Release.parse(it.toByteArray()) }
                     synchronized(this) {
                         record = cached
-                        mutable.value = mutable.value.copy(release = release, lastSuccess = record.lastSuccess,
+                        mutable.value = mutable.value.copy(
+                            release = release, lastSuccess = record.lastSuccess,
                             retryAt = record.retryAt, problem = record.problem, check = when {
                                 record.problem == UpdateProblem.RATE_LIMIT -> CheckStatus.RATE_LIMIT
                                 record.problem != null -> CheckStatus.ERROR
                                 record.lastSuccess == null -> CheckStatus.NEVER
                                 else -> successStatus(release)
-                            })
+                            }
+                        )
                     }
-                    directory.listFiles()?.filter { it.extension == "part" }?.forEach { it.delete() }
+                    directory.listFiles()?.filter { it.extension == "part" }
+                        ?.forEach { it.delete() }
                     if (release != null && states.value.available && apk(release).isFile) {
                         verify(release, apk(release), cancellation)
-                        synchronized(this) { mutable.value = mutable.value.copy(download = DownloadStatus.READY) }
+                        synchronized(this) {
+                            mutable.value = mutable.value.copy(download = DownloadStatus.READY)
+                        }
                     } else clearApks()
                 } catch (e: Exception) {
                     if (e !is CancellationException) clearApks()
-                } finally { synchronized(this) {
-                    if (active === cancellation) active = null
-                    if (foreground) check(false)
-                } }
+                } finally {
+                    synchronized(this) {
+                        if (active === cancellation) active = null
+                        if (foreground) check(false)
+                    }
+                }
             }
         }
     }
 
     private fun apk(release: Release) = File(directory, release.fileName)
-    private fun clearApks() { directory.listFiles()?.filter { it.extension == "apk" }?.forEach { it.delete() } }
+    private fun clearApks() {
+        directory.listFiles()?.filter { it.extension == "apk" }?.forEach { it.delete() }
+    }
+
     private fun successStatus(release: Release?) = when {
         release == null -> CheckStatus.NO_STABLE
-        release.version > (StableVersion.parse(identity.versionName) ?: throw UpdateException(UpdateProblem.VERSION)) -> CheckStatus.AVAILABLE
+        release.version > (StableVersion.parse(identity.versionName) ?: throw UpdateException(
+            UpdateProblem.VERSION
+        )) -> CheckStatus.AVAILABLE
+
         else -> CheckStatus.CURRENT
     }
+
     private fun persist() {
-        try { store.save(record) } catch (_: Exception) {
-            mutable.value = mutable.value.copy(check = CheckStatus.ERROR, problem = UpdateProblem.STORAGE)
+        try {
+            store.save(record)
+        } catch (_: Exception) {
+            mutable.value =
+                mutable.value.copy(check = CheckStatus.ERROR, problem = UpdateProblem.STORAGE)
         }
     }
 
-    @Synchronized fun resume(canInstall: Boolean) {
+    @Synchronized
+    fun resume(canInstall: Boolean) {
         foreground = true
         val current = installed()
         if (current != identity) {
             identity = current
             cancelDownload()
-            mutable.value = mutable.value.copy(installedVersion = current.versionName,
-                download = DownloadStatus.IDLE, install = InstallStatus.IDLE)
+            mutable.value = mutable.value.copy(
+                installedVersion = current.versionName,
+                download = DownloadStatus.IDLE, install = InstallStatus.IDLE
+            )
             if (!mutable.value.available) {
                 mutable.value = mutable.value.copy(release = null, check = CheckStatus.NEVER)
-                record = record.copy(metadata = null, etag = null, lastAttempt = null, lastSuccess = null, problem = null)
+                record = record.copy(
+                    metadata = null,
+                    etag = null,
+                    lastAttempt = null,
+                    lastSuccess = null,
+                    problem = null
+                )
                 executor.execute { synchronized(this) { clearApks(); persist() } }
             }
         }
-        mutable.value = mutable.value.copy(install = when (mutable.value.install) {
-            InstallStatus.PERMISSION -> if (canInstall) InstallStatus.OFFER_INSTALL else InstallStatus.PERMISSION_DENIED
-            InstallStatus.INSTALLER -> InstallStatus.NOT_INSTALLED
-            else -> mutable.value.install
-        })
+        mutable.value = mutable.value.copy(
+            install = when (mutable.value.install) {
+                InstallStatus.PERMISSION -> if (canInstall) InstallStatus.OFFER_INSTALL else InstallStatus.PERMISSION_DENIED
+                InstallStatus.INSTALLER -> InstallStatus.NOT_INSTALLED
+                else -> mutable.value.install
+            }
+        )
         check(false)
     }
 
-    @Synchronized fun background() {
+    @Synchronized
+    fun background() {
         foreground = false
         cancelDownload()
     }
 
-    @Synchronized fun check(manual: Boolean): Boolean {
+    @Synchronized
+    fun check(manual: Boolean): Boolean {
         if (checking || active != null) return false
         val now = clock()
         if (now < record.retryAt) {
-            mutable.value = mutable.value.copy(check = CheckStatus.RATE_LIMIT, problem = UpdateProblem.RATE_LIMIT)
+            mutable.value = mutable.value.copy(
+                check = CheckStatus.RATE_LIMIT,
+                problem = UpdateProblem.RATE_LIMIT
+            )
             return false
         }
         if (manual) {
@@ -144,46 +178,62 @@ internal class UpdateRepository(
                     val result = when (response.status) {
                         200 -> Release.parse(response.bytes)
                         304 -> {
-                            val cached = record.metadata ?: throw UpdateException(UpdateProblem.METADATA)
+                            val cached =
+                                record.metadata ?: throw UpdateException(UpdateProblem.METADATA)
                             Release.parse(cached.toByteArray())
                         }
+
                         403, 429 -> {
                             record = record.copy(retryAt = retryDeadline(response, clock()))
                             throw UpdateException(UpdateProblem.RATE_LIMIT)
                         }
+
                         else -> throw UpdateException(UpdateProblem.HTTP)
                     }
                     // Release-note edits do not replace a verified APK.
                     if (result?.copy(notes = "") != mutable.value.release?.copy(notes = "")) {
                         clearApks()
-                        mutable.value = mutable.value.copy(download = DownloadStatus.IDLE, bytes = 0,
-                            downloadProblem = null, install = InstallStatus.IDLE)
+                        mutable.value = mutable.value.copy(
+                            download = DownloadStatus.IDLE, bytes = 0,
+                            downloadProblem = null, install = InstallStatus.IDLE
+                        )
                     }
-                    record = record.copy(metadata = if (response.status == 200) response.bytes.toString(Charsets.UTF_8) else record.metadata,
+                    record = record.copy(
+                        metadata = if (response.status == 200) response.bytes.toString(Charsets.UTF_8) else record.metadata,
                         etag = response.etag ?: if (response.status == 304) record.etag else null,
-                        lastSuccess = clock(), retryAt = 0, problem = null)
-                    mutable.value = mutable.value.copy(release = result, check = successStatus(result), problem = null,
-                        lastSuccess = record.lastSuccess, retryAt = 0)
+                        lastSuccess = clock(), retryAt = 0, problem = null
+                    )
+                    mutable.value = mutable.value.copy(
+                        release = result, check = successStatus(result), problem = null,
+                        lastSuccess = record.lastSuccess, retryAt = 0
+                    )
                 }
             } catch (e: Exception) {
                 synchronized(this) {
                     val problem = (e as? UpdateException)?.problem ?: UpdateProblem.NETWORK
                     record = record.copy(problem = problem)
-                    mutable.value = mutable.value.copy(check = if (problem == UpdateProblem.RATE_LIMIT) CheckStatus.RATE_LIMIT else CheckStatus.ERROR,
-                        problem = problem, retryAt = record.retryAt)
+                    mutable.value = mutable.value.copy(
+                        check = if (problem == UpdateProblem.RATE_LIMIT) CheckStatus.RATE_LIMIT else CheckStatus.ERROR,
+                        problem = problem, retryAt = record.retryAt
+                    )
                 }
-            } finally { synchronized(this) { persist(); checking = false } }
+            } finally {
+                synchronized(this) { persist(); checking = false }
+            }
         }
         return true
     }
 
-    @Synchronized fun download(): Boolean {
+    @Synchronized
+    fun download(): Boolean {
         val release = mutable.value.release ?: return false
         if (!foreground || !mutable.value.available || active != null || checking) return false
         val cancellation = DownloadCancellation()
         active = cancellation
-        mutable.value = mutable.value.copy(download = DownloadStatus.DOWNLOADING, bytes = 0,
-            downloadProblem = null, install = InstallStatus.IDLE)
+        mutable.value = mutable.value.copy(
+            download = DownloadStatus.DOWNLOADING, bytes = 0,
+            downloadProblem = null, install = InstallStatus.IDLE
+        )
         executor.execute {
             val partial = File(directory, "${release.fileName}.part")
             try {
@@ -197,21 +247,28 @@ internal class UpdateRepository(
                                 mutable.value = mutable.value.copy(bytes = bytes)
                         }
                     }
-                    synchronized(this) { mutable.value = mutable.value.copy(download = DownloadStatus.VERIFYING) }
+                    synchronized(this) {
+                        mutable.value = mutable.value.copy(download = DownloadStatus.VERIFYING)
+                    }
                     verify(release, partial, cancellation)
                     cancellation.check()
                     check(partial.renameTo(apk(release)))
                 }
                 synchronized(this) {
                     cancellation.check()
-                    mutable.value = mutable.value.copy(download = DownloadStatus.READY, bytes = release.size)
+                    mutable.value =
+                        mutable.value.copy(download = DownloadStatus.READY, bytes = release.size)
                 }
             } catch (e: Exception) {
                 synchronized(this) {
-                    val cancelled = runCatching { cancellation.check() }.exceptionOrNull() is CancellationException
+                    val cancelled =
+                        runCatching { cancellation.check() }.exceptionOrNull() is CancellationException
                     if (!cancelled) apk(release).delete()
-                    mutable.value = mutable.value.copy(download = if (cancelled) DownloadStatus.CANCELLED else DownloadStatus.ERROR,
-                        downloadProblem = if (cancelled) null else (e as? UpdateException)?.problem ?: UpdateProblem.DOWNLOAD)
+                    mutable.value = mutable.value.copy(
+                        download = if (cancelled) DownloadStatus.CANCELLED else DownloadStatus.ERROR,
+                        downloadProblem = if (cancelled) null else (e as? UpdateException)?.problem
+                            ?: UpdateProblem.DOWNLOAD
+                    )
                 }
             } finally {
                 partial.delete()
@@ -227,15 +284,21 @@ internal class UpdateRepository(
         cancellation.check()
     }
 
-    @Synchronized fun cancelDownload() {
+    @Synchronized
+    fun cancelDownload() {
         val cancellation = active ?: return
         cancellation.cancel()
         // Closing a network connection must not block TV input or Activity Stop.
         executor.execute { cancellation.disconnect() }
     }
-    @Synchronized fun installStatus(status: InstallStatus) { mutable.value = mutable.value.copy(install = status) }
 
-    @Synchronized fun forInstall(ready: (File) -> Unit) {
+    @Synchronized
+    fun installStatus(status: InstallStatus) {
+        mutable.value = mutable.value.copy(install = status)
+    }
+
+    @Synchronized
+    fun forInstall(ready: (File) -> Unit) {
         val release = mutable.value.release ?: return
         if (!foreground || active != null || checking || mutable.value.download != DownloadStatus.READY) return
         val cancellation = DownloadCancellation()
@@ -254,16 +317,22 @@ internal class UpdateRepository(
                     if (e is CancellationException) {
                         mutable.value = mutable.value.copy(download = DownloadStatus.READY)
                     } else {
-                        mutable.value = mutable.value.copy(download = DownloadStatus.ERROR,
-                            downloadProblem = (e as? UpdateException)?.problem ?: UpdateProblem.APK_INVALID)
+                        mutable.value = mutable.value.copy(
+                            download = DownloadStatus.ERROR,
+                            downloadProblem = (e as? UpdateException)?.problem
+                                ?: UpdateProblem.APK_INVALID
+                        )
                         apk(release).delete()
                     }
                 }
-            } finally { synchronized(this) { if (active === cancellation) active = null } }
+            } finally {
+                synchronized(this) { if (active === cancellation) active = null }
+            }
         }
     }
 
     companion object {
-        internal fun elapsed(previous: Long?, now: Long, interval: Long) = previous == null || now < previous || now - previous >= interval
+        internal fun elapsed(previous: Long?, now: Long, interval: Long) =
+            previous == null || now < previous || now - previous >= interval
     }
 }

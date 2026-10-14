@@ -72,7 +72,9 @@ internal fun SettingsContent(
     onBack: () -> Unit,
     onSelect: (String) -> Unit,
     rulesState: RulesState = RulesState(1, RulesOutcome.CHECKING),
-    updateState: indie.fiatsiz.anitv.update.UpdateState = indie.fiatsiz.anitv.update.UpdateState(BuildConfig.VERSION_NAME),
+    updateState: indie.fiatsiz.anitv.update.UpdateState = indie.fiatsiz.anitv.update.UpdateState(
+        BuildConfig.VERSION_NAME
+    ),
     onCheckUpdate: () -> Unit = {},
     onDownloadUpdate: () -> Unit = {},
     onCancelUpdate: () -> Unit = {},

@@ -17,15 +17,27 @@ internal object UpdateInstaller {
         repository.forInstall { file ->
             activity.runOnUiThread {
                 if (activity.isFinishing || activity.isDestroyed ||
-                    (activity as? LifecycleOwner)?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) != true) return@runOnUiThread
+                    (activity as? LifecycleOwner)?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) != true
+                ) return@runOnUiThread
                 try {
                     if (!activity.packageManager.canRequestPackageInstalls()) {
                         repository.installStatus(InstallStatus.PERMISSION)
-                        activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                            Uri.parse("package:${activity.packageName}")))
+                        activity.startActivity(
+                            Intent(
+                                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                Uri.parse("package:${activity.packageName}")
+                            )
+                        )
                     } else {
-                        val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.updates", file)
-                        val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                        val uri = FileProvider.getUriForFile(
+                            activity,
+                            "${activity.packageName}.updates",
+                            file
+                        )
+                        val intent = Intent(Intent.ACTION_VIEW).setDataAndType(
+                            uri,
+                            "application/vnd.android.package-archive"
+                        )
                             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         intent.clipData = ClipData.newRawUri("AniTV update", uri)
                         repository.installStatus(InstallStatus.INSTALLER)

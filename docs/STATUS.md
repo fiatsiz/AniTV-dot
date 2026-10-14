@@ -2,6 +2,11 @@
 
 As of 2026-10-14.
 
+## Owner build source formatting — 1.1.0
+
+- The owner supplied a signed 1.1.0 APK and requested publication with the code updates. The 26 pending source/manifest/test edits contain formatting changes only: a token comparison against `d5b916f` preserved quoted strings, comments, and every non-whitespace token.
+- `./gradlew :app:testDebugUnitTest :app:lintRelease --offline` passed again on this worktree: 67 tests passed, one publication-only test skipped, and release lint reported no errors. No app behavior was edited during release verification. Committing the formatted worktree preserves the source supplied for this release; the APK embeds base revision `d5b916fd8e80f05a98828cbf71a1d985bfd80bec`.
+
 ## GitHub updater — 1.1.0 / versionCode 2
 
 - Stable GitHub checks, a focusable Home notice, localized Settings details/notes/actions, foreground-only private APK downloads, SHA-256/size checks, Android package/version/SDK/signer inspection, restricted FileProvider sharing, unknown-app permission handling, and explicit Android installer confirmation are implemented. Automatic attempts are daily at launch/resume, including failures; manual checks have a persisted 60-second debounce and respect server deadlines. No dependency or SDK changes, background scheduler, automatic downloads, silent installs, tags, pushes, or release publication.

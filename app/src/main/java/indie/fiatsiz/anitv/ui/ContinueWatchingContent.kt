@@ -72,10 +72,12 @@ internal fun ContinueWatchingCard(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier
-                .width(140.dp)
-                .height(200.dp)
-                .background(Color(0xFF27273B))) {
+            Box(
+                Modifier
+                    .width(140.dp)
+                    .height(200.dp)
+                    .background(Color(0xFF27273B))
+            ) {
                 if (poster != null) Image(
                     poster,
                     null,

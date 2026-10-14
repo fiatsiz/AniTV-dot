@@ -33,7 +33,9 @@ private val previewUpdateState = indie.fiatsiz.anitv.update.UpdateState(
         indie.fiatsiz.anitv.update.StableVersion.parse("1.2.0")!!,
         "Sample stable release notes.",
         "https://github.com/fiatsiz/AniTV-dot/releases/download/v1.2.0/AniTV-1.2.0.apk",
-        30_000_000, "0".repeat(64)), check = indie.fiatsiz.anitv.update.CheckStatus.AVAILABLE)
+        30_000_000, "0".repeat(64)
+    ), check = indie.fiatsiz.anitv.update.CheckStatus.AVAILABLE
+)
 
 @Preview(name = "TV home", widthDp = 960, heightDp = 540)
 @Composable
@@ -132,7 +134,9 @@ private fun SettingsTurkishPreview() {
                     {},
                     {},
                     updateState = previewUpdateState.copy(
-                        download = indie.fiatsiz.anitv.update.DownloadStatus.DOWNLOADING, bytes = 12_000_000),
+                        download = indie.fiatsiz.anitv.update.DownloadStatus.DOWNLOADING,
+                        bytes = 12_000_000
+                    ),
                     onTranslationSettings = {})
             }
         }

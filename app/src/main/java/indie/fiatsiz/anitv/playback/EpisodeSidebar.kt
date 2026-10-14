@@ -54,9 +54,11 @@ internal fun EpisodeSidebar(
             dismissOnClickOutside = false
         )
     ) {
-        Box(Modifier
-            .fillMaxSize()
-            .background(Color(0x66000000))) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color(0x66000000))
+        ) {
             EpisodeSidebarContent(
                 animeTitle,
                 currentEpisode,

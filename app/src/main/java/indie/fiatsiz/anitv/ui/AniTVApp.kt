@@ -394,17 +394,19 @@ internal fun AniTVApp(
                 val localeManager = context.getSystemService(LocaleManager::class.java)
                 val appLocales = localeManager.applicationLocales
                 val selectedLanguage = if (appLocales.isEmpty) "" else appLocales[0].language
-                SettingsContent(selectedLanguage, translationSettings, firstFocus, ::back, { tag ->
-                    if (tag != selectedLanguage)
-                        localeManager.applicationLocales =
-                            if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(
-                                tag
-                            )
-                }, rulesState = rulesState, updateState = updateState,
+                SettingsContent(
+                    selectedLanguage, translationSettings, firstFocus, ::back, { tag ->
+                        if (tag != selectedLanguage)
+                            localeManager.applicationLocales =
+                                if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(
+                                    tag
+                                )
+                    }, rulesState = rulesState, updateState = updateState,
                     onCheckUpdate = { updates.check(true) },
                     onDownloadUpdate = { updates.download() },
                     onCancelUpdate = { updates.cancelDownload() },
-                    onInstallUpdate = onInstallUpdate) { next ->
+                    onInstallUpdate = onInstallUpdate
+                ) { next ->
                     translationSettings = next
                     translationStore.save(next)
                 }

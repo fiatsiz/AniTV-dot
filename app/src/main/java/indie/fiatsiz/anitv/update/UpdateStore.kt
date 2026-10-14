@@ -24,8 +24,11 @@ internal class UpdateStore(private val directory: File) {
         UpdateRecord(
             json.optString("metadata").takeIf { it.isNotEmpty() },
             json.optString("etag").takeIf { it.isNotEmpty() },
-            time("lastAttempt"), time("lastManual"), time("lastSuccess"),
-            json.optLong("retryAt", 0), json.optString("problem").takeIf { it.isNotEmpty() }?.let(UpdateProblem::valueOf)
+            time("lastAttempt"),
+            time("lastManual"),
+            time("lastSuccess"),
+            json.optLong("retryAt", 0),
+            json.optString("problem").takeIf { it.isNotEmpty() }?.let(UpdateProblem::valueOf)
         ).also { it.metadata?.let { value -> Release.parse(value.toByteArray()) } }
     }.getOrDefault(UpdateRecord())
 
@@ -41,8 +44,12 @@ internal class UpdateStore(private val directory: File) {
                 stream.write(json.toString().toByteArray())
                 stream.fd.sync()
             }
-            Files.move(temporary.toPath(), File(directory, "state.json").toPath(),
-                StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-        } finally { temporary.delete() }
+            Files.move(
+                temporary.toPath(), File(directory, "state.json").toPath(),
+                StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING
+            )
+        } finally {
+            temporary.delete()
+        }
     }
 }

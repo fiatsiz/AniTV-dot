@@ -92,12 +92,13 @@ internal fun HomeContent(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             item(key = "main_menu") {
-                Column(Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged {
-                        if (it.hasFocus) scope.launch { listState.scrollToItem(0) }
-                    }
-                    .focusGroup(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged {
+                            if (it.hasFocus) scope.launch { listState.scrollToItem(0) }
+                        }
+                        .focusGroup(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             stringResource(R.string.home_heading),
@@ -166,10 +167,15 @@ internal fun HomeContent(
             }
             if (updateVersion != null) {
                 item(key = "app_update") {
-                    Button(onClick = { onNavigate(Page.SETTINGS) }, modifier = Modifier.fillMaxWidth(),
+                    Button(
+                        onClick = { onNavigate(Page.SETTINGS) }, modifier = Modifier.fillMaxWidth(),
                         scale = ButtonDefaults.scale(focusedScale = 1f),
-                        shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))) {
-                        Text(stringResource(R.string.update_notice, updateVersion), fontSize = 18.sp)
+                        shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))
+                    ) {
+                        Text(
+                            stringResource(R.string.update_notice, updateVersion),
+                            fontSize = 18.sp
+                        )
                     }
                 }
             }

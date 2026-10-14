@@ -28,40 +28,56 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class UpdateUiInstrumentedTest {
-    @get:Rule val compose = createComposeRule()
+    @get:Rule
+    val compose = createComposeRule()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    @Test fun arrivingHomeNoticeKeepsSearchFocusAndOpensSettings() {
+    @Test
+    fun arrivingHomeNoticeKeepsSearchFocusAndOpensSettings() {
         val version = mutableStateOf<String?>(null)
         var settingsOpened = false
         compose.setContent {
             val focus = remember { FocusRequester() }
             AniTVTheme {
                 Surface(Modifier.fillMaxSize()) {
-                    HomeContent(emptyList(), focus, Modifier.padding(56.dp), version.value,
-                        onNavigate = { settingsOpened = it == indie.fiatsiz.anitv.ui.Page.SETTINGS }) {}
+                    HomeContent(
+                        emptyList(), focus, Modifier.padding(56.dp), version.value,
+                        onNavigate = {
+                            settingsOpened = it == indie.fiatsiz.anitv.ui.Page.SETTINGS
+                        }) {}
                 }
             }
             LaunchedEffect(Unit) { focus.requestFocus() }
         }
-        val search = compose.onNode(hasText(context.getString(R.string.search), substring = true) and hasClickAction())
+        val search = compose.onNode(
+            hasText(
+                context.getString(R.string.search),
+                substring = true
+            ) and hasClickAction()
+        )
         search.performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
         search.assertIsFocused()
         compose.runOnIdle { version.value = "1.2.0" }
         search.assertIsFocused()
         val notice = compose.onNodeWithText(context.getString(R.string.update_notice, "1.2.0"))
         notice.performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
-        notice.assertIsFocused().performKeyInput { pressKey(androidx.compose.ui.input.key.Key.DirectionCenter) }
+        notice.assertIsFocused()
+            .performKeyInput { pressKey(androidx.compose.ui.input.key.Key.DirectionCenter) }
         compose.runOnIdle { assertTrue(settingsOpened) }
     }
 
-    @Test fun downloadActionKeepsFocusAcrossProgressAndReadyStates() {
+    @Test
+    fun downloadActionKeepsFocusAcrossProgressAndReadyStates() {
         val release = Release(StableVersion.parse("1.2.0")!!, "Notes", "", 100, "0".repeat(64))
         val state = mutableStateOf(UpdateState("1.1.0", release, CheckStatus.AVAILABLE))
         compose.setContent {
             AniTVTheme {
                 Surface(Modifier.fillMaxSize()) {
-                    Column(Modifier.padding(56.dp).verticalScroll(rememberScrollState())) {
+                    Column(
+                        Modifier
+                            .padding(56.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
                         UpdateContent(state.value, {}, {}, {}, {})
                     }
                 }
@@ -70,7 +86,9 @@ class UpdateUiInstrumentedTest {
         compose.onNodeWithText(context.getString(R.string.update_download)).performScrollTo()
             .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
         compose.onNodeWithText(context.getString(R.string.update_download)).assertIsFocused()
-        compose.runOnIdle { state.value = state.value.copy(download = DownloadStatus.DOWNLOADING, bytes = 50) }
+        compose.runOnIdle {
+            state.value = state.value.copy(download = DownloadStatus.DOWNLOADING, bytes = 50)
+        }
         compose.onNodeWithText(context.getString(R.string.update_cancel)).assertIsFocused()
         compose.runOnIdle { state.value = state.value.copy(download = DownloadStatus.READY) }
         compose.onNodeWithText(context.getString(R.string.update_install)).assertIsFocused()
