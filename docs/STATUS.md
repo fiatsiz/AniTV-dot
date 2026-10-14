@@ -2,12 +2,18 @@
 
 As of 2026-10-14.
 
-## Physical TV release installation
+## Physical TV release verification
+
+- On 2026-10-14, following manual installation guidance for release 1.0.0, the owner reported that every check they could perform from the supplied TV checklist worked on their Beko Google TV (API 34). The only identified skipped checks were timestamp-based cache refresh after 24 hours and the Google Cloud Translation API.
+- The owner explicitly confirmed that DeepL translation and caption styling work well during normal usage. These are owner-reported physical-TV results, separate from the agent's emulator verification; no physical-TV control automation was used.
+- The manual test report supersedes the earlier installation blocker below. No further uninstall or installation attempt is needed. Application code, architecture, and the release APK are unchanged; this milestone updates documentation only.
+
+### Earlier adb installation attempt
 
 - On 2026-10-14, the owner requested installing the existing signed release APK on the connected Beko Google TV (Android API 34). Both adb connections identify the same physical TV; only one connection was used for installation.
 - The local `app/build/outputs/apk/release/app-release.apk` still matches the published 1.0.0 SHA-256 and owner certificate recorded in [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md). Its v2 signature, package/version, API minimum, and non-debuggable manifest were rechecked.
 - `adb install -r` initially failed with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`: the TV had a debug-signed AniTV 1.0 installation with the same application ID and a different certificate.
-- The owner then explicitly approved uninstalling the debug app and losing its data. The uninstall command stalled without returning a result; its local client was terminated, and the release install guarded by its success did not run. Both previously listed adb connections failed bounded read-only probes. Reconnecting removed the stale connections; the advertised wireless endpoint refused a new connection. Release installation is blocked until wireless adb responds again. Whether the uninstall reached the TV remains unknown and must be checked before retrying.
+- The owner then explicitly approved uninstalling the debug app and losing its data. The uninstall command stalled without returning a result; its local client was terminated, and the release install guarded by its success did not run. Both previously listed adb connections failed bounded read-only probes. Reconnecting removed the stale connections; the advertised wireless endpoint refused a new connection. At that point, installation was blocked and uninstall completion was unknown. The owner subsequently received manual installation guidance and reported successful TV testing above.
 - No TV controls, launch, playback, or live source checks were exercised. Application code, architecture, and the release APK are unchanged; no rebuild or unit-test rerun was needed for this installation attempt.
 
 ## Implemented
@@ -55,7 +61,7 @@ As of 2026-10-14.
 
 - Owner-built `app/build/outputs/apk/release/app-release.apk` passed signature, non-debuggable manifest, package/version/SDK, and bundled-rule verification. SHA-256: `3c629c2e932b723e94a1de492ffbf06da30f00216b443bcb6f071c6345309969`; owner certificate SHA-256: `9a65e9f457a546bd65d51146f1e4ab611f44c57be68e089c000d4431fb805854`. Rechecking after the user's rebuild produced the same checksum and certificate.
 - APK embedded source commit: `bf044b8c471c58c41df279cdf757a8d77f72a35e`. Release tag `v1.0.0` adds documentation only; release assets include the unchanged signed APK, exact build-source archive, GPL-3.0 license, certificate/provenance, and checksums. The owner authorized GitHub release publication after the earlier rules-only preparation.
-- Shared-source unit tests (51 passed, one publication-only test skipped) and release lint passed again. A separate fresh Android TV API 34 emulator installed the signed APK, displayed version/current signed rules, completed live search/details/episodes, and rendered SUB video/subtitles with forward seeking and an active audio track. Back returned to details. Existing emulator/user app data was not uninstalled or cleared. Physical-TV behavior and audible audio remain unverified.
+- Shared-source unit tests (51 passed, one publication-only test skipped) and release lint passed again. A separate fresh Android TV API 34 emulator installed the signed APK, displayed version/current signed rules, completed live search/details/episodes, and rendered SUB video/subtitles with forward seeking and an active audio track. Back returned to details. Existing emulator/user app data was not uninstalled or cleared. Physical-TV testing was later reported by the owner on 2026-10-14 above.
 - [Release download](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0); full artifact/test record: [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md).
 
 ## Earlier release preparation
@@ -80,6 +86,8 @@ As of 2026-10-14.
 - Full provenance, checksum/fingerprints, tested/untested steps, and the remaining release gate are in [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md). The rules key requires secure backup; the rules publishing and APK signing guide is [RELEASE.md](RELEASE.md).
 
 ## Verified
+
+Earlier milestone entries below preserve their original test scope. See the physical-TV report above for the owner's subsequent manual verification.
 
 - Search HTTP 403 investigation (2026-10-13): the installed Android TV emulator app successfully searched `takopi` and displayed “Takopi's Original Sin,” then searched `one piece` and displayed “One Piece” and related titles. Search results are fetched through `HiAnimeSource` without a search cache. The earlier desktop-probe warning is removed as an unresolved app issue; no app change is needed for the verified flow. `./gradlew :app:assembleDebug --offline` passed with all tasks up to date; the existing APK and its recorded SHA-256 are unchanged. Unit tests were not rerun because only documentation changed.
 - Controlled desktop requests to the same `/search?keyword=takopi` URL returned HTTP 403, `Server: cloudflare`, and the plain-text body `error code: 1010` with Python's default User-Agent, both with and without the app's Referer. An Android WebView-style User-Agent returned HTTP 200 and one result card, both with and without Referer. An additional app-style `one piece` request returned HTTP 200 and 30 result cards. The WebView-style header was a diagnostic sample, not a capture of the emulator's actual header. These comparisons isolate User-Agent-dependent blocking in the current desktop reproduction. The original probe's headers were not recorded, so its precise request cannot be reconstructed.
@@ -121,12 +129,12 @@ As of 2026-10-14.
 
 ## Open verification and limits
 
-- The requested rollback removes the empty-library Home focus fix and its custom focus indicator. The previously reported Home navigation/focus problem on empty Favorites, Currently watching, and Completed screens may return.
+- The requested rollback removed the empty-library Home focus fix and its custom focus indicator. The owner reported no failures in the applicable manual TV checks on 2026-10-14; retain the earlier focus issue as regression context.
 
-- **Current APK device status: the debug APK passed the emulator flows in the release verification report; the owner-signed APK has since passed separate release smoke checks, while physical TV remains unverified.** Audible sound was not checked because the emulator ran with `-no-audio`; Android showed an active audio track. Translation provider requests, caption style variants, quality selection, physical Home/return behavior, forced episode-list error/retry while playing, and broad network/source compatibility still need testing. Complete on-device link loss was not reproduced; offline/default behavior passed injected transport tests, and cached deadline fallback passed on the emulator.
-- HiAnime titles, descriptions, metadata values, most episode names, and subtitle tracks remain in the source language. Generic “Episode N” labels are localized. Live search and SUB/DUB video/captions were verified on the emulator during release preparation; physical-TV behavior was not rechecked.
+- **Current APK device status: the owner reports that all manual TV checks they could perform worked, including DeepL translation and caption styling during normal usage.** The only identified skipped checks are timestamp-based cache refresh after 24 hours and Google Cloud Translation API requests. The earlier emulator and automated test records remain separate evidence; the owner report does not establish compatibility with every title, network, or future source response.
+- HiAnime titles, descriptions, metadata values, most episode names, and original subtitle tracks remain in the source language. Generic “Episode N” labels are localized. Selected subtitle translation uses the configured provider; DeepL normal usage is owner-verified.
 - Quality options appear only when Media3 reports multiple supported HLS video tracks. A single-variant stream stays on Auto.
-- Translation API requests were not exercised with real provider keys. Google Cloud Translation Basic v2 requires an API key. Google ML Kit is keyless, but its terms prohibit TV app use without prior written permission, so it is not integrated. DeepL documents advise against using API keys in client-side code; this direct TV client sends the user's key to DeepL over HTTPS, so use a personal key and account for runtime extraction risk on a compromised device. Android Keystore protects the saved key at rest.
+- Google Cloud Translation Basic v2 requests remain untested with a real provider key; DeepL translation and caption styling passed owner testing. Google Cloud Translation Basic v2 requires an API key. Google ML Kit is keyless, but its terms prohibit TV app use without prior written permission, so it is not integrated. DeepL documents advise against using API keys in client-side code; this direct TV client sends the user's key to DeepL over HTTPS, so use a personal key and account for runtime extraction risk on a compromised device. Android Keystore protects the saved key at rest.
 - Search reads one result page. Playback supports ZokoAnime SUB and DUB entries only. SUB requires an HTTPS subtitle track; DUB captions are optional. Other providers are ignored and there is no server fallback. Audio selection is per episode; library progress remains shared between audio versions.
 - HiAnime is unofficial and changeable. Markup, player encoding, blocks, and expiring links can break this flow; the app reports those failures.
 - No login, downloads, recommendations, other sources, or APK updater are included. The owner-signed 1.0.0 APK and matching source are distributed through GitHub Releases; signed declarative rules are published separately.
