@@ -81,8 +81,8 @@ class HiAnimeSourceTest {
             HiAnimeSource.parseServers(fixture("hianime-servers-sub-only.html"))
         )
         val dubOnly =
-            fixture("hianime-servers.html").lines().filter { it.contains("data-type=\"dub\"") }
-                .joinToString("\n")
+            org.jsoup.Jsoup.parse(fixture("hianime-servers.html"))
+                .select("[data-type=dub]").outerHtml()
         assertEquals(listOf(dub), HiAnimeSource.parseServers(dubOnly))
     }
 

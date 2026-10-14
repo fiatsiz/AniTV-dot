@@ -2,6 +2,13 @@
 
 As of 2026-10-14.
 
+## GitHub updater core — 1.1.0 preparation
+
+- Added an isolated `update` package with stable numeric version/asset validation, conditional GitHub transport, private atomic metadata storage, persisted daily/manual timing and retry deadlines, observable repository state, bounded downloads, cancellation, byte/digest verification, and APK identity rules. UI and Android installer wiring are the next milestone; this intermediate APK does not expose an updater.
+- `:app:testDebugUnitTest :app:assembleDebug --offline` passed: 65 tests passed, one existing publication-only test skipped. New cases cover timing/restarts/rollback/debounce/deduplication, cached 304, malformed/offline/rate-limited responses, asset contracts, restricted redirects, size/digest/cancellation, and package/version/SDK/certificate rejection.
+- Full-suite verification found an existing DUB test extracting individual lines from a multiline HTML element. It now extracts complete elements with the installed Jsoup parser; production source behavior is unchanged.
+- The public latest release was inspected on 2026-10-14: `v1.0.0`, uploaded `AniTV-1.0.0.apk`, 27,261,480 bytes, valid matching SHA-256 digest. No release was published. Android updater behavior is not yet verified.
+
 ## Physical TV release verification
 
 - On 2026-10-14, following manual installation guidance for release 1.0.0, the owner reported that every check they could perform from the supplied TV checklist worked on their Beko Google TV (API 34). The only identified skipped checks were timestamp-based cache refresh after 24 hours and the Google Cloud Translation API.

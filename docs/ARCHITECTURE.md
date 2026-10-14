@@ -105,3 +105,11 @@ Release lint required scoped Media3 `UnstableApi` opt-ins and `LocalResources`/`
 ## Release distribution
 
 GitHub tag `v1.0.0` distributes the owner's signed, non-debuggable APK, SHA256SUMS, certificate/provenance information, GPL-3.0 license, and source archived from the APK's embedded commit `bf044b8c471c58c41df279cdf757a8d77f72a35e`. The tag's additional changes document publication only; application code and build configuration match the supplied APK. The rules branch remains independent. Release publication adds no APK update checking, downloading, installation, network permission, or application data migration. See `docs/RELEASE-VERIFICATION.md` for artifact fingerprints and test limits.
+
+## GitHub APK updater core
+
+`update/Release.kt` owns stable numeric versions, exact release-asset contracts, HTTPS URL restrictions, and pure APK identity validation. `UpdateTransport.kt` owns the fixed latest-release endpoint, conditional requests, finite timeouts, 1 MiB metadata / 100 MiB APK limits, at most five allowed HTTPS redirects, streaming progress, cancellation, byte count, SHA-256, and server retry deadlines. It does not use `HiAnimeSource` or the signed-rules transport.
+
+`UpdateRepository` owns observable check/download/install state and injected transport, clock, installed identity, and APK inspection. An executor performs requests and file validation. Synchronization deduplicates checks and downloads; foreground transitions cancel unfinished work. The first automatic attempt is due immediately, later attempts are daily even after failure, clock rollback is due, manual checks have a persisted 60-second debounce, and server deadlines override both. A 304 reuses validated cached metadata; failures preserve earlier information and successful timestamps with an error status.
+
+`UpdateStore` atomically persists release metadata, ETag, attempts, successful check time, retry deadline, and last check problem under private `files/update`. APKs use only `cache/update`; partial files are removed on startup and after unfinished transfers. Ready files must pass byte/digest and injected identity validation again before reuse. Existing library, translation, detail cache, and rules storage are untouched. Android process ownership, lifecycle/UI, and installer integration follow in the next milestone.
