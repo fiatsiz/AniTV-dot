@@ -2,6 +2,11 @@
 
 As of 2026-10-14.
 
+## Installation guides — 2026-10-14
+
+- Updated the English and Turkish README installation sections for published 1.1.0 / versionCode 2, manual installation over 1.0.0, same-certificate updates, and subsequent foreground updater checks/downloads/Android confirmation. Signed source rules remain a separate update path.
+- Verified the published stable release and its five asset names through GitHub, checked local documentation links and matching release values in both languages, and confirmed the README changes stay within the installation sections. Documentation only; app builds, tests, and device checks were not repeated. Architecture and release artifacts are unchanged.
+
 ## Published 1.1.0 — 2026-10-14
 
 - Published [AniTV 1.1.0](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.1.0) at 18:15:35 UTC as public Latest, with draft/prerelease disabled. Tag `v1.1.0` points to `36c28f84ae57e61678e43730404a4b17ef6b52c2`; the code and owner formatting updates are pushed to `origin/master`. The rules branch remains `e97e669715f09b71e1713ec464b010083d226279`.

@@ -27,11 +27,13 @@ The project is still in development, but the following features are already impl
 
 ## Installation and releases
 
-Download `AniTV-1.0.0.apk` from [AniTV 1.0.0](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0). Android TV / Google TV with Android 14 or newer is required. VersionName is `1.0.0`; Android versionCode is `1`. Signed HiAnime parsing rules update automatically from the separate public [rules branch](https://github.com/fiatsiz/AniTV-dot/tree/rules).
+Download `AniTV-1.1.0.apk` from [AniTV 1.1.0](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.1.0). Android TV / Google TV with Android 14 or newer is required. VersionName is `1.1.0`; Android versionCode is `2`.
 
-Check the release's `SHA256SUMS` and signing certificate, then copy the APK to your TV and install it with your chosen APK installer. A differently signed debug installation normally cannot update in place; uninstalling can erase Favorites and progress. Never clear data or uninstall automatically.
+Check the release's `SHA256SUMS` and signing certificate, then copy the APK to your TV and install it with your chosen APK installer. Install 1.1.0 manually: 1.0.0 has no APK updater. Both releases use the same owner signing certificate, allowing an in-place update without uninstalling. A differently signed debug installation normally cannot update in place; uninstalling can erase Favorites and progress. Do not clear data or uninstall to bypass a signing error.
 
-The release includes matching GPL-3.0 source from APK build commit `bf044b8c471c58c41df279cdf757a8d77f72a35e` and the [license](LICENSE). See the [verification report](docs/RELEASE-VERIFICATION.md) for fingerprints and tested/untested behavior, or the [release guide](docs/RELEASE.md) to build locally. No automatic APK update checker, downloader, or installer is included.
+From 1.1.0 onward, AniTV checks for newer stable GitHub releases on launch/resume when 24 hours have elapsed since the last attempt. You can also check manually in Settings. A Home notice opens update details in Settings. Downloads start only when you select Update, show progress, and offer Cancel; unfinished downloads stop when AniTV enters the background. Installation requires Android's installation permission and confirmation. AniTV does not check while closed or install silently. Signed HiAnime parsing rules still update separately from the public [rules branch](https://github.com/fiatsiz/AniTV-dot/tree/rules).
+
+The release includes matching GPL-3.0 source, the [license](LICENSE), `RELEASE-INFO.txt`, and `SHA256SUMS`. See the [verification report](docs/RELEASE-VERIFICATION.md) for fingerprints and tested/untested behavior, or the [release guide](docs/RELEASE.md) to build locally.
 
 ## Inspiration
 
