@@ -17,10 +17,18 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-internal data class AnimeArtwork(val details: AnimeDetails?, val poster: ImageBitmap?, val loading: Boolean)
+internal data class AnimeArtwork(
+    val details: AnimeDetails?,
+    val poster: ImageBitmap?,
+    val loading: Boolean
+)
 
 @Composable
-internal fun rememberAnimeArtwork(anime: Anime, cache: AnimeDetailCache, source: HiAnimeSource): AnimeArtwork {
+internal fun rememberAnimeArtwork(
+    anime: Anime,
+    cache: AnimeDetailCache,
+    source: HiAnimeSource
+): AnimeArtwork {
     var details by remember(anime) { mutableStateOf<AnimeDetails?>(null) }
     var poster by remember(anime) { mutableStateOf<ImageBitmap?>(null) }
     var loading by remember(anime) { mutableStateOf(true) }
@@ -30,16 +38,26 @@ internal fun rememberAnimeArtwork(anime: Anime, cache: AnimeDetailCache, source:
             if (cached != null) {
                 details = cached.details
                 poster = withContext(Dispatchers.IO) {
-                    BitmapFactory.decodeByteArray(cached.poster, 0, cached.poster.size)?.asImageBitmap()
+                    BitmapFactory.decodeByteArray(cached.poster, 0, cached.poster.size)
+                        ?.asImageBitmap()
                 }
             }
             if (cached?.isFresh(System.currentTimeMillis()) == true && poster != null) return@LaunchedEffect
             val fresh = withContext(Dispatchers.IO) { source.details(anime) }
             details = fresh
             val bytes = withContext(Dispatchers.IO) { source.poster(fresh.posterUrl) }
-            val decoded = withContext(Dispatchers.IO) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
+            val decoded = withContext(Dispatchers.IO) {
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+            }
             if (decoded != null) {
-                withContext(Dispatchers.IO) { cache.save(anime, fresh, bytes, System.currentTimeMillis()) }
+                withContext(Dispatchers.IO) {
+                    cache.save(
+                        anime,
+                        fresh,
+                        bytes,
+                        System.currentTimeMillis()
+                    )
+                }
                 poster = decoded
             }
         } catch (e: CancellationException) {

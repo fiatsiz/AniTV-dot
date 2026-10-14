@@ -11,22 +11,63 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class RulesRepositoryTest {
-    private fun directory() = Files.createTempDirectory("anitv-rules-test").toFile().apply { deleteOnExit() }
-    private fun repository(cache: RulesCache = RulesCache(directory()), deadline: Long = 3000,
-        transport: RulesTransport) = RulesRepository(cache, transport, RulesTestSupport.signed(), RulesTestSupport.keys.public, 1, deadline)
-    private fun response(revision: Int = 2) = RulesResponse(200, RulesTestSupport.signed(revision).envelope(), "\"rev-$revision\"")
+    private fun directory() =
+        Files.createTempDirectory("anitv-rules-test").toFile().apply { deleteOnExit() }
 
-    @Test fun verifiesBundledRulesAndRejectsTamperingWrongKeysAndOversizedEnvelopes() {
+    private fun repository(
+        cache: RulesCache = RulesCache(directory()), deadline: Long = 3000,
+        transport: RulesTransport
+    ) = RulesRepository(
+        cache,
+        transport,
+        RulesTestSupport.signed(),
+        RulesTestSupport.keys.public,
+        1,
+        deadline
+    )
+
+    private fun response(revision: Int = 2) =
+        RulesResponse(200, RulesTestSupport.signed(revision).envelope(), "\"rev-$revision\"")
+
+    @Test
+    fun verifiesBundledRulesAndRejectsTamperingWrongKeysAndOversizedEnvelopes() {
         assertEquals(1L, SignedRules.bundled.rules.revision)
         val signed = RulesTestSupport.signed()
-        val tampered = JSONObject(signed.envelope().toString(Charsets.UTF_8)).put("payload", Base64.getEncoder().encodeToString("{}".toByteArray())).toString().toByteArray()
-        assertThrows(Exception::class.java) { SignedRules.verify(tampered, RulesTestSupport.keys.public, 1) }
-        assertThrows(Exception::class.java) { SignedRules.verify(signed.envelope(), SignedRules.publicKey, 1) }
-        assertThrows(Exception::class.java) { SignedRules.verify(ByteArray(SignedRules.MAX_BYTES + 1), RulesTestSupport.keys.public, 1) }
-        assertThrows(Exception::class.java) { readLimited(ByteArray(SignedRules.MAX_BYTES + 1).inputStream(), SignedRules.MAX_BYTES) }
+        val tampered = JSONObject(signed.envelope().toString(Charsets.UTF_8)).put(
+            "payload",
+            Base64.getEncoder().encodeToString("{}".toByteArray())
+        ).toString().toByteArray()
+        assertThrows(Exception::class.java) {
+            SignedRules.verify(
+                tampered,
+                RulesTestSupport.keys.public,
+                1
+            )
+        }
+        assertThrows(Exception::class.java) {
+            SignedRules.verify(
+                signed.envelope(),
+                SignedRules.publicKey,
+                1
+            )
+        }
+        assertThrows(Exception::class.java) {
+            SignedRules.verify(
+                ByteArray(SignedRules.MAX_BYTES + 1),
+                RulesTestSupport.keys.public,
+                1
+            )
+        }
+        assertThrows(Exception::class.java) {
+            readLimited(
+                ByteArray(SignedRules.MAX_BYTES + 1).inputStream(),
+                SignedRules.MAX_BYTES
+            )
+        }
     }
 
-    @Test fun rejectsUnsupportedSchemaMinimumVersionMalformedFieldsAndSelectors() {
+    @Test
+    fun rejectsUnsupportedSchemaMinimumVersionMalformedFieldsAndSelectors() {
         val changes: List<(JSONObject) -> Unit> = listOf(
             { it.put("schemaVersion", 2) }, { it.put("minAppVersionCode", 2) },
             { it.put("revision", 0) }, { it.put("revision", 1.5) }, { it.remove("player") },
@@ -37,18 +78,32 @@ class RulesRepositoryTest {
             { it.getJSONObject("player").put("streamPath", org.json.JSONArray()) },
             { it.getJSONObject("search").getJSONObject("response").put("format", "script") }
         )
-        changes.forEach { change -> assertThrows(Exception::class.java) { RulesTestSupport.signed(change = change) } }
-    }
-
-    @Test fun rejectsUnsafeOrMalformedEndpointTemplates() {
-        listOf("https://evil.example/{query}", "//evil.example/{query}", "/../{query}",
-            "/search?q={other}", "/search?q={query}&x={query}", "/search?q={query}#fragment",
-            "/\\evil/{query}", "/search", "/search?{query}{").forEach { template ->
-            assertThrows(Exception::class.java) { RulesTestSupport.signed { it.getJSONObject("search").put("endpoint", template) } }
+        changes.forEach { change ->
+            assertThrows(Exception::class.java) {
+                RulesTestSupport.signed(
+                    change = change
+                )
+            }
         }
     }
 
-    @Test fun enforcesRevisionOrderingAndExactSameRevisionPayload() {
+    @Test
+    fun rejectsUnsafeOrMalformedEndpointTemplates() {
+        listOf(
+            "https://evil.example/{query}", "//evil.example/{query}", "/../{query}",
+            "/search?q={other}", "/search?q={query}&x={query}", "/search?q={query}#fragment",
+            "/\\evil/{query}", "/search", "/search?{query}{"
+        ).forEach { template ->
+            assertThrows(Exception::class.java) {
+                RulesTestSupport.signed {
+                    it.getJSONObject("search").put("endpoint", template)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun enforcesRevisionOrderingAndExactSameRevisionPayload() {
         val one = RulesTestSupport.signed()
         RulesTestSupport.signed().requireSuccessorOf(one)
         RulesTestSupport.signed(2).requireSuccessorOf(one)
@@ -57,7 +112,8 @@ class RulesRepositoryTest {
         assertThrows(Exception::class.java) { conflict.requireSuccessorOf(one) }
     }
 
-    @Test fun checksOnlyOnceAndFreezesSelectedSnapshot() {
+    @Test
+    fun checksOnlyOnceAndFreezesSelectedSnapshot() {
         val calls = AtomicInteger()
         val repo = repository { _, _ -> calls.incrementAndGet(); response() }
         val snapshot = repo.snapshot()
@@ -67,7 +123,8 @@ class RulesRepositoryTest {
         assertEquals(1, calls.get())
     }
 
-    @Test fun usesSavedEtagAndPreservesPreviousValidatedCopyAcrossInterruptedWrite() {
+    @Test
+    fun usesSavedEtagAndPreservesPreviousValidatedCopyAcrossInterruptedWrite() {
         val dir = directory()
         val cache = RulesCache(dir)
         val one = CachedRules(RulesTestSupport.signed(), "\"one\"")
@@ -75,7 +132,8 @@ class RulesRepositoryTest {
         cache.save(one, one)
         cache.save(two, one)
         File(dir, "current.json.tmp").writeText("interrupted")
-        val repo = repository(cache) { etag, _ -> assertEquals("\"two\"", etag); RulesResponse(304) }
+        val repo =
+            repository(cache) { etag, _ -> assertEquals("\"two\"", etag); RulesResponse(304) }
         assertEquals(2L, repo.snapshot().revision)
         assertEquals(RulesOutcome.CURRENT, repo.state.outcome)
         File(dir, "current.json").writeText("corrupt")
@@ -83,10 +141,14 @@ class RulesRepositoryTest {
         assertEquals(1L, restored.signed.rules.revision)
         cache.save(two, restored)
         File(dir, "current.json").writeText("corrupt again")
-        assertEquals(1L, cache.load(RulesTestSupport.keys.public, 1, one.signed).signed.rules.revision)
+        assertEquals(
+            1L,
+            cache.load(RulesTestSupport.keys.public, 1, one.signed).signed.rules.revision
+        )
     }
 
-    @Test fun ignoresInvalidOrOlderCacheAndDefaultsOffline() {
+    @Test
+    fun ignoresInvalidOrOlderCacheAndDefaultsOffline() {
         val dir = directory()
         File(dir, "current.json").writeText("invalid")
         val repo = repository(RulesCache(dir)) { _, _ -> throw java.io.IOException("offline") }
@@ -95,13 +157,26 @@ class RulesRepositoryTest {
         val cache = RulesCache(directory())
         val old = CachedRules(RulesTestSupport.signed(), "old")
         cache.save(old, old)
-        assertEquals(2L, cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed(2)).signed.rules.revision)
+        assertEquals(
+            2L,
+            cache.load(
+                RulesTestSupport.keys.public,
+                1,
+                RulesTestSupport.signed(2)
+            ).signed.rules.revision
+        )
     }
 
-    @Test fun retainsLocalRulesOnHttpFailuresAndInvalidDownloads() {
-        val responses = listOf(RulesResponse(403), RulesResponse(429), RulesResponse(404),
-            RulesResponse(200, "bad json".toByteArray()), RulesResponse(200, ByteArray(SignedRules.MAX_BYTES + 1)),
-            RulesResponse(200, SignedRules.bundled.envelope()))
+    @Test
+    fun retainsLocalRulesOnHttpFailuresAndInvalidDownloads() {
+        val responses = listOf(
+            RulesResponse(403),
+            RulesResponse(429),
+            RulesResponse(404),
+            RulesResponse(200, "bad json".toByteArray()),
+            RulesResponse(200, ByteArray(SignedRules.MAX_BYTES + 1)),
+            RulesResponse(200, SignedRules.bundled.envelope())
+        )
         responses.forEach { response ->
             val repo = repository { _, _ -> response }
             assertEquals(1L, repo.snapshot().revision)
@@ -109,25 +184,37 @@ class RulesRepositoryTest {
         }
     }
 
-    @Test fun rejectsDowngradeAndSameRevisionConflictWithoutChangingEtag() {
+    @Test
+    fun rejectsDowngradeAndSameRevisionConflictWithoutChangingEtag() {
         val cache = RulesCache(directory())
         val two = CachedRules(RulesTestSupport.signed(2), "two")
         cache.save(two, CachedRules(RulesTestSupport.signed(), null))
-        val conflict = RulesTestSupport.signed(2) { it.getJSONObject("servers").put("name", "Changed") }
+        val conflict =
+            RulesTestSupport.signed(2) { it.getJSONObject("servers").put("name", "Changed") }
         for (signed in listOf(RulesTestSupport.signed(), conflict)) {
-            val repo = repository(cache) { _, _ -> RulesResponse(200, signed.envelope(), "rejected") }
+            val repo =
+                repository(cache) { _, _ -> RulesResponse(200, signed.envelope(), "rejected") }
             assertEquals(2L, repo.snapshot().revision)
             assertEquals(RulesOutcome.REJECTED, repo.state.outcome)
-            assertEquals("two", cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag)
+            assertEquals(
+                "two",
+                cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag
+            )
         }
     }
 
-    @Test fun deadlineAppliesToStartupOnceAndDiscardsLateDownloadAndEtag() {
+    @Test
+    fun deadlineAppliesToStartupOnceAndDiscardsLateDownloadAndEtag() {
         val cache = RulesCache(directory())
         val started = CountDownLatch(1)
         val release = CountDownLatch(1)
         val finished = CountDownLatch(1)
-        val repo = repository(cache, 100) { _, _ -> started.countDown(); release.await(2, TimeUnit.SECONDS); finished.countDown(); response() }
+        val repo = repository(cache, 100) { _, _ ->
+            started.countDown(); release.await(
+            2,
+            TimeUnit.SECONDS
+        ); finished.countDown(); response()
+        }
         assertTrue(started.await(1, TimeUnit.SECONDS))
         val start = System.nanoTime()
         assertEquals(1L, repo.snapshot().revision)
@@ -143,18 +230,21 @@ class RulesRepositoryTest {
         assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - frozenStart) < 100)
     }
 
-    @Test fun cachedRulesRemainUsableWhenTransportNeverFinishesBeforeDeadline() {
+    @Test
+    fun cachedRulesRemainUsableWhenTransportNeverFinishesBeforeDeadline() {
         val cache = RulesCache(directory())
         val two = CachedRules(RulesTestSupport.signed(2), "two")
         cache.save(two, CachedRules(RulesTestSupport.signed(), null))
         val release = CountDownLatch(1)
-        val repo = repository(cache, 100) { _, _ -> release.await(1, TimeUnit.SECONDS); response(3) }
+        val repo =
+            repository(cache, 100) { _, _ -> release.await(1, TimeUnit.SECONDS); response(3) }
         assertEquals(2L, repo.snapshot().revision)
         release.countDown()
         assertEquals(RulesOutcome.TIMEOUT, repo.state.outcome)
     }
 
-    @Test fun unchangedPayloadCanStoreEtagButUnsolicited304Cannot() {
+    @Test
+    fun unchangedPayloadCanStoreEtagButUnsolicited304Cannot() {
         val cached = RulesTestSupport.signed()
         val repo = repository { _, _ -> RulesResponse(200, cached.envelope(), "unchanged") }
         assertEquals(1L, repo.snapshot().revision)
@@ -163,7 +253,9 @@ class RulesRepositoryTest {
         unsolicited.snapshot()
         assertEquals(RulesOutcome.REJECTED, unsolicited.state.outcome)
     }
-    @Test fun storageFailureDoesNotDiscardValidatedProcessRules() {
+
+    @Test
+    fun storageFailureDoesNotDiscardValidatedProcessRules() {
         val blocked = File(directory(), "file-instead-of-directory").apply { writeText("existing") }
         val repo = repository(RulesCache(blocked)) { _, _ -> response() }
         assertEquals(2L, repo.snapshot().revision)
@@ -173,7 +265,8 @@ class RulesRepositoryTest {
         assertEquals("existing", blocked.readText())
     }
 
-    @Test fun signedIncompatibleSchemaAndMinimumVersionKeepLocalSnapshot() {
+    @Test
+    fun signedIncompatibleSchemaAndMinimumVersionKeepLocalSnapshot() {
         for (name in listOf("schemaVersion", "minAppVersionCode")) {
             val payload = RulesTestSupport.payload(2).put(name, 2).toString().toByteArray()
             val repo = repository { _, _ -> RulesResponse(200, RulesTestSupport.sign(payload)) }

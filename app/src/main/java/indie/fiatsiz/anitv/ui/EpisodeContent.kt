@@ -18,10 +18,15 @@ import indie.fiatsiz.anitv.source.Episode
 import indie.fiatsiz.anitv.source.EpisodeServer
 
 @Composable
-internal fun EpisodeContent(animeTitle: String, episode: Episode, servers: List<EpisodeServer>, loading: Boolean,
+internal fun EpisodeContent(
+    animeTitle: String, episode: Episode, servers: List<EpisodeServer>, loading: Boolean,
     error: String?, firstFocus: FocusRequester, onBack: () -> Unit, onPlay: (EpisodeServer) -> Unit,
-    onRetry: () -> Unit) {
-    Button(onClick = onBack, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.back_to_episodes)) }
+    onRetry: () -> Unit
+) {
+    Button(
+        onClick = onBack,
+        modifier = Modifier.focusRequester(firstFocus)
+    ) { Text(stringResource(R.string.back_to_episodes)) }
     Text("$animeTitle · ${localizedEpisodeTitle(episode)}", fontSize = 26.sp)
     if (loading) Text(stringResource(R.string.loading_stream))
     error?.let { Text(it, color = Color(0xFFFF9999)) }
@@ -35,7 +40,11 @@ internal fun EpisodeContent(animeTitle: String, episode: Episode, servers: List<
             }
         }
         if (servers.any { it.audio == AudioVersion.DUB })
-            Text(stringResource(R.string.audio_source_hint), color = Color(0xFFB9C5D8), fontSize = 16.sp)
+            Text(
+                stringResource(R.string.audio_source_hint),
+                color = Color(0xFFB9C5D8),
+                fontSize = 16.sp
+            )
     }
     if (error != null && !loading) Button(onClick = onRetry) { Text(stringResource(R.string.retry_playback)) }
 }

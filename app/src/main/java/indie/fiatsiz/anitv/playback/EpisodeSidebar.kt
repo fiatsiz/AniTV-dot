@@ -43,23 +43,44 @@ import indie.fiatsiz.anitv.source.Episode
 import indie.fiatsiz.anitv.ui.localizedEpisodeTitle
 
 @Composable
-internal fun EpisodeSidebar(animeTitle: String, currentEpisode: Episode, episodes: List<Episode>, loading: Boolean,
-    error: String?, onDismiss: () -> Unit, onRetry: () -> Unit, onSelect: (Episode) -> Unit) {
-    Dialog(onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)) {
-        Box(Modifier.fillMaxSize().background(Color(0x66000000))) {
-            EpisodeSidebarContent(animeTitle, currentEpisode, episodes, loading, error, onDismiss, onRetry, onSelect)
+internal fun EpisodeSidebar(
+    animeTitle: String, currentEpisode: Episode, episodes: List<Episode>, loading: Boolean,
+    error: String?, onDismiss: () -> Unit, onRetry: () -> Unit, onSelect: (Episode) -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false
+        )
+    ) {
+        Box(Modifier
+            .fillMaxSize()
+            .background(Color(0x66000000))) {
+            EpisodeSidebarContent(
+                animeTitle,
+                currentEpisode,
+                episodes,
+                loading,
+                error,
+                onDismiss,
+                onRetry,
+                onSelect
+            )
         }
     }
 }
 
 @Composable
-internal fun EpisodeSidebarContent(animeTitle: String, currentEpisode: Episode, episodes: List<Episode>, loading: Boolean,
-    error: String?, onDismiss: () -> Unit, onRetry: () -> Unit, onSelect: (Episode) -> Unit) {
+internal fun EpisodeSidebarContent(
+    animeTitle: String, currentEpisode: Episode, episodes: List<Episode>, loading: Boolean,
+    error: String?, onDismiss: () -> Unit, onRetry: () -> Unit, onSelect: (Episode) -> Unit
+) {
     val currentFocus = remember { FocusRequester() }
     val closeFocus = remember { FocusRequester() }
     val focusIndex = episodeSidebarFocusIndex(episodes, currentEpisode.id)
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = focusIndex.coerceAtLeast(0))
+    val listState =
+        rememberLazyListState(initialFirstVisibleItemIndex = focusIndex.coerceAtLeast(0))
     LaunchedEffect(episodes, currentEpisode.id, loading) {
         if (focusIndex >= 0) {
             listState.scrollToItem(focusIndex)
@@ -67,34 +88,76 @@ internal fun EpisodeSidebarContent(animeTitle: String, currentEpisode: Episode, 
             currentFocus.requestFocus()
         } else closeFocus.requestFocus()
     }
-    Column(Modifier.width(420.dp).fillMaxHeight().background(Color(0xFF0F0F23)).padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        Modifier
+            .width(420.dp)
+            .fillMaxHeight()
+            .background(Color(0xFF0F0F23))
+            .padding(32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Text(stringResource(R.string.episodes), fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
         Text(animeTitle, fontSize = 20.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(stringResource(R.string.now_playing_episode, currentEpisode.number), color = Color(0xFFB9C5D8), fontSize = 18.sp)
-        Button(onClick = onDismiss, modifier = Modifier.focusRequester(closeFocus)) { Text(stringResource(R.string.close_episodes)) }
+        Text(
+            stringResource(R.string.now_playing_episode, currentEpisode.number),
+            color = Color(0xFFB9C5D8),
+            fontSize = 18.sp
+        )
+        Button(onClick = onDismiss, modifier = Modifier.focusRequester(closeFocus)) {
+            Text(
+                stringResource(R.string.close_episodes)
+            )
+        }
         if (loading) Text(stringResource(R.string.loading_episodes))
         error?.let { Text(it, color = Color(0xFFFF9999)) }
         if (!loading && (error != null || episodes.isEmpty())) {
-            if (error == null) Text(stringResource(R.string.error_no_episodes), color = Color(0xFFFF9999))
+            if (error == null) Text(
+                stringResource(R.string.error_no_episodes),
+                color = Color(0xFFFF9999)
+            )
             Button(onClick = onRetry) { Text(stringResource(R.string.retry_episodes)) }
         }
-        LazyColumn(Modifier.fillMaxWidth().weight(1f), state = listState, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(
+            Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            state = listState,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
                 val isPlaying = episode.id == currentEpisode.id
-                Button(onClick = { onSelect(episode) },
-                    modifier = Modifier.fillMaxWidth()
+                Button(
+                    onClick = { onSelect(episode) },
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .then(if (index == focusIndex) Modifier.focusRequester(currentFocus) else Modifier)
                         .semantics { selected = isPlaying },
                     scale = ButtonDefaults.scale(focusedScale = 1f),
                     colors = ButtonDefaults.colors(
                         containerColor = if (isPlaying) Color(0xFF28235A) else Color(0xFF27273B),
-                        contentColor = Color.White, focusedContainerColor = Color(0xFF4338CA), focusedContentColor = Color.White)) {
+                        contentColor = Color.White,
+                        focusedContainerColor = Color(0xFF4338CA),
+                        focusedContentColor = Color.White
+                    )
+                ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(stringResource(R.string.episode_button, episode.number, localizedEpisodeTitle(episode)),
-                            maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        if (isPlaying) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Text(
+                            stringResource(
+                                R.string.episode_button,
+                                episode.number,
+                                localizedEpisodeTitle(episode)
+                            ),
+                            maxLines = 2, overflow = TextOverflow.Ellipsis
+                        )
+                        if (isPlaying) Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
                             Text(stringResource(R.string.episode_playing), fontSize = 14.sp)
                         }
                     }

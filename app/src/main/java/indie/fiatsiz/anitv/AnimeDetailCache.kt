@@ -19,9 +19,12 @@ class AnimeDetailCache(context: Context) {
         val metadata = JSONObject(prefs.getString(anime.id, null) ?: return null)
         val image = File(directory, anime.id).takeIf { it.isFile }?.readBytes() ?: return null
         CachedAnimeDetails(
-            AnimeDetails(metadata.getString("description"), metadata.getString("posterUrl"),
-                metadata.getJSONArray("facts").let { array -> (0 until array.length()).map { array.getString(it) } }),
-            image, metadata.getLong("savedAt"))
+            AnimeDetails(
+                metadata.getString("description"), metadata.getString("posterUrl"),
+                metadata.getJSONArray("facts")
+                    .let { array -> (0 until array.length()).map { array.getString(it) } }),
+            image, metadata.getLong("savedAt")
+        )
     }.getOrNull()
 
     fun save(anime: Anime, details: AnimeDetails, poster: ByteArray, now: Long) {
@@ -33,9 +36,14 @@ class AnimeDetailCache(context: Context) {
             return
         }
         val facts = JSONArray().apply { details.facts.forEach(::put) }
-        prefs.edit().putString(anime.id, JSONObject().put("description", details.description)
-            .put("posterUrl", details.posterUrl).put("facts", facts).put("savedAt", now).toString()).apply()
+        prefs.edit().putString(
+            anime.id, JSONObject().put("description", details.description)
+                .put("posterUrl", details.posterUrl).put("facts", facts).put("savedAt", now)
+                .toString()
+        ).apply()
     }
 
-    companion object { const val TTL_MS = 24 * 60 * 60 * 1000L }
+    companion object {
+        const val TTL_MS = 24 * 60 * 60 * 1000L
+    }
 }

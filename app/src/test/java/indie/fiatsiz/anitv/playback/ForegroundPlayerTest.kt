@@ -20,20 +20,33 @@ class ForegroundPlayerTest {
         var position = 0L
         var ready = false
         var releases = 0
-        val player = Proxy.newProxyInstance(Player::class.java.classLoader, arrayOf(Player::class.java)) { _, method, args ->
+        val player = Proxy.newProxyInstance(
+            Player::class.java.classLoader,
+            arrayOf(Player::class.java)
+        ) { _, method, args ->
             when (method.name) {
                 "getCurrentPosition" -> position
                 "getDuration" -> 100_000L
                 "getPlayWhenReady" -> ready
-                "setPlayWhenReady" -> { ready = args!![0] as Boolean; null }
-                "pause" -> { ready = false; null }
-                "release" -> { releases++; null }
+                "setPlayWhenReady" -> {
+                    ready = args!![0] as Boolean; null
+                }
+
+                "pause" -> {
+                    ready = false; null
+                }
+
+                "release" -> {
+                    releases++; null
+                }
+
                 else -> error("Unexpected Player call: ${method.name}")
             }
         } as Player
     }
 
-    @Test fun homeReleasesImmediatelyAndReturnRestoresPosition() {
+    @Test
+    fun homeReleasesImmediatelyAndReturnRestoresPosition() {
         val owner = Owner()
         val players = mutableListOf<FakePlayer>()
         val positions = mutableListOf<Long>()
@@ -63,7 +76,8 @@ class ForegroundPlayerTest {
         assertEquals(listOf(1, 1), players.map { it.releases })
     }
 
-    @Test fun lateStreamWaitsForForegroundAndPausedPlaybackStaysPaused() {
+    @Test
+    fun lateStreamWaitsForForegroundAndPausedPlaybackStaysPaused() {
         val owner = Owner()
         owner.event(Lifecycle.Event.ON_CREATE)
         val players = mutableListOf<FakePlayer>()

@@ -33,10 +33,19 @@ import indie.fiatsiz.anitv.R
 private fun HomePreview() {
     AniTVTheme(isInDarkTheme = true) {
         Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0F0F23))
+                    .padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 BrandHeader()
-                HomeContent(emptyList(), remember { androidx.compose.ui.focus.FocusRequester() }, Modifier.weight(1f), onNavigate = {}) {}
+                HomeContent(
+                    emptyList(),
+                    remember { androidx.compose.ui.focus.FocusRequester() },
+                    Modifier.weight(1f),
+                    onNavigate = {}) {}
             }
         }
     }
@@ -47,11 +56,21 @@ private fun HomePreview() {
 private fun EpisodesPreview() {
     AniTVTheme(isInDarkTheme = true) {
         Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0F0F23))
+                    .padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 BrandHeader()
                 Text("Sample anime", fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
-                Text(stringResource(R.string.episodes_heading), fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+                Text(
+                    stringResource(R.string.episodes_heading),
+                    fontSize = 15.sp,
+                    color = Color(0xFFB9C5D8),
+                    letterSpacing = 2.sp
+                )
                 EpisodeButton(Episode("preview-1", "1", "Episode 1"), null) {}
                 EpisodeButton(Episode("preview-2", "2", "Episode 2"), null) {}
             }
@@ -64,10 +83,21 @@ private fun EpisodesPreview() {
 private fun SettingsEnglishPreview() {
     AniTVTheme(isInDarkTheme = true) {
         Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0F0F23))
+                    .padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 BrandHeader()
-                SettingsContent("en", TranslationSettings(), remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, onTranslationSettings = {})
+                SettingsContent(
+                    "en",
+                    TranslationSettings(),
+                    remember { androidx.compose.ui.focus.FocusRequester() },
+                    {},
+                    {},
+                    onTranslationSettings = {})
             }
         }
     }
@@ -78,10 +108,21 @@ private fun SettingsEnglishPreview() {
 private fun SettingsTurkishPreview() {
     AniTVTheme(isInDarkTheme = true) {
         Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0F0F23))
+                    .padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 BrandHeader()
-                SettingsContent("tr", TranslationSettings(), remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, onTranslationSettings = {})
+                SettingsContent(
+                    "tr",
+                    TranslationSettings(),
+                    remember { androidx.compose.ui.focus.FocusRequester() },
+                    {},
+                    {},
+                    onTranslationSettings = {})
             }
         }
     }
@@ -92,13 +133,27 @@ private fun SettingsTurkishPreview() {
 private fun AudioChoicePreview() {
     AniTVTheme(isInDarkTheme = true) {
         Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0F0F23))
+                    .padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 BrandHeader()
-                EpisodeContent("Sample anime", Episode("1", "1", "Episode 1"),
-                    listOf(EpisodeServer(AudioVersion.SUB, "https://player.example/sub"),
-                        EpisodeServer(AudioVersion.DUB, "https://player.example/dub")),
-                    false, null, remember { androidx.compose.ui.focus.FocusRequester() }, {}, {}, {})
+                EpisodeContent(
+                    "Sample anime",
+                    Episode("1", "1", "Episode 1"),
+                    listOf(
+                        EpisodeServer(AudioVersion.SUB, "https://player.example/sub"),
+                        EpisodeServer(AudioVersion.DUB, "https://player.example/dub")
+                    ),
+                    false,
+                    null,
+                    remember { androidx.compose.ui.focus.FocusRequester() },
+                    {},
+                    {},
+                    {})
             }
         }
     }
@@ -109,14 +164,31 @@ private fun AudioChoicePreview() {
 private fun ContinueWatchingPreview() {
     AniTVTheme(isInDarkTheme = true) {
         Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0F0F23))
+                    .padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 BrandHeader()
-                Text(stringResource(R.string.continue_watching), fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                ContinueWatchingCard(LibraryEntry(Anime("1", "Sample anime"),
-                    progress = WatchProgress("2", "2", 753_000, 1_440_000, AudioVersion.DUB)),
-                    AnimeDetails("A sample description for the title you last watched.", "https://image.example/poster.webp", emptyList()),
-                    null, false) {}
+                Text(
+                    stringResource(R.string.continue_watching),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                ContinueWatchingCard(
+                    LibraryEntry(
+                        Anime("1", "Sample anime"),
+                        progress = WatchProgress("2", "2", 753_000, 1_440_000, AudioVersion.DUB)
+                    ),
+                    AnimeDetails(
+                        "A sample description for the title you last watched.",
+                        "https://image.example/poster.webp",
+                        emptyList()
+                    ),
+                    null, false
+                ) {}
             }
         }
     }
@@ -127,7 +199,8 @@ private fun ContinueWatchingPreview() {
 private fun EpisodeSidebarPreview() {
     AniTVTheme(isInDarkTheme = true) {
         Surface(Modifier.fillMaxSize()) {
-            EpisodeSidebarContent("Sample anime", Episode("3", "3", "Episode 3"),
+            EpisodeSidebarContent(
+                "Sample anime", Episode("3", "3", "Episode 3"),
                 (1..12).map { Episode("$it", "$it", "Episode $it") }, false, null, {}, {}, {})
         }
     }
@@ -138,14 +211,28 @@ private fun EpisodeSidebarPreview() {
 private fun FavoriteCardPreview() {
     AniTVTheme(isInDarkTheme = true) {
         Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().background(Color(0xFF0F0F23)).padding(horizontal = 56.dp, vertical = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0F0F23))
+                    .padding(horizontal = 56.dp, vertical = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 BrandHeader()
-                Text(stringResource(R.string.favorites), fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
-                FavoriteCard(LibraryEntry(Anime("1", "Sample favorite"), favorite = true),
-                    AnimeDetails("A saved title with artwork, a description, and details.",
-                        "https://image.example/poster.webp", listOf("Status: Currently Airing", "Genres: Adventure")),
-                    null, false) {}
+                Text(
+                    stringResource(R.string.favorites),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                FavoriteCard(
+                    LibraryEntry(Anime("1", "Sample favorite"), favorite = true),
+                    AnimeDetails(
+                        "A saved title with artwork, a description, and details.",
+                        "https://image.example/poster.webp",
+                        listOf("Status: Currently Airing", "Genres: Adventure")
+                    ),
+                    null, false
+                ) {}
             }
         }
     }

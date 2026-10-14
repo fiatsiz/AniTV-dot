@@ -4,7 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ContinueWatchingContentTest {
-    @Test fun formatsSavedPositionWithSecondsAndLongEpisodeTimes() {
+    @Test
+    fun formatsSavedPositionWithSecondsAndLongEpisodeTimes() {
         assertEquals("0:00", formatResumePosition(-1))
         assertEquals("0:00", formatResumePosition(0))
         assertEquals("0:59", formatResumePosition(59_999))

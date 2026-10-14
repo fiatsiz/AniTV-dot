@@ -19,9 +19,12 @@ android {
 
     }
 
-    val releaseVariables = listOf("ANITV_RELEASE_KEYSTORE", "ANITV_RELEASE_STORE_PASSWORD",
-        "ANITV_RELEASE_KEY_ALIAS", "ANITV_RELEASE_KEY_PASSWORD")
-    val releaseCredentials = releaseVariables.associateWith { System.getenv(it)?.takeIf(String::isNotBlank) }
+    val releaseVariables = listOf(
+        "ANITV_RELEASE_KEYSTORE", "ANITV_RELEASE_STORE_PASSWORD",
+        "ANITV_RELEASE_KEY_ALIAS", "ANITV_RELEASE_KEY_PASSWORD"
+    )
+    val releaseCredentials =
+        releaseVariables.associateWith { System.getenv(it)?.takeIf(String::isNotBlank) }
     signingConfigs {
         create("ownerRelease") {
             releaseCredentials["ANITV_RELEASE_KEYSTORE"]?.let { storeFile = file(it) }
@@ -41,7 +44,9 @@ android {
         }
     }
     tasks.configureEach {
-        if (name == "validateSigningRelease" || name == "packageRelease") dependsOn(validateReleaseSigning)
+        if (name == "validateSigningRelease" || name == "packageRelease") dependsOn(
+            validateReleaseSigning
+        )
     }
     buildTypes {
         release {

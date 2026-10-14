@@ -42,24 +42,47 @@ import indie.fiatsiz.anitv.source.Anime
 import indie.fiatsiz.anitv.R
 
 @Composable
-internal fun SearchContent(query: String, loading: Boolean, searched: Boolean, error: String?, results: List<Anime>,
-    firstFocus: androidx.compose.ui.focus.FocusRequester, onBack: () -> Unit, onQuery: (String) -> Unit,
-    onSearch: () -> Unit, onAnime: (Anime) -> Unit) {
-                Button(onClick = onBack, modifier = Modifier.focusRequester(firstFocus)) { Text(stringResource(R.string.home)) }
-                Text(stringResource(R.string.search_anime), fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
-                SearchField(query, { onQuery(it) }, onSearch)
-                Button(onClick = onSearch, enabled = query.isNotBlank() && !loading) { Text(stringResource(R.string.search)) }
-                if (loading) Text(stringResource(R.string.searching))
-                error?.let { Text(it, color = Color(0xFFFF9999)) }
-                if (searched && !loading && error == null && results.isEmpty()) Text(stringResource(R.string.no_results))
-                if (results.isNotEmpty()) {
-                    Text(stringResource(R.string.results_heading), fontSize = 15.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(results, key = { it.id }) { item ->
-                            Button(onClick = { onAnime(item) }, modifier = Modifier.fillMaxWidth()) { Text(item.title) }
-                        }
-                    }
-                }
+internal fun SearchContent(
+    query: String,
+    loading: Boolean,
+    searched: Boolean,
+    error: String?,
+    results: List<Anime>,
+    firstFocus: androidx.compose.ui.focus.FocusRequester,
+    onBack: () -> Unit,
+    onQuery: (String) -> Unit,
+    onSearch: () -> Unit,
+    onAnime: (Anime) -> Unit
+) {
+    Button(
+        onClick = onBack,
+        modifier = Modifier.focusRequester(firstFocus)
+    ) { Text(stringResource(R.string.home)) }
+    Text(stringResource(R.string.search_anime), fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+    SearchField(query, { onQuery(it) }, onSearch)
+    Button(
+        onClick = onSearch,
+        enabled = query.isNotBlank() && !loading
+    ) { Text(stringResource(R.string.search)) }
+    if (loading) Text(stringResource(R.string.searching))
+    error?.let { Text(it, color = Color(0xFFFF9999)) }
+    if (searched && !loading && error == null && results.isEmpty()) Text(stringResource(R.string.no_results))
+    if (results.isNotEmpty()) {
+        Text(
+            stringResource(R.string.results_heading),
+            fontSize = 15.sp,
+            color = Color(0xFFB9C5D8),
+            letterSpacing = 2.sp
+        )
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(results, key = { it.id }) { item ->
+                Button(
+                    onClick = { onAnime(item) },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(item.title) }
+            }
+        }
+    }
 }
 
 @Composable
@@ -68,8 +91,14 @@ private fun SearchField(value: String, onChange: (String) -> Unit, onSearch: () 
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     Box(
-        Modifier.fillMaxWidth().height(54.dp)
-            .border(if (focused) 3.dp else 1.dp, if (focused) Color.White else Color.Gray, RoundedCornerShape(8.dp))
+        Modifier
+            .fillMaxWidth()
+            .height(54.dp)
+            .border(
+                if (focused) 3.dp else 1.dp,
+                if (focused) Color.White else Color.Gray,
+                RoundedCornerShape(8.dp)
+            )
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -80,7 +109,8 @@ private fun SearchField(value: String, onChange: (String) -> Unit, onSearch: () 
             textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 20.sp),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
                         keyboard?.hide()
@@ -90,6 +120,9 @@ private fun SearchField(value: String, onChange: (String) -> Unit, onSearch: () 
                 }
                 .onFocusChanged { focused = it.isFocused }
         )
-        if (value.isEmpty() && !focused) Text(stringResource(R.string.search_hint), color = Color.LightGray)
+        if (value.isEmpty() && !focused) Text(
+            stringResource(R.string.search_hint),
+            color = Color.LightGray
+        )
     }
 }

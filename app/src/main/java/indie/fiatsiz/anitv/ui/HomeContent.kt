@@ -48,9 +48,24 @@ import kotlinx.coroutines.launch
 
 @Composable
 internal fun BrandHeader() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Image(painterResource(R.drawable.anitv_logo_vector), "AniTV", Modifier.width(120.dp).height(60.dp), contentScale = ContentScale.Crop)
-        Text(stringResource(R.string.tagline), fontSize = 14.sp, color = Color(0xFFB9C5D8), letterSpacing = 2.sp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Image(
+            painterResource(R.drawable.anitv_logo_vector),
+            "AniTV",
+            Modifier
+                .width(120.dp)
+                .height(60.dp),
+            contentScale = ContentScale.Crop
+        )
+        Text(
+            stringResource(R.string.tagline),
+            fontSize = 14.sp,
+            color = Color(0xFFB9C5D8),
+            letterSpacing = 2.sp
+        )
     }
 }
 
@@ -59,39 +74,102 @@ internal object HomeBringIntoViewSpec : BringIntoViewSpec
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun HomeContent(library: List<LibraryEntry>, firstFocus: androidx.compose.ui.focus.FocusRequester,
-    modifier: Modifier = Modifier, onNavigate: (Page) -> Unit, continueWatching: @Composable (LibraryEntry) -> Unit) {
+internal fun HomeContent(
+    library: List<LibraryEntry>,
+    firstFocus: androidx.compose.ui.focus.FocusRequester,
+    modifier: Modifier = Modifier,
+    onNavigate: (Page) -> Unit,
+    continueWatching: @Composable (LibraryEntry) -> Unit
+) {
     val latest = LibraryStore.continueWatching(library)
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     CompositionLocalProvider(LocalBringIntoViewSpec provides HomeBringIntoViewSpec) {
-        LazyColumn(modifier.fillMaxWidth(), state = listState, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        LazyColumn(
+            modifier.fillMaxWidth(),
+            state = listState,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
             item(key = "main_menu") {
-                Column(Modifier.fillMaxWidth().onFocusChanged {
-                    if (it.hasFocus) scope.launch { listState.scrollToItem(0) }
-                }.focusGroup(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                Column(Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged {
+                        if (it.hasFocus) scope.launch { listState.scrollToItem(0) }
+                    }
+                    .focusGroup(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.home_heading), modifier = Modifier.weight(1f), fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
-                        Button(onClick = { onNavigate(Page.SETTINGS) }, shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))) {
-                            Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Text(
+                            stringResource(R.string.home_heading),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Button(
+                            onClick = { onNavigate(Page.SETTINGS) },
+                            shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))
+                        ) {
+                            Icon(
+                                Icons.Filled.Settings,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.settings))
                         }
                     }
-                    Text(stringResource(R.string.home_description), color = Color(0xFFB9C5D8), fontSize = 18.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                        HomeButton(stringResource(R.string.search), stringResource(R.string.find_title), Icons.Filled.Search, Modifier.weight(1f).focusRequester(firstFocus)) { onNavigate(Page.SEARCH) }
-                        HomeButton(stringResource(R.string.watching), stringResource(R.string.title_count, LibraryStore.watching(library).size), Icons.Filled.PlayArrow, Modifier.weight(1f)) { onNavigate(Page.WATCHING) }
+                    Text(
+                        stringResource(R.string.home_description),
+                        color = Color(0xFFB9C5D8),
+                        fontSize = 18.sp
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        HomeButton(
+                            stringResource(R.string.search),
+                            stringResource(R.string.find_title),
+                            Icons.Filled.Search,
+                            Modifier
+                                .weight(1f)
+                                .focusRequester(firstFocus)
+                        ) { onNavigate(Page.SEARCH) }
+                        HomeButton(
+                            stringResource(R.string.watching),
+                            stringResource(
+                                R.string.title_count,
+                                LibraryStore.watching(library).size
+                            ),
+                            Icons.Filled.PlayArrow,
+                            Modifier.weight(1f)
+                        ) { onNavigate(Page.WATCHING) }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                        HomeButton(stringResource(R.string.favorites), stringResource(R.string.saved_count, library.count { it.favorite }), Icons.Filled.Favorite, Modifier.weight(1f)) { onNavigate(Page.FAVORITES) }
-                        HomeButton(stringResource(R.string.completed), stringResource(R.string.archived_count, library.count { it.completed }), Icons.Filled.CheckCircle, Modifier.weight(1f)) { onNavigate(Page.COMPLETED) }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        HomeButton(
+                            stringResource(R.string.favorites),
+                            stringResource(R.string.saved_count, library.count { it.favorite }),
+                            Icons.Filled.Favorite,
+                            Modifier.weight(1f)
+                        ) { onNavigate(Page.FAVORITES) }
+                        HomeButton(
+                            stringResource(R.string.completed),
+                            stringResource(R.string.archived_count, library.count { it.completed }),
+                            Icons.Filled.CheckCircle,
+                            Modifier.weight(1f)
+                        ) { onNavigate(Page.COMPLETED) }
                     }
                 }
             }
             if (latest != null) {
                 item(key = "continue_heading") {
-                    Text(stringResource(R.string.continue_watching), fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.continue_watching),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
                 item(key = "continue_${latest.anime.id}") { continueWatching(latest) }
             }
@@ -100,8 +178,18 @@ internal fun HomeContent(library: List<LibraryEntry>, firstFocus: androidx.compo
 }
 
 @Composable
-private fun HomeButton(title: String, subtitle: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = modifier.height(112.dp), shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))) {
+private fun HomeButton(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(112.dp),
+        shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))
+    ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
         Spacer(Modifier.width(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

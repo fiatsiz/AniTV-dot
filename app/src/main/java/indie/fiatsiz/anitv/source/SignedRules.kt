@@ -8,7 +8,11 @@ import java.security.interfaces.RSAPublicKey
 import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
 
-class SignedRules private constructor(val rules: SourceRules, payload: ByteArray, envelope: ByteArray) {
+class SignedRules private constructor(
+    val rules: SourceRules,
+    payload: ByteArray,
+    envelope: ByteArray
+) {
     private val payloadBytes = payload.copyOf()
     private val envelopeBytes = envelope.copyOf()
     fun envelope(): ByteArray = envelopeBytes.copyOf()
@@ -21,12 +25,19 @@ class SignedRules private constructor(val rules: SourceRules, payload: ByteArray
     companion object {
         const val MAX_BYTES = 256 * 1024
         val publicKey: PublicKey by lazy {
-            KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(
-                SignedRules::class.java.getResourceAsStream("/hianime-public.der")!!.use { it.readBytes() }))
+            KeyFactory.getInstance("RSA").generatePublic(
+                X509EncodedKeySpec(
+                    SignedRules::class.java.getResourceAsStream("/hianime-public.der")!!
+                        .use { it.readBytes() })
+            )
         }
         val bundled: SignedRules by lazy {
-            verify(SignedRules::class.java.getResourceAsStream("/hianime.signed.json")!!.use { it.readBytes() }, publicKey, 1)
+            verify(
+                SignedRules::class.java.getResourceAsStream("/hianime.signed.json")!!
+                    .use { it.readBytes() }, publicKey, 1
+            )
         }
+
         fun verify(envelope: ByteArray, publicKey: PublicKey, appVersionCode: Int): SignedRules {
             require(envelope.size <= MAX_BYTES) { "Rules envelope too large" }
             require((publicKey as? RSAPublicKey)?.modulus?.bitLength() == 3072) { "Rules require RSA-3072" }
