@@ -34,6 +34,7 @@ class LibraryStore(context: Context) {
                 put(
                     JSONObject().put("id", entry.anime.id).put("title", entry.anime.title)
                         .put("detailUrl", entry.anime.detailUrl).put("favorite", entry.favorite)
+                        .put("japaneseTitle", entry.anime.japaneseTitle)
                         .put("completed", entry.completed)
                         .apply {
                             entry.progress?.let {
@@ -80,7 +81,8 @@ class LibraryStore(context: Context) {
                         id,
                         title,
                         item.optString("detailUrl")
-                            .takeIf { it.startsWith("https://hianime.at/") }),
+                            .takeIf { it.startsWith("https://hianime.at/") },
+                        item.optString("japaneseTitle").takeIf { it.isNotBlank() }),
                     item.optBoolean("favorite"),
                     item.optBoolean("completed"),
                     progress

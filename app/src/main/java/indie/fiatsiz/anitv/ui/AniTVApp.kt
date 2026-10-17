@@ -275,7 +275,7 @@ internal fun AniTVApp(
                 translationSettings,
                 configuration.locales[0].language,
                 userAgent,
-                animeTitle = selectedAnime.title,
+                anime = selectedAnime,
                 currentEpisode = selectedEpisode,
                 episodes = episodes,
                 episodesLoading = episodesLoading,

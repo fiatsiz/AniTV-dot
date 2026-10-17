@@ -1,6 +1,6 @@
 # AniTV architecture
 
-AniTV is one Kotlin Android `app` module. Compose for TV owns navigation and screens; `LibraryStore` owns local favorites and progress; `AnimeDetailCache` owns cached title metadata and poster files; `HiAnimeSource` owns HiAnime requests and parsing; `ProcessRules` owns one startup `RulesRepository`; `ProcessUpdates` owns one foreground release updater; `SubtitleTranslator` owns Google/DeepL API requests; Media3 owns playback.
+AniTV is one Kotlin Android `app` module. Compose for TV owns navigation and screens; `LibraryStore` owns local favorites and progress; `AnimeDetailCache` owns cached title metadata and poster files; `HiAnimeSource` owns HiAnime requests and parsing; `OpeningSkipSource` owns MAL title matching and AniSkip timing requests; `ProcessRules` owns one startup `RulesRepository`; `ProcessUpdates` owns one foreground release updater; `SubtitleTranslator` owns Google/DeepL API requests; Media3 owns playback.
 
 ```text
 Home → Search/results or local library → detail + episodes → available SUB/DUB → HLS + optional VTT player
@@ -14,6 +14,7 @@ AniTVApp → TV WebView/HTTP User-Agent → HiAnimeSource + Media3 HTTP requests
 Settings → TranslationSettingsStore → Android Keystore → provider key
 Playback caption menu → TranslationSettingsStore → target language + caption style
 Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Media3 SubtitleView overlay
+Playback → romanized/display title → MAL exact match → AniSkip opening interval → one Media3 seek
 ```
 
 ## Files and responsibilities
@@ -30,6 +31,8 @@ Playback → HiAnimeSource VTT cues → SubtitleTranslator batches → timed Med
 | `app/src/main/java/indie/fiatsiz/anitv/ui/ScreenPreviews.kt` | Sample home, episode, audio choice, Continue watching, favorite card, episode sidebar, English Settings, and Turkish Settings Compose previews. |
 | `app/src/main/java/indie/fiatsiz/anitv/playback/Playback.kt` | Media3 configuration, playback state/progress, translation lookahead, modal Settings/quality/caption navigation, and shared progress-saving episode selection. |
 | `app/src/main/java/indie/fiatsiz/anitv/playback/PlaybackControls.kt` | Bottom controller, centered Material play/pause and neighboring episode icons, progress slider semantics, D-pad focus/hide/show routing, and bounded 10-second seeking helpers. Receives playback state and callbacks; performs no source requests. |
+| `app/src/main/java/indie/fiatsiz/anitv/playback/OpeningSkipper.kt` | Opening interval/active-state checks, once-per-playback-visit seek rule, and the localized TV Settings toggle/status component. Playback owns the saved preference and timed polling. |
+| `app/src/main/java/indie/fiatsiz/anitv/source/OpeningSkipSource.kt` | Fixed HTTPS MAL autocomplete and AniSkip v2 requests, exact unambiguous title matching, bounded responses, and opening-only timestamp/duration validation. Independent from signed HiAnime rules. |
 | `app/src/main/java/indie/fiatsiz/anitv/playback/EpisodeSidebar.kt` | Modal episode list, current-playing marker, current-ID focus/scroll targeting, and loading/error/retry UI. Receives source data and callbacks; performs no site requests. |
 | `app/src/main/java/indie/fiatsiz/anitv/playback/ForegroundPlayer.kt` | Activity lifecycle observer; creates playback on Start, pauses/saves/releases synchronously on Stop, and restores position and play/pause state on return. Composition disposal also releases exactly once. |
 | `app/src/main/java/indie/fiatsiz/anitv/playback/CaptionSettings.kt` | Caption menu, language/style choices, and shared Media3 subtitle styling. |
@@ -66,6 +69,18 @@ Playback's Episodes control opens `EpisodeSidebar` in a modal Compose Dialog. Th
 8. Settings reads and sets Android `LocaleManager.applicationLocales`. An empty locale list follows the system; explicit `en` or `tr` choices persist in Android and cause a configuration change. `TranslationSettingsStore` encrypts the API key with Android Keystore and stores the provider choice and caption style in private preferences. Android string resources localize app controls and source errors. `HiAnimeSource` emits typed failure codes without depending on Android resources.
 
 The UI uses `remember` state for query, results, selection, loading, and errors. The page uses `rememberSaveable` so Settings remains open after a language change. Separate title and transient request counters ignore late responses after another selection or Back. Search query and results are not persisted across process death; library and detail cache state are.
+
+## Opening skipping
+
+`HiAnimeSource.parseSearch()` optionally reads `data-jname` from the configured title element into `Anime.japaneseTitle`; the visible title and search behavior stay intact. The optional library JSON field preserves it across restarts. Older entries without it remain readable; playback refreshes the matching HiAnime search entry by source ID before lookup. Missing optional markup still permits exact matching by display title. This attribute is compiled, not a new signed-rules schema field.
+
+Opening skipping defaults to On. Playback Settings saves the toggle under private `playback` preferences (`skip_openings`), independent of captions, translation, and library progress. When enabled and the foreground player reports a known seekable duration, a cancellable Compose effect performs lookup on `Dispatchers.IO`. The preferred romanized title is sent to MAL's fixed `/search/prefix.json?type=anime&keyword=...&v=1` endpoint. Only a unique positive anime ID whose name exactly matches the romanized or display title, ignoring case and repeated whitespace, is accepted. There is no fuzzy-first-result or HiAnime-ID-to-MAL-ID assumption.
+
+`OpeningSkipSource` sends the MAL ID, source episode number, and actual duration in seconds to AniSkip `/v2/skip-times/{malId}/{episodeNumber}?types[]=op&episodeLength=...`. Decimal episode labels are supported; nonnumeric labels do not request timings. Only finite `op` intervals with nonnegative start, increasing endpoints, an end before the media ends, and a reported duration within 30 seconds are accepted. Identical intervals deduplicate; conflicting intervals disable skipping. Duration is sent so AniSkip can select a suitable cut; timestamps are never stretched or shifted. Requests reject redirects, use five-second connect/read timeouts, and limit each JSON body to 256 KiB. No API key, media URL, subtitle text, or saved watch position is sent. MAL receives the title query; AniSkip receives ID/episode/duration. Both receive the app's User-Agent and ordinary connection metadata.
+
+The existing 250 ms playback poll seeks to the opening end only while playing seekable media, enabled, outside Settings/Episodes, and inside the interval. It immediately saves progress and shows a three-second nonfocusable AniSkip notice. `OpeningSkipper` remembers consumption by anime/episode through foreground player recreation, so seeking back can replay the opening. Leaving playback or recreating the Activity starts a new visit. Paused/disabled/unknown-duration/unseekable playback and open menus do not consume the skip. Toggling Off prevents new lookups/seeks; toggling On retries lookup without resetting consumption. Missing matches/times, bad data, and network failures leave ordinary playback available and show a localized Settings status. No repeated network retry, ending/mixed-opening/recap skips, manual MAL picker, or persistent timing cache is included.
+
+The [ani-skip README](https://github.com/synacktraa/ani-skip) supplied the behavior reference (AniSkip lookup, skip once, seek-back replay). No ani-skip code was copied. The [AniSkip API documentation](https://api.aniskip.com/api-docs) and live JSON responses supplied the request/response contract. Community timestamps and release cuts can still differ; the toggle allows ordinary playback when timing is unsuitable.
 
 ## Progress compatibility
 

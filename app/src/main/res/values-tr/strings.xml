@@ -54,6 +54,14 @@
     <string name="episodes">Bölümler</string>
     <string name="pause">Duraklat</string>
     <string name="play">Oynat</string>
+    <string name="opening_skip_on">Açılışları atla: açık</string>
+    <string name="opening_skip_off">Açılışları atla: kapalı</string>
+    <string name="opening_skip_hint">AniSkip ile açılışları bölüm başına bir kez otomatik atlar.</string>
+    <string name="opening_skip_loading">Açılış zamanları aranıyor…</string>
+    <string name="opening_skip_ready">AniSkip açılışı bulundu. Tekrar izlemek için atlamadan sonra geri sarın.</string>
+    <string name="opening_skip_not_found">Kesin bir başlık veya uygun açılış zamanı bulunamadı. Oynatma normal devam eder.</string>
+    <string name="opening_skip_unavailable">Açılış bilgisine ulaşılamadı. Oynatma normal devam eder. Yeniden denemek için kapatıp açın.</string>
+    <string name="opening_skipped">Açılış atlandı · AniSkip</string>
     <string name="seek_back">−10 sn</string>
     <string name="seek_forward">+10 sn</string>
     <string name="captions_off">Altyazı: kapalı</string>

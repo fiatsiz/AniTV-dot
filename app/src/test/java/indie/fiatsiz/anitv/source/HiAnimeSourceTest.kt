@@ -8,6 +8,15 @@ class HiAnimeSourceTest {
     private fun fixture(name: String) = javaClass.getResource("/$name")!!.readText()
 
     @Test
+    fun extractsOptionalRomanizedTitleWithoutChangingDisplayTitle() {
+        val html = fixture("hianime-search.html").replace("class=\"dynamic-name\"", "class=\"dynamic-name\" data-jname=\"Wan Piisu\"")
+        val anime = HiAnimeSource.parseSearch(html).single()
+        assertEquals("One Piece", anime.title)
+        assertEquals("Wan Piisu", anime.japaneseTitle)
+        assertEquals(null, HiAnimeSource.parseSearch(fixture("hianime-search.html")).single().japaneseTitle)
+    }
+
+    @Test
     fun parsesCurrentSearchAndEpisodes() {
         assertEquals(
             listOf(Anime("1", "One Piece", "https://hianime.at/one-piece-1")),

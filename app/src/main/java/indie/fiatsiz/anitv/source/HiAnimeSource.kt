@@ -9,7 +9,10 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
-data class Anime(val id: String, val title: String, val detailUrl: String? = null)
+data class Anime(
+    val id: String, val title: String, val detailUrl: String? = null,
+    val japaneseTitle: String? = null
+)
 data class AnimeDetails(val description: String, val posterUrl: String, val facts: List<String>)
 data class Episode(val id: String, val number: String, val title: String)
 enum class AudioVersion { SUB, DUB }
@@ -195,7 +198,10 @@ class HiAnimeSource(
                             false
                         )
                     }
-                if (title.isBlank() || !id.matches(Regex("[0-9]+"))) null else Anime(id, title, url)
+                val japaneseTitle = item.selectFirst(config.title.selector)?.attr("data-jname")
+                    ?.trim()?.takeIf { it.isNotEmpty() }
+                if (title.isBlank() || !id.matches(Regex("[0-9]+"))) null
+                else Anime(id, title, url, japaneseTitle)
             }
             if (results.isEmpty() && document.selectFirst(config.container) == null)
                 throw SourceException(SourceFailure.SEARCH_CHANGED)

@@ -54,6 +54,14 @@
     <string name="episodes">Episodes</string>
     <string name="pause">Pause</string>
     <string name="play">Play</string>
+    <string name="opening_skip_on">Skip openings: on</string>
+    <string name="opening_skip_off">Skip openings: off</string>
+    <string name="opening_skip_hint">Automatically skip openings once per episode using AniSkip.</string>
+    <string name="opening_skip_loading">Looking up opening times…</string>
+    <string name="opening_skip_ready">AniSkip opening found. Seek back after skipping to replay it.</string>
+    <string name="opening_skip_not_found">No unambiguous title or matching opening times. Playback continues normally.</string>
+    <string name="opening_skip_unavailable">Opening lookup unavailable. Playback continues normally. Turn off and on to retry.</string>
+    <string name="opening_skipped">Opening skipped · AniSkip</string>
     <string name="seek_back">−10s</string>
     <string name="seek_forward">+10s</string>
     <string name="captions_off">Captions: off</string>

@@ -38,6 +38,14 @@ class LibraryStoreTest {
     }
 
     @Test
+    fun optionalRomanizedTitlePreservesLibraryAndOlderEntries() {
+        val entry = LibraryEntry(anime.copy(japaneseTitle = "Example no Monogatari"), favorite = true,
+            progress = WatchProgress("45", "2", 42_123, 1_200_000))
+        assertEquals(listOf(entry), LibraryStore.decode(LibraryStore.encode(listOf(entry))))
+        assertNull(LibraryStore.decode("""[{"id":"123","title":"Example"}]""").single().anime.japaneseTitle)
+    }
+
+    @Test
     fun badOrOldLibraryDataDoesNotCrash() {
         assertTrue(LibraryStore.decode("broken").isEmpty())
         assertTrue(LibraryStore.decode("[{\"id\":\"bad\",\"title\":\"X\"}]").isEmpty())

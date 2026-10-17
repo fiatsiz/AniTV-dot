@@ -45,7 +45,10 @@ import androidx.media3.ui.SubtitleView
 import androidx.tv.material3.Button
 import androidx.tv.material3.Text
 import indie.fiatsiz.anitv.source.Episode
+import indie.fiatsiz.anitv.source.Anime
 import indie.fiatsiz.anitv.source.HiAnimeSource
+import indie.fiatsiz.anitv.source.OpeningInterval
+import indie.fiatsiz.anitv.source.OpeningSkipSource
 import indie.fiatsiz.anitv.source.Stream
 import indie.fiatsiz.anitv.source.SubtitleCue
 import kotlinx.coroutines.Dispatchers
@@ -70,7 +73,7 @@ internal fun Playback(
     translation: TranslationSettings,
     targetLanguage: String,
     userAgent: String,
-    animeTitle: String,
+    anime: Anime,
     currentEpisode: Episode,
     episodes: List<Episode>,
     episodesLoading: Boolean,
@@ -86,6 +89,15 @@ internal fun Playback(
     val rules = remember { indie.fiatsiz.anitv.source.ProcessRules.get(context) }
     val source = remember(userAgent, rules) { HiAnimeSource(userAgent, rules::snapshot) }
     val translator = remember { SubtitleTranslator() }
+    val openingSource = remember(userAgent) { OpeningSkipSource(userAgent) }
+    val playbackPreferences = remember {
+        context.getSharedPreferences("playback", android.content.Context.MODE_PRIVATE)
+    }
+    var skipOpenings by remember { mutableStateOf(playbackPreferences.getBoolean("skip_openings", true)) }
+    var openingStatus by remember(stream) { mutableStateOf(OpeningStatus.LOADING) }
+    var openingInterval by remember(stream) { mutableStateOf<OpeningInterval?>(null) }
+    val openingSkipper = remember(anime.id, currentEpisode.id) { OpeningSkipper() }
+    var openingNotice by remember(stream) { mutableStateOf(false) }
     val hasCaptions = stream.subtitleUrl != null
     val translationReady =
         hasCaptions && translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
@@ -205,6 +217,33 @@ internal fun Playback(
             { position, duration -> progressCallback(position, duration) }, { currentPlayer = it })
         onDispose { session.dispose() }
     }
+    androidx.compose.runtime.LaunchedEffect(currentPlayer, skipOpenings) {
+        val activePlayer = currentPlayer ?: return@LaunchedEffect
+        if (!skipOpenings) return@LaunchedEffect
+        openingStatus = OpeningStatus.LOADING
+        openingInterval = null
+        while (activePlayer.duration <= 0 || !activePlayer.isCurrentMediaItemSeekable) delay(250)
+        val mediaDuration = activePlayer.duration
+        try {
+            openingInterval = withContext(Dispatchers.IO) {
+                val matchingAnime = if (anime.japaneseTitle.isNullOrBlank()) {
+                    source.search(anime.title).firstOrNull { it.id == anime.id } ?: anime
+                } else anime
+                openingSource.opening(matchingAnime, currentEpisode, mediaDuration)
+            }
+            openingStatus = if (openingInterval == null) OpeningStatus.NOT_FOUND else OpeningStatus.READY
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            openingStatus = OpeningStatus.UNAVAILABLE
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(openingNotice) {
+        if (openingNotice) {
+            delay(3_000)
+            openingNotice = false
+        }
+    }
     val player = currentPlayer ?: return
     androidx.compose.runtime.LaunchedEffect(player) {
         while (true) {
@@ -219,6 +258,15 @@ internal fun Playback(
             delay(250)
             positionMs = player.currentPosition.coerceAtLeast(0)
             durationMs = player.duration.coerceAtLeast(0)
+            openingSkipper.target(
+                openingInterval, positionMs, durationMs,
+                skipOpenings && player.isPlaying && player.isCurrentMediaItemSeekable && !settingsOpen && !episodesOpen
+            )?.let { target ->
+                player.seekTo(target)
+                positionMs = target
+                progressCallback(target, durationMs)
+                openingNotice = true
+            }
         }
     }
     androidx.compose.runtime.LaunchedEffect(
@@ -365,6 +413,12 @@ internal fun Playback(
                 color = Color.White
             )
         }
+        if (openingNotice) Text(
+            stringResource(R.string.opening_skipped),
+            modifier = Modifier.align(Alignment.TopStart).padding(32.dp)
+                .background(Color(0xCC000000), RoundedCornerShape(8.dp)).padding(12.dp),
+            color = Color.White
+        )
         val episodeIndex = episodes.indexOfFirst { it.id == currentEpisode.id }
         val previous = episodes.getOrNull(episodeIndex - 1).takeIf { episodeIndex > 0 && !episodesLoading }
         val next = episodes.getOrNull(episodeIndex + 1).takeIf { episodeIndex >= 0 && !episodesLoading }
@@ -460,6 +514,10 @@ internal fun Playback(
                                     if (qualityOptions.size <= 1 && hasCaptions) Modifier.focusRequester(settingsFocus) else Modifier
                                 )
                             ) { Text(stringResource(if (hasCaptions) R.string.captions_settings else R.string.captions_unavailable)) }
+                            OpeningSkipSettings(skipOpenings, openingStatus) {
+                                skipOpenings = !skipOpenings
+                                playbackPreferences.edit().putBoolean("skip_openings", skipOpenings).apply()
+                            }
                         }
                         Button(
                             onClick = { closeSettingsPage() },
@@ -477,7 +535,7 @@ internal fun Playback(
             color = Color.White
         )
         if (episodesOpen) EpisodeSidebar(
-            animeTitle, currentEpisode, episodes, episodesLoading, episodesError,
+            anime.title, currentEpisode, episodes, episodesLoading, episodesError,
             onDismiss = { episodesOpen = false; restoreEpisodesFocus = true; interactionTick++ },
             onRetry = onReloadEpisodes, onSelect = { selected ->
                 if (selected.id == currentEpisode.id) {
