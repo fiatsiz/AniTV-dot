@@ -1,13 +1,13 @@
 package indie.fiatsiz.anitv
 
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.tv.material3.Surface
-import indie.fiatsiz.anitv.ui.theme.AniTVTheme
 import indie.fiatsiz.anitv.ui.AniTVApp
+import indie.fiatsiz.anitv.ui.theme.AniTVTheme
 
 class MainActivity : AppCompatActivity() {
     private val updates by lazy { indie.fiatsiz.anitv.update.ProcessUpdates.get(applicationContext) }

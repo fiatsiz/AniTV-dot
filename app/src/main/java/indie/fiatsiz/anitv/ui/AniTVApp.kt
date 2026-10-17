@@ -1,48 +1,48 @@
 package indie.fiatsiz.anitv.ui
 
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.os.LocaleListCompat
 import android.graphics.BitmapFactory
 import android.webkit.WebSettings
-import androidx.lifecycle.Lifecycle
 import androidx.activity.compose.BackHandler
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.Lifecycle
+import indie.fiatsiz.anitv.AnimeDetailCache
+import indie.fiatsiz.anitv.LibraryEntry
+import indie.fiatsiz.anitv.LibraryStore
+import indie.fiatsiz.anitv.R
+import indie.fiatsiz.anitv.TranslationSettingsStore
+import indie.fiatsiz.anitv.WatchProgress
+import indie.fiatsiz.anitv.localizedError
+import indie.fiatsiz.anitv.playback.Playback
 import indie.fiatsiz.anitv.source.Anime
-import indie.fiatsiz.anitv.source.AudioVersion
 import indie.fiatsiz.anitv.source.AnimeDetails
-import indie.fiatsiz.anitv.source.EpisodeServer
+import indie.fiatsiz.anitv.source.AudioVersion
 import indie.fiatsiz.anitv.source.Episode
+import indie.fiatsiz.anitv.source.EpisodeServer
 import indie.fiatsiz.anitv.source.HiAnimeSource
 import indie.fiatsiz.anitv.source.Stream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import indie.fiatsiz.anitv.AnimeDetailCache
-import indie.fiatsiz.anitv.LibraryStore
-import indie.fiatsiz.anitv.LibraryEntry
-import indie.fiatsiz.anitv.WatchProgress
-import indie.fiatsiz.anitv.TranslationSettingsStore
-import indie.fiatsiz.anitv.localizedError
-import indie.fiatsiz.anitv.R
-import indie.fiatsiz.anitv.playback.Playback
 
 internal enum class Page { HOME, SEARCH, FAVORITES, WATCHING, COMPLETED, SETTINGS }
 
@@ -396,7 +396,11 @@ internal fun AniTVApp(
                 SettingsContent(
                     selectedLanguage, translationSettings, firstFocus, ::back, { tag ->
                         if (tag != selectedLanguage)
-                            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+                            AppCompatDelegate.setApplicationLocales(
+                                LocaleListCompat.forLanguageTags(
+                                    tag
+                                )
+                            )
                     }, rulesState = rulesState, updateState = updateState,
                     onCheckUpdate = { rules.refresh(); updates.check(true) },
                     onDownloadUpdate = { updates.download() },

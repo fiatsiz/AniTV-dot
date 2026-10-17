@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -19,10 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,14 +29,14 @@ import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
 import androidx.tv.material3.Button
 import androidx.tv.material3.Text
-import java.util.Locale
-import indie.fiatsiz.anitv.TranslationSettings
-import indie.fiatsiz.anitv.TranslationProvider
-import indie.fiatsiz.anitv.CaptionFont
 import indie.fiatsiz.anitv.CaptionColor
+import indie.fiatsiz.anitv.CaptionFont
 import indie.fiatsiz.anitv.CaptionStyleSettings
-import indie.fiatsiz.anitv.captionSizes
 import indie.fiatsiz.anitv.R
+import indie.fiatsiz.anitv.TranslationProvider
+import indie.fiatsiz.anitv.TranslationSettings
+import indie.fiatsiz.anitv.captionSizes
+import java.util.Locale
 
 internal enum class CaptionMode { OFF, ORIGINAL, TRANSLATED }
 internal enum class CaptionMenu { CLOSED, OPTIONS, LANGUAGES, STYLES, FONT, SIZE, BACKGROUND, FOREGROUND }

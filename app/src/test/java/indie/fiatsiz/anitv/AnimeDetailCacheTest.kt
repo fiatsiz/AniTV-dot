@@ -1,7 +1,8 @@
 package indie.fiatsiz.anitv
 
 import indie.fiatsiz.anitv.source.AnimeDetails
-import org.junit.Assert.*
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AnimeDetailCacheTest {

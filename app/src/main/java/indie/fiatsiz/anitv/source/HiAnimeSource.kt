@@ -1,7 +1,7 @@
 package indie.fiatsiz.anitv.source
 
-import org.jsoup.Jsoup
 import org.json.JSONObject
+import org.jsoup.Jsoup
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
@@ -13,6 +13,7 @@ data class Anime(
     val id: String, val title: String, val detailUrl: String? = null,
     val japaneseTitle: String? = null
 )
+
 data class AnimeDetails(val description: String, val posterUrl: String, val facts: List<String>)
 data class Episode(val id: String, val number: String, val title: String)
 enum class AudioVersion { SUB, DUB }

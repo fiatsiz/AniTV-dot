@@ -4,15 +4,31 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -22,10 +38,19 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.input.key.*
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.*
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
@@ -77,19 +102,27 @@ internal fun PlaybackControls(
         }
     }
     Box(
-        Modifier.fillMaxSize()
+        Modifier
+            .fillMaxSize()
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown || !active) return@onPreviewKeyEvent false
                 onInteraction()
                 when {
-                    !visible && !openingFocused && event.key in listOf(Key.DirectionDown, Key.DirectionCenter, Key.Enter, Key.NumPadEnter) -> {
+                    !visible && !openingFocused && event.key in listOf(
+                        Key.DirectionDown,
+                        Key.DirectionCenter,
+                        Key.Enter,
+                        Key.NumPadEnter
+                    ) -> {
                         onVisible(true)
                         true
                     }
+
                     !visible && openingVisible && !openingFocused && event.key == Key.DirectionUp -> {
                         openingFocus.requestFocus()
                         true
                     }
+
                     visible && event.key == Key.DirectionUp -> {
                         when {
                             openingFocused -> onVisible(false)
@@ -99,18 +132,25 @@ internal fun PlaybackControls(
                         }
                         true
                     }
+
                     openingFocused && event.key == Key.DirectionDown -> {
                         if (visible) sliderFocus.requestFocus() else onVisible(true)
                         true
                     }
+
                     visible && event.key == Key.DirectionDown -> {
                         if (sliderFocused) controlFocus.requestFocus()
                         true
                     }
-                    visible && sliderFocused && event.key in listOf(Key.DirectionLeft, Key.DirectionRight) -> {
+
+                    visible && sliderFocused && event.key in listOf(
+                        Key.DirectionLeft,
+                        Key.DirectionRight
+                    ) -> {
                         if (seekable && durationMs > 0) onSeek(if (event.key == Key.DirectionRight) 10_000 else -10_000)
                         true
                     }
+
                     else -> false
                 }
             }
@@ -118,11 +158,15 @@ internal fun PlaybackControls(
             .focusable()
     ) {
         Column(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
                 .padding(bottom = if (visible) 0.dp else 16.dp)
         ) {
             if (openingVisible) Row(
-                Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp, bottom = 8.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 32.dp, end = 32.dp, bottom = 8.dp),
                 horizontalArrangement = Arrangement.End
             ) {
                 Button(
@@ -138,21 +182,32 @@ internal fun PlaybackControls(
                     scale = ButtonDefaults.scale(focusedScale = 1f)
                 ) {
                     Box(
-                        Modifier.heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+                        Modifier
+                            .heightIn(min = 48.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) { Text(stringResource(R.string.skip_opening), textAlign = TextAlign.Center) }
                 }
             }
             if (visible) Column(
-                Modifier.fillMaxWidth().testTag("playback_controller")
+                Modifier
+                    .fillMaxWidth()
+                    .testTag("playback_controller")
                     .background(colors.surface.copy(alpha = 0.96f))
                     .padding(horizontal = 32.dp, vertical = 16.dp)
             ) {
-                val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+                val progress =
+                    if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
                 val progressLabel = stringResource(R.string.playback_progress)
                 Canvas(
-                    Modifier.fillMaxWidth().height(48.dp)
-                        .border(2.dp, if (sliderFocused) colors.onSurface else Color.Transparent, RoundedCornerShape(8.dp))
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .border(
+                            2.dp,
+                            if (sliderFocused) colors.onSurface else Color.Transparent,
+                            RoundedCornerShape(8.dp)
+                        )
                         .focusRequester(sliderFocus)
                         .onFocusChanged { sliderFocused = it.isFocused }
                         .semantics {
@@ -172,15 +227,32 @@ internal fun PlaybackControls(
                     val start = Offset(inset, size.height / 2)
                     val end = Offset(size.width - inset, size.height / 2)
                     val thumb = Offset(start.x + (end.x - start.x) * progress, start.y)
-                    drawLine(colors.onSurface.copy(alpha = 0.35f), start, end, 4.dp.toPx(), StrokeCap.Round)
+                    drawLine(
+                        colors.onSurface.copy(alpha = 0.35f),
+                        start,
+                        end,
+                        4.dp.toPx(),
+                        StrokeCap.Round
+                    )
                     drawLine(colors.onSurface, start, thumb, 4.dp.toPx(), StrokeCap.Round)
-                    drawCircle(colors.onSurface, if (sliderFocused) 8.dp.toPx() else 5.dp.toPx(), thumb)
+                    drawCircle(
+                        colors.onSurface,
+                        if (sliderFocused) 8.dp.toPx() else 5.dp.toPx(),
+                        thumb
+                    )
                 }
-                Text("${playbackTime(positionMs)} / ${playbackTime(durationMs)}", color = colors.onSurface)
-                Box(Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
+                Text(
+                    "${playbackTime(positionMs)} / ${playbackTime(durationMs)}",
+                    color = colors.onSurface
+                )
+                Box(Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 64.dp)) {
                     Button(
                         onClick = onEpisodes,
-                        modifier = Modifier.align(Alignment.CenterStart).focusRequester(episodesFocus),
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .focusRequester(episodesFocus),
                         scale = ButtonDefaults.scale(focusedScale = 1f)
                     ) { Text(stringResource(R.string.episodes)) }
                     Row(
@@ -190,36 +262,67 @@ internal fun PlaybackControls(
                     ) {
                         Button(
                             onClick = onPrevious, enabled = previousEnabled,
-                            modifier = Modifier.size(56.dp).focusProperties { canFocus = previousEnabled },
+                            modifier = Modifier
+                                .size(56.dp)
+                                .focusProperties { canFocus = previousEnabled },
                             contentPadding = PaddingValues(12.dp),
                             scale = ButtonDefaults.scale(focusedScale = 1f)
                         ) {
-                            Icon(Icons.Default.SkipPrevious, stringResource(R.string.previous_episode), Modifier.size(32.dp))
+                            Icon(
+                                Icons.Default.SkipPrevious,
+                                stringResource(R.string.previous_episode),
+                                Modifier.size(32.dp)
+                            )
                         }
                         Button(
                             onClick = onPlayPause,
-                            modifier = Modifier.size(64.dp).focusRequester(controlFocus),
+                            modifier = Modifier
+                                .size(64.dp)
+                                .focusRequester(controlFocus),
                             contentPadding = PaddingValues(12.dp),
                             scale = ButtonDefaults.scale(focusedScale = 1f)
                         ) {
-                            if (playing) Icon(Icons.Default.Pause, stringResource(R.string.pause), Modifier.size(40.dp))
-                            else Icon(Icons.Default.PlayArrow, stringResource(R.string.play), Modifier.size(40.dp))
+                            if (playing) Icon(
+                                Icons.Default.Pause,
+                                stringResource(R.string.pause),
+                                Modifier.size(40.dp)
+                            )
+                            else Icon(
+                                Icons.Default.PlayArrow,
+                                stringResource(R.string.play),
+                                Modifier.size(40.dp)
+                            )
                         }
                         Button(
                             onClick = onNext, enabled = nextEnabled,
-                            modifier = Modifier.size(56.dp).focusProperties { canFocus = nextEnabled },
+                            modifier = Modifier
+                                .size(56.dp)
+                                .focusProperties { canFocus = nextEnabled },
                             contentPadding = PaddingValues(12.dp),
                             scale = ButtonDefaults.scale(focusedScale = 1f)
                         ) {
-                            Icon(Icons.Default.SkipNext, stringResource(R.string.next_episode), Modifier.size(32.dp))
+                            Icon(
+                                Icons.Default.SkipNext,
+                                stringResource(R.string.next_episode),
+                                Modifier.size(32.dp)
+                            )
                         }
                     }
                     Button(
                         onClick = onSettings,
-                        modifier = Modifier.align(Alignment.CenterEnd).size(56.dp).focusRequester(settingsFocus),
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(56.dp)
+                            .focusRequester(settingsFocus),
                         contentPadding = PaddingValues(12.dp),
                         scale = ButtonDefaults.scale(focusedScale = 1f)
-                    ) { Icon(Icons.Default.Settings, stringResource(R.string.settings), Modifier.size(32.dp)) }
+                    ) {
+                        Icon(
+                            Icons.Default.Settings,
+                            stringResource(R.string.settings),
+                            Modifier.size(32.dp)
+                        )
+                    }
                 }
             }
         }

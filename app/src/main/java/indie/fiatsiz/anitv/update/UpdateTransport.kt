@@ -75,7 +75,8 @@ internal class GitHubUpdateTransport(
             val status = connection.responseCode
             val body = if (status == 200) {
                 requireUpdate(
-                    (connection.getHeaderField("Content-Length")?.toLongOrNull() ?: -1L) <= MAX_METADATA_BYTES,
+                    (connection.getHeaderField("Content-Length")?.toLongOrNull()
+                        ?: -1L) <= MAX_METADATA_BYTES,
                     UpdateProblem.METADATA
                 )
                 connection.inputStream.use { readMetadata(it) }

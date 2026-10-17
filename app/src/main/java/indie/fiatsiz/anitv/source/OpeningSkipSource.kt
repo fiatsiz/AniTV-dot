@@ -1,8 +1,8 @@
 package indie.fiatsiz.anitv.source
 
-import org.json.JSONObject
 import indie.fiatsiz.anitv.AniTVApplication
 import okhttp3.Request
+import org.json.JSONObject
 import java.io.IOException
 import java.net.URLEncoder
 import kotlin.math.abs
@@ -17,7 +17,8 @@ class OpeningSkipSource(
 ) {
     fun opening(anime: Anime, episode: Episode, durationMs: Long): OpeningInterval? {
         if (durationMs <= 0 || !episode.number.matches(Regex("[0-9]+(?:\\.[0-9]+)?")) ||
-            episode.number.toDoubleOrNull()?.isFinite() != true) return null
+            episode.number.toDoubleOrNull()?.isFinite() != true
+        ) return null
         val titles = listOfNotNull(anime.japaneseTitle, anime.title).filter { it.isNotBlank() }
         if (titles.isEmpty()) return null
         val query = URLEncoder.encode(titles.first(), "UTF-8")
@@ -46,7 +47,9 @@ class OpeningSkipSource(
 
     companion object {
         fun matchingMalId(json: String, titles: List<String>): Int? {
-            fun normalize(value: String) = value.trim().replace(Regex("\\s+"), " ").lowercase(java.util.Locale.ROOT)
+            fun normalize(value: String) =
+                value.trim().replace(Regex("\\s+"), " ").lowercase(java.util.Locale.ROOT)
+
             val names = titles.map(::normalize).filter { it.isNotEmpty() }.toSet()
             val categories = JSONObject(json).getJSONArray("categories")
             val matches = mutableSetOf<Int>()
@@ -80,8 +83,14 @@ class OpeningSkipSource(
                 val length = (result.opt("episodeLength") as? Number)?.toDouble() ?: continue
                 if (!start.isFinite() || !end.isFinite() || !length.isFinite() || start < 0 ||
                     end <= start || end * 1000 >= durationMs ||
-                    abs(length * 1000 - durationMs) > 30_000) continue
-                intervals.add(OpeningInterval((start * 1000).roundToLong(), (end * 1000).roundToLong()))
+                    abs(length * 1000 - durationMs) > 30_000
+                ) continue
+                intervals.add(
+                    OpeningInterval(
+                        (start * 1000).roundToLong(),
+                        (end * 1000).roundToLong()
+                    )
+                )
             }
             return intervals.singleOrNull()
         }

@@ -10,8 +10,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -39,7 +49,9 @@ class UpdateUiInstrumentedTest {
         compose.setContent {
             AniTVTheme {
                 Surface(Modifier.fillMaxSize()) {
-                    Column(Modifier.padding(56.dp).verticalScroll(rememberScrollState())) {
+                    Column(Modifier
+                        .padding(56.dp)
+                        .verticalScroll(rememberScrollState())) {
                         UpdateContent(
                             UpdateState("1.1.0", check = CheckStatus.CURRENT),
                             { checks++ }, {}, {}, {}, rulesChecking = rulesChecking.value
@@ -49,7 +61,8 @@ class UpdateUiInstrumentedTest {
             }
         }
         val button = compose.onNodeWithText(context.getString(R.string.update_check))
-        button.performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        button.performScrollTo()
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
         button.performKeyInput { pressKey(androidx.compose.ui.input.key.Key.DirectionCenter) }
         compose.runOnIdle { org.junit.Assert.assertEquals(1, checks); rulesChecking.value = true }
         button.assertIsNotEnabled()

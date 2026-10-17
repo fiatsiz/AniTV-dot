@@ -1,11 +1,26 @@
 package indie.fiatsiz.anitv.playback
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import indie.fiatsiz.anitv.R
@@ -20,7 +35,8 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class PlaybackControlsInstrumentedTest {
-    @get:Rule val compose = createComposeRule()
+    @get:Rule
+    val compose = createComposeRule()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private var position = 20_000L
     private var previousCount = 0
@@ -29,8 +45,10 @@ class PlaybackControlsInstrumentedTest {
     private var settingsCount = 0
     private var openingCount = 0
 
-    private fun content(previousEnabled: Boolean = true, nextEnabled: Boolean = true, seekable: Boolean = true,
-                        opening: OpeningInterval? = null) {
+    private fun content(
+        previousEnabled: Boolean = true, nextEnabled: Boolean = true, seekable: Boolean = true,
+        opening: OpeningInterval? = null
+    ) {
         compose.setContent {
             val video = remember { FocusRequester() }
             val play = remember { FocusRequester() }
@@ -41,12 +59,33 @@ class PlaybackControlsInstrumentedTest {
             var progress by remember { mutableStateOf(position) }
             AniTVTheme {
                 PlaybackControls(
-                    visible, true, playing, progress, 60_000, seekable, previousEnabled, nextEnabled,
-                    video, play, episodes, settings, { visible = it }, {}, { playing = !playing },
+                    visible,
+                    true,
+                    playing,
+                    progress,
+                    60_000,
+                    seekable,
+                    previousEnabled,
+                    nextEnabled,
+                    video,
+                    play,
+                    episodes,
+                    settings,
+                    { visible = it },
+                    {},
+                    { playing = !playing },
                     { position = seekPosition(position, it, 60_000); progress = position },
                     { position = it; progress = position },
-                    { previousCount++ }, { nextCount++ }, { episodesCount++ }, { settingsCount++ },
-                    openingAvailable = openingSkipTarget(opening, progress, 60_000, seekable) != null,
+                    { previousCount++ },
+                    { nextCount++ },
+                    { episodesCount++ },
+                    { settingsCount++ },
+                    openingAvailable = openingSkipTarget(
+                        opening,
+                        progress,
+                        60_000,
+                        seekable
+                    ) != null,
                     onSkipOpening = {
                         openingSkipTarget(opening, progress, 60_000, seekable)?.let {
                             position = it; progress = it; openingCount++
@@ -65,25 +104,40 @@ class PlaybackControlsInstrumentedTest {
     @Test
     fun openingPromptStaysOutsideControllerAndCentersItsLabel() {
         content(opening = OpeningInterval(30_000, 40_000))
-        val panelBefore = compose.onNodeWithTag("playback_controller").fetchSemanticsNode().boundsInRoot
+        val panelBefore =
+            compose.onNodeWithTag("playback_controller").fetchSemanticsNode().boundsInRoot
         val sliderBefore = control(R.string.playback_progress).fetchSemanticsNode().boundsInRoot
         openingButton().assertDoesNotExist()
-        control(R.string.playback_progress).performSemanticsAction(SemanticsActions.SetProgress) { it(0.55f) }
+        control(R.string.playback_progress).performSemanticsAction(SemanticsActions.SetProgress) {
+            it(
+                0.55f
+            )
+        }
         openingButton().assertIsDisplayed()
-        assertEquals(panelBefore, compose.onNodeWithTag("playback_controller").fetchSemanticsNode().boundsInRoot)
-        assertEquals(sliderBefore, control(R.string.playback_progress).fetchSemanticsNode().boundsInRoot)
+        assertEquals(
+            panelBefore,
+            compose.onNodeWithTag("playback_controller").fetchSemanticsNode().boundsInRoot
+        )
+        assertEquals(
+            sliderBefore,
+            control(R.string.playback_progress).fetchSemanticsNode().boundsInRoot
+        )
         key(Key.DirectionUp)
         key(Key.DirectionUp)
         openingButton().assertIsFocused()
         val button = openingButton().fetchSemanticsNode().boundsInRoot
-        val label = compose.onNodeWithText(context.getString(R.string.skip_opening), useUnmergedTree = true)
-            .fetchSemanticsNode().boundsInRoot
+        val label =
+            compose.onNodeWithText(context.getString(R.string.skip_opening), useUnmergedTree = true)
+                .fetchSemanticsNode().boundsInRoot
         assertTrue(button.bottom < panelBefore.top)
         assertEquals(button.center.x, label.center.x, 1f)
         assertEquals(button.center.y, label.center.y, 1f)
         key(Key.DirectionCenter)
         openingButton().assertDoesNotExist()
-        assertEquals(panelBefore, compose.onNodeWithTag("playback_controller").fetchSemanticsNode().boundsInRoot)
+        assertEquals(
+            panelBefore,
+            compose.onNodeWithTag("playback_controller").fetchSemanticsNode().boundsInRoot
+        )
     }
 
     @Test
@@ -117,7 +171,11 @@ class PlaybackControlsInstrumentedTest {
         key(Key.DirectionUp)
         key(Key.DirectionUp)
         openingButton().assertIsFocused()
-        control(R.string.playback_progress).performSemanticsAction(SemanticsActions.SetProgress) { it(0.9f) }
+        control(R.string.playback_progress).performSemanticsAction(SemanticsActions.SetProgress) {
+            it(
+                0.9f
+            )
+        }
         openingButton().assertDoesNotExist()
         control(R.string.playback_progress).assertIsFocused()
         compose.runOnIdle { assertEquals(54_000L, position); assertEquals(0, openingCount) }
@@ -189,7 +247,12 @@ class PlaybackControlsInstrumentedTest {
 
     @Test
     fun boundariesDisableEpisodeSkipAndUnknownMediaDoesNotSeek() {
-        content(previousEnabled = false, nextEnabled = false, seekable = false, opening = OpeningInterval(10_000, 40_000))
+        content(
+            previousEnabled = false,
+            nextEnabled = false,
+            seekable = false,
+            opening = OpeningInterval(10_000, 40_000)
+        )
         openingButton().assertDoesNotExist()
         control(R.string.previous_episode).assertIsNotEnabled()
         control(R.string.next_episode).assertIsNotEnabled()
@@ -206,9 +269,17 @@ class PlaybackControlsInstrumentedTest {
     @Test
     fun accessibleSliderActionSeeksAndClamps() {
         content()
-        control(R.string.playback_progress).performSemanticsAction(SemanticsActions.SetProgress) { it(0.5f) }
+        control(R.string.playback_progress).performSemanticsAction(SemanticsActions.SetProgress) {
+            it(
+                0.5f
+            )
+        }
         compose.runOnIdle { assertEquals(30_000L, position) }
-        control(R.string.playback_progress).performSemanticsAction(SemanticsActions.SetProgress) { it(2f) }
+        control(R.string.playback_progress).performSemanticsAction(SemanticsActions.SetProgress) {
+            it(
+                2f
+            )
+        }
         compose.runOnIdle { assertEquals(60_000L, position) }
     }
 
@@ -218,7 +289,8 @@ class PlaybackControlsInstrumentedTest {
         val play = control(R.string.pause).fetchSemanticsNode().boundsInRoot
         val previous = control(R.string.previous_episode).fetchSemanticsNode().boundsInRoot
         val next = control(R.string.next_episode).fetchSemanticsNode().boundsInRoot
-        val episodes = compose.onNodeWithText(context.getString(R.string.episodes)).fetchSemanticsNode().boundsInRoot
+        val episodes = compose.onNodeWithText(context.getString(R.string.episodes))
+            .fetchSemanticsNode().boundsInRoot
         val settings = control(R.string.settings).fetchSemanticsNode().boundsInRoot
         val slider = control(R.string.playback_progress).fetchSemanticsNode().boundsInRoot
         val screen = compose.onRoot().fetchSemanticsNode().boundsInRoot

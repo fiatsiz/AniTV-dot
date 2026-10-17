@@ -7,17 +7,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
@@ -28,9 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.media3.common.C
-import androidx.media3.common.text.Cue
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
@@ -38,28 +38,29 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackGroup
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.text.Cue
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
 import androidx.tv.material3.Button
 import androidx.tv.material3.Text
-import indie.fiatsiz.anitv.source.Episode
+import indie.fiatsiz.anitv.R
+import indie.fiatsiz.anitv.SubtitleTranslator
+import indie.fiatsiz.anitv.TranslationProvider
+import indie.fiatsiz.anitv.TranslationSettings
+import indie.fiatsiz.anitv.shouldPrefetchNextBatch
 import indie.fiatsiz.anitv.source.Anime
+import indie.fiatsiz.anitv.source.Episode
 import indie.fiatsiz.anitv.source.HiAnimeSource
 import indie.fiatsiz.anitv.source.OpeningInterval
 import indie.fiatsiz.anitv.source.OpeningSkipSource
 import indie.fiatsiz.anitv.source.Stream
 import indie.fiatsiz.anitv.source.SubtitleCue
+import indie.fiatsiz.anitv.subtitleBatchEnd
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import indie.fiatsiz.anitv.TranslationSettings
-import indie.fiatsiz.anitv.TranslationProvider
-import indie.fiatsiz.anitv.SubtitleTranslator
-import indie.fiatsiz.anitv.subtitleBatchEnd
-import indie.fiatsiz.anitv.shouldPrefetchNextBatch
-import indie.fiatsiz.anitv.R
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private data class QualityOption(val group: TrackGroup, val index: Int, val label: String)
@@ -93,7 +94,14 @@ internal fun Playback(
     val playbackPreferences = remember {
         context.getSharedPreferences("playback", android.content.Context.MODE_PRIVATE)
     }
-    var skipOpenings by remember { mutableStateOf(playbackPreferences.getBoolean("skip_openings", true)) }
+    var skipOpenings by remember {
+        mutableStateOf(
+            playbackPreferences.getBoolean(
+                "skip_openings",
+                true
+            )
+        )
+    }
     var openingStatus by remember(stream) { mutableStateOf(OpeningStatus.LOADING) }
     var openingInterval by remember(stream) { mutableStateOf<OpeningInterval?>(null) }
     var openingButtonFocused by remember(stream) { mutableStateOf(false) }
@@ -159,7 +167,7 @@ internal fun Playback(
             stream.subtitleUrl?.let { subtitle ->
                 builder.setSubtitleConfigurations(
                     listOf(
-                        MediaItem.SubtitleConfiguration.Builder(android.net.Uri.parse(subtitle))
+                        MediaItem.SubtitleConfiguration.Builder(subtitle.toUri())
                             .setMimeType(MimeTypes.TEXT_VTT).setLanguage("en")
                             .setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
                     )
@@ -231,7 +239,8 @@ internal fun Playback(
                 } else anime
                 openingSource.opening(matchingAnime, currentEpisode, mediaDuration)
             }
-            openingStatus = if (openingInterval == null) OpeningStatus.NOT_FOUND else OpeningStatus.READY
+            openingStatus =
+                if (openingInterval == null) OpeningStatus.NOT_FOUND else OpeningStatus.READY
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -311,7 +320,13 @@ internal fun Playback(
     fun closeSettingsPage() {
         when {
             captionMenu == CaptionMenu.LANGUAGES -> captionMenu = CaptionMenu.OPTIONS
-            captionMenu in listOf(CaptionMenu.FONT, CaptionMenu.SIZE, CaptionMenu.BACKGROUND, CaptionMenu.FOREGROUND) -> captionMenu = CaptionMenu.STYLES
+            captionMenu in listOf(
+                CaptionMenu.FONT,
+                CaptionMenu.SIZE,
+                CaptionMenu.BACKGROUND,
+                CaptionMenu.FOREGROUND
+            ) -> captionMenu = CaptionMenu.STYLES
+
             captionMenu == CaptionMenu.STYLES -> captionMenu = CaptionMenu.OPTIONS
             captionMenu == CaptionMenu.OPTIONS -> captionMenu = CaptionMenu.CLOSED
             qualityOpen -> qualityOpen = false
@@ -321,6 +336,7 @@ internal fun Playback(
             }
         }
     }
+
     fun selectEpisode(selected: Episode) {
         if (player.currentPosition > 0) progressCallback(
             player.currentPosition, player.duration.coerceAtLeast(0)
@@ -336,11 +352,13 @@ internal fun Playback(
                 androidx.compose.runtime.withFrameNanos { }
                 episodesButtonFocus.requestFocus()
             }
+
             restoreSettingsFocus -> {
                 restoreSettingsFocus = false
                 androidx.compose.runtime.withFrameNanos { }
                 settingsButtonFocus.requestFocus()
             }
+
             else -> controlFocus.requestFocus()
         }
     }
@@ -407,13 +425,18 @@ internal fun Playback(
         }
         if (openingNotice) Text(
             stringResource(R.string.opening_skipped),
-            modifier = Modifier.align(Alignment.TopStart).padding(32.dp)
-                .background(Color(0xCC000000), RoundedCornerShape(8.dp)).padding(12.dp),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(32.dp)
+                .background(Color(0xCC000000), RoundedCornerShape(8.dp))
+                .padding(12.dp),
             color = Color.White
         )
         val episodeIndex = episodes.indexOfFirst { it.id == currentEpisode.id }
-        val previous = episodes.getOrNull(episodeIndex - 1).takeIf { episodeIndex > 0 && !episodesLoading }
-        val next = episodes.getOrNull(episodeIndex + 1).takeIf { episodeIndex >= 0 && !episodesLoading }
+        val previous =
+            episodes.getOrNull(episodeIndex - 1).takeIf { episodeIndex > 0 && !episodesLoading }
+        val next =
+            episodes.getOrNull(episodeIndex + 1).takeIf { episodeIndex >= 0 && !episodesLoading }
         PlaybackControls(
             visible = controlsVisible,
             active = !episodesOpen && !settingsOpen,
@@ -460,7 +483,10 @@ internal fun Playback(
         )
         if (settingsOpen) Dialog(
             onDismissRequest = { closeSettingsPage() },
-            properties = DialogProperties(dismissOnClickOutside = false, usePlatformDefaultWidth = false)
+            properties = DialogProperties(
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false
+            )
         ) {
             androidx.compose.runtime.LaunchedEffect(captionMenu, qualityOpen) {
                 when (captionMenu) {
@@ -471,9 +497,14 @@ internal fun Playback(
                     CaptionMenu.CLOSED -> if (qualityOpen) qualityFocus.requestFocus() else settingsFocus.requestFocus()
                 }
             }
-            Box(Modifier.fillMaxSize().padding(32.dp)) {
-                val menuModifier = Modifier.align(Alignment.BottomEnd).width(320.dp)
-                    .heightIn(max = 400.dp).verticalScroll(rememberScrollState())
+            Box(Modifier
+                .fillMaxSize()
+                .padding(32.dp)) {
+                val menuModifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .width(320.dp)
+                    .heightIn(max = 400.dp)
+                    .verticalScroll(rememberScrollState())
                 when {
                     captionMenu != CaptionMenu.CLOSED -> CaptionSettings(
                         captionMenu, captionMode, translation, effectiveTarget,
@@ -483,26 +514,38 @@ internal fun Playback(
                         onMode = { captionMode = it },
                         onTranslationSettings = onTranslationSettings
                     )
+
                     else -> Column(
-                        menuModifier.background(Color(0xFF0F0F23)).padding(16.dp),
+                        menuModifier
+                            .background(Color(0xFF0F0F23))
+                            .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(stringResource(if (qualityOpen) R.string.quality_title else R.string.settings))
                         if (qualityOpen) {
                             Button(
                                 onClick = {
-                                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-                                        .clearOverridesOfType(C.TRACK_TYPE_VIDEO).build()
+                                    player.trackSelectionParameters =
+                                        player.trackSelectionParameters.buildUpon()
+                                            .clearOverridesOfType(C.TRACK_TYPE_VIDEO).build()
                                     selectedQuality = resources.getString(R.string.auto)
                                     qualityOpen = false
                                 },
-                                modifier = Modifier.fillMaxWidth().focusRequester(qualityFocus)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(qualityFocus)
                             ) { Text(stringResource(R.string.auto)) }
                             qualityOptions.forEach { option ->
                                 Button(
                                     onClick = {
-                                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-                                            .setOverrideForType(TrackSelectionOverride(option.group, option.index)).build()
+                                        player.trackSelectionParameters =
+                                            player.trackSelectionParameters.buildUpon()
+                                                .setOverrideForType(
+                                                    TrackSelectionOverride(
+                                                        option.group,
+                                                        option.index
+                                                    )
+                                                ).build()
                                         selectedQuality = option.label.substringBefore(" ·")
                                         qualityOpen = false
                                     },
@@ -512,27 +555,41 @@ internal fun Playback(
                         } else {
                             Button(
                                 onClick = { qualityOpen = true }, enabled = qualityOptions.size > 1,
-                                modifier = Modifier.fillMaxWidth().then(
-                                    if (qualityOptions.size > 1) Modifier.focusRequester(settingsFocus) else Modifier
-                                )
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (qualityOptions.size > 1) Modifier.focusRequester(
+                                            settingsFocus
+                                        ) else Modifier
+                                    )
                             ) { Text(stringResource(R.string.quality, selectedQuality)) }
                             if (qualityOptions.size <= 1) Text(stringResource(R.string.auto_quality))
                             Button(
-                                onClick = { captionMenu = CaptionMenu.OPTIONS }, enabled = hasCaptions,
-                                modifier = Modifier.fillMaxWidth().then(
-                                    if (qualityOptions.size <= 1 && hasCaptions) Modifier.focusRequester(settingsFocus) else Modifier
-                                )
+                                onClick = { captionMenu = CaptionMenu.OPTIONS },
+                                enabled = hasCaptions,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (qualityOptions.size <= 1 && hasCaptions) Modifier.focusRequester(
+                                            settingsFocus
+                                        ) else Modifier
+                                    )
                             ) { Text(stringResource(if (hasCaptions) R.string.captions_settings else R.string.captions_unavailable)) }
                             OpeningSkipSettings(skipOpenings, openingStatus) {
                                 skipOpenings = !skipOpenings
-                                playbackPreferences.edit().putBoolean("skip_openings", skipOpenings).apply()
+                                playbackPreferences.edit().putBoolean("skip_openings", skipOpenings)
+                                    .apply()
                             }
                         }
                         Button(
                             onClick = { closeSettingsPage() },
-                            modifier = Modifier.fillMaxWidth().then(
-                                if (!qualityOpen && qualityOptions.size <= 1 && !hasCaptions) Modifier.focusRequester(settingsFocus) else Modifier
-                            )
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (!qualityOpen && qualityOptions.size <= 1 && !hasCaptions) Modifier.focusRequester(
+                                        settingsFocus
+                                    ) else Modifier
+                                )
                         ) { Text(stringResource(R.string.back)) }
                     }
                 }

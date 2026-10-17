@@ -12,10 +12,16 @@ import indie.fiatsiz.anitv.source.OpeningInterval
 
 internal enum class OpeningStatus { LOADING, READY, NOT_FOUND, UNAVAILABLE }
 
-internal fun openingSkipTarget(interval: OpeningInterval?, positionMs: Long, durationMs: Long, active: Boolean): Long? {
+internal fun openingSkipTarget(
+    interval: OpeningInterval?,
+    positionMs: Long,
+    durationMs: Long,
+    active: Boolean
+): Long? {
     if (!active || interval == null || interval.startMs < 0 ||
         interval.endMs <= interval.startMs || interval.endMs >= durationMs ||
-        positionMs !in interval.startMs until interval.endMs) return null
+        positionMs !in interval.startMs until interval.endMs
+    ) return null
     return interval.endMs
 }
 
@@ -25,11 +31,15 @@ internal fun OpeningSkipSettings(enabled: Boolean, status: OpeningStatus, onTogg
         Button(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(if (enabled) R.string.opening_skip_on else R.string.opening_skip_off))
         }
-        Text(stringResource(if (!enabled) R.string.opening_skip_hint else when (status) {
-            OpeningStatus.LOADING -> R.string.opening_skip_loading
-            OpeningStatus.READY -> R.string.opening_skip_ready
-            OpeningStatus.NOT_FOUND -> R.string.opening_skip_not_found
-            OpeningStatus.UNAVAILABLE -> R.string.opening_skip_unavailable
-        }))
+        Text(
+            stringResource(
+                if (!enabled) R.string.opening_skip_hint else when (status) {
+                    OpeningStatus.LOADING -> R.string.opening_skip_loading
+                    OpeningStatus.READY -> R.string.opening_skip_ready
+                    OpeningStatus.NOT_FOUND -> R.string.opening_skip_not_found
+                    OpeningStatus.UNAVAILABLE -> R.string.opening_skip_unavailable
+                }
+            )
+        )
     }
 }

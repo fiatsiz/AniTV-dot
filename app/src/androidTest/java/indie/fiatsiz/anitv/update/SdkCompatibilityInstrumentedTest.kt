@@ -2,10 +2,13 @@ package indie.fiatsiz.anitv.update
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import indie.fiatsiz.anitv.BuildConfig
 import indie.fiatsiz.anitv.AniTVApplication
+import indie.fiatsiz.anitv.BuildConfig
 import okhttp3.TlsVersion
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -23,7 +26,10 @@ class SdkCompatibilityInstrumentedTest {
         assertFalse(client.retryOnConnectionFailure)
         assertTrue(client.connectionSpecs.any { TlsVersion.TLS_1_3 in it.tlsVersions.orEmpty() })
         client.sslSocketFactory.createSocket().use { socket ->
-            assertTrue("Opening lookup requires TLS 1.3", "TLSv1.3" in (socket as SSLSocket).enabledProtocols)
+            assertTrue(
+                "Opening lookup requires TLS 1.3",
+                "TLSv1.3" in (socket as SSLSocket).enabledProtocols
+            )
         }
     }
 
@@ -56,9 +62,11 @@ class SdkCompatibilityInstrumentedTest {
             val next = UpdateRecord(etag = "new", lastAttempt = 2, retryAt = 10)
             store.save(next)
             assertEquals(next, store.read())
-            assertEquals(1445412480000L, retryDeadline(
-                ReleaseResponse(429, retryAfter = "Wed, 21 Oct 2015 07:28:00 GMT"), 0
-            ))
+            assertEquals(
+                1445412480000L, retryDeadline(
+                    ReleaseResponse(429, retryAfter = "Wed, 21 Oct 2015 07:28:00 GMT"), 0
+                )
+            )
         } finally {
             directory.deleteRecursively()
         }

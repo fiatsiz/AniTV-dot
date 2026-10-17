@@ -1,7 +1,12 @@
 package indie.fiatsiz.anitv.source
 
 import org.json.JSONObject
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
@@ -138,7 +143,11 @@ class RulesRepositoryTest {
             release.await(2, TimeUnit.SECONDS)
             response(2)
         }
-        try { assertFalse(repo.refresh()) } finally { release.countDown() }
+        try {
+            assertFalse(repo.refresh())
+        } finally {
+            release.countDown()
+        }
         assertEquals(2L, repo.snapshot().revision)
         assertEquals(1, calls.get())
     }
@@ -175,17 +184,31 @@ class RulesRepositoryTest {
             val start = System.nanoTime()
             repeat(20) { assertSame(original, repo.snapshot()) }
             assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) < 100)
-        } finally { release.countDown() }
+        } finally {
+            release.countDown()
+        }
         awaitOutcome(repo, RulesOutcome.UPDATED)
         source.search("One Piece")
-        assertEquals(listOf("https://hianime.at/search?keyword=One+Piece",
-            "https://hianime.at/new-search?keyword=One+Piece"), requests)
+        assertEquals(
+            listOf(
+                "https://hianime.at/search?keyword=One+Piece",
+                "https://hianime.at/new-search?keyword=One+Piece"
+            ), requests
+        )
         assertEquals(1L, original.revision)
         assertEquals(2L, repo.snapshot().revision)
         val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(1)
-        while (cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag != "new-etag" &&
-            System.nanoTime() < until) Thread.sleep(5)
-        assertEquals("new-etag", cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag)
+        while (cache.load(
+                RulesTestSupport.keys.public,
+                1,
+                RulesTestSupport.signed()
+            ).etag != "new-etag" &&
+            System.nanoTime() < until
+        ) Thread.sleep(5)
+        assertEquals(
+            "new-etag",
+            cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag
+        )
         assertEquals(2, calls.get())
     }
 
@@ -199,6 +222,7 @@ class RulesRepositoryTest {
                     assertEquals("\"rev-2\"", etag)
                     RulesResponse(304)
                 }
+
                 else -> {
                     assertEquals("\"rev-2\"", etag)
                     response(3)
@@ -222,7 +246,8 @@ class RulesRepositoryTest {
 
     @Test
     fun manualInvalidDownloadsKeepCurrentRulesAndCachedEtag() {
-        val conflict = RulesTestSupport.signed(2) { it.getJSONObject("servers").put("name", "Changed") }
+        val conflict =
+            RulesTestSupport.signed(2) { it.getJSONObject("servers").put("name", "Changed") }
         val incompatible = RulesTestSupport.sign(
             RulesTestSupport.payload(3).put("minAppVersionCode", 2).toString().toByteArray()
         )
@@ -246,7 +271,10 @@ class RulesRepositoryTest {
             assertTrue(repo.refresh())
             awaitOutcome(repo, RulesOutcome.REJECTED)
             assertEquals(2L, repo.snapshot().revision)
-            assertEquals("two", cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag)
+            assertEquals(
+                "two",
+                cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag
+            )
         }
     }
 
@@ -278,12 +306,17 @@ class RulesRepositoryTest {
             awaitOutcome(timed, RulesOutcome.TIMEOUT)
             assertFalse(timed.refresh())
             assertEquals(1L, timed.snapshot().revision)
-        } finally { release.countDown() }
+        } finally {
+            release.countDown()
+        }
         assertTrue(finished.await(1, TimeUnit.SECONDS))
         Thread.sleep(30)
         assertEquals(RulesOutcome.TIMEOUT, timed.state.outcome)
         assertEquals(1L, timed.snapshot().revision)
-        assertEquals("\"rev-1\"", cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag)
+        assertEquals(
+            "\"rev-1\"",
+            cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag
+        )
     }
 
     @Test

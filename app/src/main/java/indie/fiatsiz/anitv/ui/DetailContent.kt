@@ -1,5 +1,6 @@
 package indie.fiatsiz.anitv.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,8 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -19,23 +20,21 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.Image
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
+import indie.fiatsiz.anitv.LibraryEntry
+import indie.fiatsiz.anitv.LibraryStore
+import indie.fiatsiz.anitv.R
+import indie.fiatsiz.anitv.WatchProgress
 import indie.fiatsiz.anitv.source.Anime
 import indie.fiatsiz.anitv.source.AnimeDetails
 import indie.fiatsiz.anitv.source.Episode
-import indie.fiatsiz.anitv.LibraryStore
-import indie.fiatsiz.anitv.LibraryEntry
-import indie.fiatsiz.anitv.WatchProgress
-import indie.fiatsiz.anitv.R
 
 @Composable
 internal fun DetailContent(

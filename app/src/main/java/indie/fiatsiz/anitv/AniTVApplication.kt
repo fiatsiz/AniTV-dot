@@ -2,8 +2,8 @@ package indie.fiatsiz.anitv
 
 import android.app.Application
 import android.os.Build
-import org.conscrypt.Conscrypt
 import okhttp3.OkHttpClient
+import org.conscrypt.Conscrypt
 import java.security.KeyStore
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory

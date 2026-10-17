@@ -1,6 +1,10 @@
 package indie.fiatsiz.anitv.update
 
-import org.junit.Assert.*
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.HttpURLConnection
 import java.net.URL
@@ -21,7 +25,11 @@ class UpdateTransportTest {
         override fun getResponseCode() = status
         override fun getInputStream() = body.inputStream()
         override fun getHeaderField(name: String) =
-            headers[name] ?: if (name.equals("Content-Length", ignoreCase = true)) length.toString() else null
+            headers[name] ?: if (name.equals(
+                    "Content-Length",
+                    ignoreCase = true
+                )
+            ) length.toString() else null
     }
 
     @Test

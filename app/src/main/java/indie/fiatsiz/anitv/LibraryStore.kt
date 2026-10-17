@@ -1,9 +1,10 @@
 package indie.fiatsiz.anitv
 
 import android.content.Context
+import androidx.core.content.edit
+import indie.fiatsiz.anitv.source.Anime
 import indie.fiatsiz.anitv.source.AudioVersion
 import indie.fiatsiz.anitv.source.Episode
-import indie.fiatsiz.anitv.source.Anime
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -25,7 +26,7 @@ class LibraryStore(context: Context) {
     fun read(): List<LibraryEntry> = decode(prefs.getString("entries", "[]") ?: "[]")
 
     fun save(entries: List<LibraryEntry>) {
-        prefs.edit().putString("entries", encode(entries)).apply()
+        prefs.edit { putString("entries", encode(entries)) }
     }
 
     companion object {

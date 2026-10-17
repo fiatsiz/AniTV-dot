@@ -4,7 +4,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.json.JSONArray
 import org.json.JSONObject
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.nio.file.Files
@@ -67,7 +69,11 @@ class SignedRulesInstrumentedTest {
         val release = CountDownLatch(1)
         val requests = AtomicInteger()
         val repo = RulesRepository(RulesCache(directory), RulesTransport { _, _ ->
-            if (requests.incrementAndGet() == 1) return@RulesTransport RulesResponse(200, original.envelope(), "original")
+            if (requests.incrementAndGet() == 1) return@RulesTransport RulesResponse(
+                200,
+                original.envelope(),
+                "original"
+            )
             check(release.await(2, TimeUnit.SECONDS))
             RulesResponse(200, newer.envelope(), "new-revision")
         }, original, keys.public)
@@ -84,7 +90,9 @@ class SignedRulesInstrumentedTest {
             assertTrue(repo.refresh())
             release.countDown()
             val refreshDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
-            while (repo.state.outcome == RulesOutcome.CHECKING && System.nanoTime() < refreshDeadline) Thread.sleep(5)
+            while (repo.state.outcome == RulesOutcome.CHECKING && System.nanoTime() < refreshDeadline) Thread.sleep(
+                5
+            )
             assertEquals(RulesOutcome.UPDATED, repo.state.outcome)
             assertEquals(
                 listOf(Anime("42", "Changed fixture", "https://hianime.at/changed-42")),

@@ -11,22 +11,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
-import indie.fiatsiz.anitv.source.AudioVersion
-import indie.fiatsiz.anitv.source.EpisodeServer
-import indie.fiatsiz.anitv.source.Episode
-import indie.fiatsiz.anitv.ui.theme.AniTVTheme
-import indie.fiatsiz.anitv.playback.EpisodeSidebarContent
 import indie.fiatsiz.anitv.LibraryEntry
+import indie.fiatsiz.anitv.R
+import indie.fiatsiz.anitv.TranslationSettings
 import indie.fiatsiz.anitv.WatchProgress
+import indie.fiatsiz.anitv.playback.EpisodeSidebarContent
 import indie.fiatsiz.anitv.source.Anime
 import indie.fiatsiz.anitv.source.AnimeDetails
-import indie.fiatsiz.anitv.TranslationSettings
-import indie.fiatsiz.anitv.R
+import indie.fiatsiz.anitv.source.AudioVersion
+import indie.fiatsiz.anitv.source.Episode
+import indie.fiatsiz.anitv.source.EpisodeServer
+import indie.fiatsiz.anitv.ui.theme.AniTVTheme
 
 private val previewUpdateState = indie.fiatsiz.anitv.update.UpdateState(
     "1.1.0", release = indie.fiatsiz.anitv.update.Release(

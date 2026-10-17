@@ -46,7 +46,9 @@ internal class AndroidApkInspector(private val context: Context) {
                 while (parser.next() != XmlPullParser.END_DOCUMENT) {
                     if (parser.eventType == XmlPullParser.START_TAG && parser.name == "uses-sdk") {
                         return parser.getAttributeIntValue(
-                            "http://schemas.android.com/apk/res/android", "minSdkVersion", Int.MAX_VALUE
+                            "http://schemas.android.com/apk/res/android",
+                            "minSdkVersion",
+                            Int.MAX_VALUE
                         )
                     }
                 }

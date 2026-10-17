@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
-import indie.fiatsiz.anitv.R
 import indie.fiatsiz.anitv.LibraryEntry
+import indie.fiatsiz.anitv.R
 import indie.fiatsiz.anitv.source.AnimeDetails
 
 @Composable

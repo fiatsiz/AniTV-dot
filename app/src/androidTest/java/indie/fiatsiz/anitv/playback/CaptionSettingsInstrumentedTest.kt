@@ -1,10 +1,16 @@
 package indie.fiatsiz.anitv.playback
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import indie.fiatsiz.anitv.R
@@ -19,7 +25,8 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class CaptionSettingsInstrumentedTest {
-    @get:Rule val compose = createComposeRule()
+    @get:Rule
+    val compose = createComposeRule()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val mode = mutableStateOf(CaptionMode.ORIGINAL)
     private val translation = mutableStateOf(TranslationSettings())
@@ -27,7 +34,8 @@ class CaptionSettingsInstrumentedTest {
 
     private fun content(initialMode: CaptionMode, translated: Boolean = false) {
         mode.value = initialMode
-        if (translated) translation.value = TranslationSettings(TranslationProvider.DEEPL, "fixture")
+        if (translated) translation.value =
+            TranslationSettings(TranslationProvider.DEEPL, "fixture")
         compose.setContent {
             val captionFocus = remember { FocusRequester() }
             val languageFocus = remember { FocusRequester() }

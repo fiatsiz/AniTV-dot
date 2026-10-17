@@ -31,7 +31,11 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import indie.fiatsiz.anitv.R
-import indie.fiatsiz.anitv.update.*
+import indie.fiatsiz.anitv.update.CheckStatus
+import indie.fiatsiz.anitv.update.DownloadStatus
+import indie.fiatsiz.anitv.update.InstallStatus
+import indie.fiatsiz.anitv.update.UpdateProblem
+import indie.fiatsiz.anitv.update.UpdateState
 import java.text.DateFormat
 import java.util.Date
 

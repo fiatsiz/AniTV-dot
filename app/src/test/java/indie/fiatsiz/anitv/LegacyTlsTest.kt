@@ -1,6 +1,8 @@
 package indie.fiatsiz.anitv
 
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.security.KeyStore
@@ -20,13 +22,18 @@ class LegacyTlsTest {
         }
         assertEquals(
             "96bcec06264976f37460779acf28c5a7cfe8a3c0aae11a8ffcee05c0bddf08c6",
-            MessageDigest.getInstance("SHA-256").digest(root.encoded).joinToString("") { "%02x".format(it) }
+            MessageDigest.getInstance("SHA-256").digest(root.encoded)
+                .joinToString("") { "%02x".format(it) }
         )
         root.checkValidity()
-        val systemFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        val systemFactory =
+            TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         systemFactory.init(null as KeyStore?)
         val system = systemFactory.trustManagers.filterIsInstance<X509TrustManager>().single()
-        assertEquals(system.acceptedIssuers.toSet(), legacyTrustManager(null).acceptedIssuers.toSet())
+        assertEquals(
+            system.acceptedIssuers.toSet(),
+            legacyTrustManager(null).acceptedIssuers.toSet()
+        )
         val combined = legacyTrustManager(root)
         assertTrue(combined.acceptedIssuers.toSet().containsAll(system.acceptedIssuers.toSet()))
         assertTrue(root in combined.acceptedIssuers)

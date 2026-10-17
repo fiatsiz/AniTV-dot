@@ -124,7 +124,10 @@ class GitHubRulesTransport : RulesTransport {
             etag?.let { connection.setRequestProperty("If-None-Match", it) }
             val status = connection.responseCode
             val body = if (status == 200) {
-                require((connection.getHeaderField("Content-Length")?.toLongOrNull() ?: -1L) <= SignedRules.MAX_BYTES) { "Rules response too large" }
+                require(
+                    (connection.getHeaderField("Content-Length")?.toLongOrNull()
+                        ?: -1L) <= SignedRules.MAX_BYTES
+                ) { "Rules response too large" }
                 connection.readTimeout = remainingMillis()
                 connection.inputStream.use { readLimited(it, SignedRules.MAX_BYTES, deadlineNanos) }
             } else byteArrayOf()
@@ -260,6 +263,7 @@ class RulesRepository(
             )
             onTime
         }
+
         val timeout = scheduler.schedule(
             { complete(current, RulesOutcome.TIMEOUT) }, deadlineMillis, TimeUnit.MILLISECONDS
         )
@@ -269,17 +273,21 @@ class RulesRepository(
                 val response = transport.fetch(current.etag, deadline)
                 when (response.status) {
                     304 -> complete(
-                        current, if (current.etag != null) RulesOutcome.CURRENT else RulesOutcome.REJECTED
+                        current,
+                        if (current.etag != null) RulesOutcome.CURRENT else RulesOutcome.REJECTED
                     )
+
                     200 -> {
-                        val downloaded = SignedRules.verify(response.body, publicKey, appVersionCode)
+                        val downloaded =
+                            SignedRules.verify(response.body, publicKey, appVersionCode)
                         downloaded.requireSuccessorOf(current.signed)
                         val accepted = CachedRules(downloaded, response.etag)
                         if (complete(
                                 accepted,
                                 if (downloaded.rules.revision > current.signed.rules.revision)
                                     RulesOutcome.UPDATED else RulesOutcome.CURRENT
-                            )) {
+                            )
+                        ) {
                             runCatching { cache.save(accepted, current) }.onFailure {
                                 mutableState.value = RulesState(
                                     accepted.signed.rules.revision, RulesOutcome.CACHE_FAILED
@@ -287,6 +295,7 @@ class RulesRepository(
                             }
                         }
                     }
+
                     else -> complete(current, RulesOutcome.OFFLINE)
                 }
             } catch (_: java.io.IOException) {
@@ -307,7 +316,8 @@ class RulesRepository(
         if (selected.count != 0L) {
             if (!selected.await(
                     (deadlineNanos - System.nanoTime()).coerceAtLeast(0), TimeUnit.NANOSECONDS
-                )) finish(local, RulesOutcome.TIMEOUT)
+                )
+            ) finish(local, RulesOutcome.TIMEOUT)
         }
         return local.signed.rules
     }

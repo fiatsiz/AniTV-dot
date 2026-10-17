@@ -1,6 +1,7 @@
 package indie.fiatsiz.anitv
 
 import android.content.Context
+import androidx.core.content.edit
 import indie.fiatsiz.anitv.source.Anime
 import indie.fiatsiz.anitv.source.AnimeDetails
 import org.json.JSONArray
@@ -36,11 +37,13 @@ class AnimeDetailCache(context: Context) {
             return
         }
         val facts = JSONArray().apply { details.facts.forEach(::put) }
-        prefs.edit().putString(
-            anime.id, JSONObject().put("description", details.description)
-                .put("posterUrl", details.posterUrl).put("facts", facts).put("savedAt", now)
-                .toString()
-        ).apply()
+        prefs.edit {
+            putString(
+                anime.id, JSONObject().put("description", details.description)
+                    .put("posterUrl", details.posterUrl).put("facts", facts).put("savedAt", now)
+                    .toString()
+            )
+        }
     }
 
     companion object {
