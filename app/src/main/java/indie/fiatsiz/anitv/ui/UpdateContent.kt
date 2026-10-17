@@ -41,7 +41,8 @@ internal fun UpdateContent(
     onCheck: () -> Unit,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
-    onInstall: () -> Unit
+    onInstall: () -> Unit,
+    rulesChecking: Boolean = false
 ) {
     val busy = state.download in setOf(DownloadStatus.DOWNLOADING, DownloadStatus.VERIFYING)
     val configuration = LocalConfiguration.current
@@ -87,7 +88,7 @@ internal fun UpdateContent(
         )
         Button(
             onClick = onCheck,
-            enabled = !busy && state.check != CheckStatus.CHECKING,
+            enabled = !busy && state.check != CheckStatus.CHECKING && !rulesChecking,
             modifier = Modifier.heightIn(min = 48.dp),
             scale = ButtonDefaults.scale(focusedScale = 1f)
         ) {

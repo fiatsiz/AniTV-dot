@@ -402,7 +402,7 @@ internal fun AniTVApp(
                                     tag
                                 )
                     }, rulesState = rulesState, updateState = updateState,
-                    onCheckUpdate = { updates.check(true) },
+                    onCheckUpdate = { rules.refresh(); updates.check(true) },
                     onDownloadUpdate = { updates.download() },
                     onCancelUpdate = { updates.cancelDownload() },
                     onInstallUpdate = onInstallUpdate

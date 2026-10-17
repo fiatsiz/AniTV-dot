@@ -33,6 +33,31 @@ class UpdateUiInstrumentedTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
+    fun checkActionDisablesWhileRulesAreChecking() {
+        val rulesChecking = mutableStateOf(false)
+        var checks = 0
+        compose.setContent {
+            AniTVTheme {
+                Surface(Modifier.fillMaxSize()) {
+                    Column(Modifier.padding(56.dp).verticalScroll(rememberScrollState())) {
+                        UpdateContent(
+                            UpdateState("1.1.0", check = CheckStatus.CURRENT),
+                            { checks++ }, {}, {}, {}, rulesChecking = rulesChecking.value
+                        )
+                    }
+                }
+            }
+        }
+        val button = compose.onNodeWithText(context.getString(R.string.update_check))
+        button.performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.RequestFocus)
+        button.performKeyInput { pressKey(androidx.compose.ui.input.key.Key.DirectionCenter) }
+        compose.runOnIdle { org.junit.Assert.assertEquals(1, checks); rulesChecking.value = true }
+        button.assertIsNotEnabled()
+        compose.runOnIdle { rulesChecking.value = false }
+        button.assertIsEnabled()
+    }
+
+    @Test
     fun arrivingHomeNoticeKeepsSearchFocusAndOpensSettings() {
         val version = mutableStateOf<String?>(null)
         var settingsOpened = false

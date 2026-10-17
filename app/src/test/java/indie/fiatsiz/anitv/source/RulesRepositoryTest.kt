@@ -11,6 +11,12 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class RulesRepositoryTest {
+    private fun awaitOutcome(repo: RulesRepository, outcome: RulesOutcome) {
+        val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+        while (repo.state.outcome != outcome && System.nanoTime() < until) Thread.sleep(5)
+        assertEquals(outcome, repo.state.outcome)
+    }
+
     private fun directory() =
         Files.createTempDirectory("anitv-rules-test").toFile().apply { deleteOnExit() }
 
@@ -121,6 +127,177 @@ class RulesRepositoryTest {
         assertEquals(2L, snapshot.revision)
         assertEquals(RulesOutcome.UPDATED, repo.state.outcome)
         assertEquals(1, calls.get())
+    }
+
+    @Test
+    fun manualCheckDuringStartupDoesNotDuplicateTheRequest() {
+        val release = CountDownLatch(1)
+        val calls = AtomicInteger()
+        val repo = repository { _, _ ->
+            calls.incrementAndGet()
+            release.await(2, TimeUnit.SECONDS)
+            response(2)
+        }
+        try { assertFalse(repo.refresh()) } finally { release.countDown() }
+        assertEquals(2L, repo.snapshot().revision)
+        assertEquals(1, calls.get())
+    }
+
+    @Test
+    fun manualRefreshUpdatesExistingSourceAndCacheWithoutBlockingCurrentSnapshots() {
+        val cache = RulesCache(directory())
+        val calls = AtomicInteger()
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val newer = RulesTestSupport.signed(2) {
+            it.getJSONObject("search").put("endpoint", "/new-search?keyword={query}")
+        }
+        val repo = repository(cache) { etag, _ ->
+            if (calls.incrementAndGet() == 1) response(1) else {
+                assertEquals("\"rev-1\"", etag)
+                started.countDown()
+                check(release.await(2, TimeUnit.SECONDS))
+                RulesResponse(200, newer.envelope(), "new-etag")
+            }
+        }
+        val original = repo.snapshot()
+        val requests = mutableListOf<String>()
+        val source = HiAnimeSource("test", repo::snapshot) { url, _, _ ->
+            requests.add(url)
+            javaClass.getResource("/hianime-search.html")!!.readBytes()
+        }
+        source.search("One Piece")
+        assertTrue(repo.refresh())
+        try {
+            assertTrue(started.await(1, TimeUnit.SECONDS))
+            assertFalse(repo.refresh())
+            assertEquals(RulesOutcome.CHECKING, repo.state.outcome)
+            val start = System.nanoTime()
+            repeat(20) { assertSame(original, repo.snapshot()) }
+            assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) < 100)
+        } finally { release.countDown() }
+        awaitOutcome(repo, RulesOutcome.UPDATED)
+        source.search("One Piece")
+        assertEquals(listOf("https://hianime.at/search?keyword=One+Piece",
+            "https://hianime.at/new-search?keyword=One+Piece"), requests)
+        assertEquals(1L, original.revision)
+        assertEquals(2L, repo.snapshot().revision)
+        val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(1)
+        while (cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag != "new-etag" &&
+            System.nanoTime() < until) Thread.sleep(5)
+        assertEquals("new-etag", cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag)
+        assertEquals(2, calls.get())
+    }
+
+    @Test
+    fun manualNotModifiedRetainsCurrentRevisionAndEtagAndCanCheckAgain() {
+        val calls = AtomicInteger()
+        val repo = repository { etag, _ ->
+            when (calls.incrementAndGet()) {
+                1 -> response(2)
+                2 -> {
+                    assertEquals("\"rev-2\"", etag)
+                    RulesResponse(304)
+                }
+                else -> {
+                    assertEquals("\"rev-2\"", etag)
+                    response(3)
+                }
+            }
+        }
+        assertEquals(2L, repo.snapshot().revision)
+        assertTrue(repo.refresh())
+        awaitOutcome(repo, RulesOutcome.CURRENT)
+        assertEquals(2L, repo.snapshot().revision)
+        assertEquals(2, calls.get())
+        val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(1)
+        while (!repo.refresh()) {
+            assertTrue(System.nanoTime() < until)
+            Thread.sleep(5)
+        }
+        awaitOutcome(repo, RulesOutcome.UPDATED)
+        assertEquals(3L, repo.snapshot().revision)
+        assertEquals(3, calls.get())
+    }
+
+    @Test
+    fun manualInvalidDownloadsKeepCurrentRulesAndCachedEtag() {
+        val conflict = RulesTestSupport.signed(2) { it.getJSONObject("servers").put("name", "Changed") }
+        val incompatible = RulesTestSupport.sign(
+            RulesTestSupport.payload(3).put("minAppVersionCode", 2).toString().toByteArray()
+        )
+        val invalid = listOf(
+            RulesResponse(200, "bad json".toByteArray()),
+            RulesResponse(200, SignedRules.bundled.envelope()),
+            RulesResponse(200, RulesTestSupport.signed(1).envelope()),
+            RulesResponse(200, conflict.envelope()),
+            RulesResponse(200, incompatible),
+            RulesResponse(200, ByteArray(SignedRules.MAX_BYTES + 1))
+        )
+        for (response in invalid) {
+            val cache = RulesCache(directory())
+            val two = CachedRules(RulesTestSupport.signed(2), "two")
+            cache.save(two, CachedRules(RulesTestSupport.signed(), null))
+            val calls = AtomicInteger()
+            val repo = repository(cache) { _, _ ->
+                if (calls.incrementAndGet() == 1) RulesResponse(304) else response
+            }
+            repo.snapshot()
+            assertTrue(repo.refresh())
+            awaitOutcome(repo, RulesOutcome.REJECTED)
+            assertEquals(2L, repo.snapshot().revision)
+            assertEquals("two", cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag)
+        }
+    }
+
+    @Test
+    fun manualOfflineAndTimeoutRetainRulesAndDiscardLateDownload() {
+        val calls = AtomicInteger()
+        val repo = repository { _, _ ->
+            if (calls.incrementAndGet() == 1) response(1) else throw java.io.IOException("offline")
+        }
+        repo.snapshot()
+        assertTrue(repo.refresh())
+        awaitOutcome(repo, RulesOutcome.OFFLINE)
+        assertEquals(1L, repo.snapshot().revision)
+
+        val cache = RulesCache(directory())
+        val timeoutCalls = AtomicInteger()
+        val release = CountDownLatch(1)
+        val finished = CountDownLatch(1)
+        val timed = repository(cache, 100) { _, _ ->
+            if (timeoutCalls.incrementAndGet() == 1) response(1) else {
+                release.await(2, TimeUnit.SECONDS)
+                finished.countDown()
+                response(2)
+            }
+        }
+        timed.snapshot()
+        assertTrue(timed.refresh())
+        try {
+            awaitOutcome(timed, RulesOutcome.TIMEOUT)
+            assertFalse(timed.refresh())
+            assertEquals(1L, timed.snapshot().revision)
+        } finally { release.countDown() }
+        assertTrue(finished.await(1, TimeUnit.SECONDS))
+        Thread.sleep(30)
+        assertEquals(RulesOutcome.TIMEOUT, timed.state.outcome)
+        assertEquals(1L, timed.snapshot().revision)
+        assertEquals("\"rev-1\"", cache.load(RulesTestSupport.keys.public, 1, RulesTestSupport.signed()).etag)
+    }
+
+    @Test
+    fun manualRefreshRetainsValidatedRulesWhenCacheCannotBeWritten() {
+        val blocked = File(directory(), "blocked").apply { writeText("existing") }
+        val calls = AtomicInteger()
+        val repo = repository(RulesCache(blocked)) { _, _ ->
+            if (calls.incrementAndGet() == 1) RulesResponse(503) else response(2)
+        }
+        repo.snapshot()
+        assertTrue(repo.refresh())
+        awaitOutcome(repo, RulesOutcome.CACHE_FAILED)
+        assertEquals(2L, repo.snapshot().revision)
+        assertEquals("existing", blocked.readText())
     }
 
     @Test

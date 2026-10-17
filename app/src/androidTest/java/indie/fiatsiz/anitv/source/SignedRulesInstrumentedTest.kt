@@ -13,6 +13,7 @@ import java.security.Signature
 import java.util.Base64
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /** Runs the installed APK's parser on Android's JSON, regex and crypto implementations. */
 @RunWith(AndroidJUnit4::class)
@@ -64,7 +65,9 @@ class SignedRulesInstrumentedTest {
             "rules-proof"
         ).toFile()
         val release = CountDownLatch(1)
+        val requests = AtomicInteger()
         val repo = RulesRepository(RulesCache(directory), RulesTransport { _, _ ->
+            if (requests.incrementAndGet() == 1) return@RulesTransport RulesResponse(200, original.envelope(), "original")
             check(release.await(2, TimeUnit.SECONDS))
             RulesResponse(200, newer.envelope(), "new-revision")
         }, original, keys.public)
@@ -77,7 +80,12 @@ class SignedRulesInstrumentedTest {
             body.toByteArray()
         }
         try {
+            assertEquals(1L, repo.snapshot().revision)
+            assertTrue(repo.refresh())
             release.countDown()
+            val refreshDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+            while (repo.state.outcome == RulesOutcome.CHECKING && System.nanoTime() < refreshDeadline) Thread.sleep(5)
+            assertEquals(RulesOutcome.UPDATED, repo.state.outcome)
             assertEquals(
                 listOf(Anime("42", "Changed fixture", "https://hianime.at/changed-42")),
                 source.search("changed fixture")

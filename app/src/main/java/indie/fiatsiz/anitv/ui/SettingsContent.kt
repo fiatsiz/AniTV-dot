@@ -109,7 +109,8 @@ internal fun SettingsContent(
                 }
             ), color = Color(0xFFB9C5D8), fontSize = 18.sp
         )
-        UpdateContent(updateState, onCheckUpdate, onDownloadUpdate, onCancelUpdate, onInstallUpdate)
+        UpdateContent(updateState, onCheckUpdate, onDownloadUpdate, onCancelUpdate, onInstallUpdate,
+            rulesChecking = rulesState.outcome == RulesOutcome.CHECKING)
         Spacer(modifier = Modifier.height(8.dp))
         Text(stringResource(R.string.language_hint), color = Color(0xFFB9C5D8), fontSize = 18.sp)
         Text(stringResource(R.string.language), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)

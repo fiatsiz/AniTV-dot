@@ -140,18 +140,19 @@ class GitHubRulesTransport : RulesTransport {
     }
 }
 
-/** Start once in the process owner. All operations share one frozen rules snapshot. */
+/** Startup selects one snapshot; explicit refreshes can replace it for subsequent operations. */
 class RulesRepository(
     private val cache: RulesCache,
     private val transport: RulesTransport = GitHubRulesTransport(),
     private val bundled: SignedRules = SignedRules.bundled,
     private val publicKey: PublicKey = SignedRules.publicKey,
     private val appVersionCode: Int = 1,
-    deadlineMillis: Long = 3000
+    private val deadlineMillis: Long = 3000
 ) {
     private val lock = Any()
     private val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(deadlineMillis)
     private val selected = CompletableFuture<CachedRules>()
+    private var refreshing = false
 
     @Volatile
     private var local = CachedRules(bundled, null)
@@ -207,10 +208,12 @@ class RulesRepository(
                         ) {
                             // Persist only content selected before the deadline; late downloads never reach storage.
                             runCatching { cache.save(accepted, cached) }.onFailure {
-                                mutableState.value = RulesState(
-                                    accepted.signed.rules.revision,
-                                    RulesOutcome.CACHE_FAILED
-                                )
+                                synchronized(lock) {
+                                    if (!refreshing) mutableState.value = RulesState(
+                                        accepted.signed.rules.revision,
+                                        RulesOutcome.CACHE_FAILED
+                                    )
+                                }
                             }
                         }
                     }
@@ -225,7 +228,6 @@ class RulesRepository(
                 finish(local, RulesOutcome.REJECTED)
             } finally {
                 if (!selected.isDone) finish(local, RulesOutcome.TIMEOUT)
-                worker.shutdown()
             }
         }
     }
@@ -234,11 +236,71 @@ class RulesRepository(
         if (selected.isDone) return false
         val onTime = System.nanoTime() < deadlineNanos
         val chosen = if (onTime) value else local
+        local = chosen
         mutableState.value =
             RulesState(chosen.signed.rules.revision, if (onTime) outcome else RulesOutcome.TIMEOUT)
         selected.complete(chosen)
-        scheduler.shutdown()
         onTime
+    }
+
+    fun refresh(): Boolean = synchronized(lock) {
+        if (!selected.isDone || refreshing) return false
+        refreshing = true
+        val current = local
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(deadlineMillis)
+        var completed = false
+        mutableState.value = RulesState(current.signed.rules.revision, RulesOutcome.CHECKING)
+        fun complete(value: CachedRules, outcome: RulesOutcome): Boolean = synchronized(lock) {
+            if (completed) return false
+            completed = true
+            val onTime = System.nanoTime() < deadline
+            if (onTime) local = value
+            mutableState.value = RulesState(
+                local.signed.rules.revision, if (onTime) outcome else RulesOutcome.TIMEOUT
+            )
+            onTime
+        }
+        val timeout = scheduler.schedule(
+            { complete(current, RulesOutcome.TIMEOUT) }, deadlineMillis, TimeUnit.MILLISECONDS
+        )
+        worker.execute {
+            try {
+                if (System.nanoTime() >= deadline) throw TimeoutException()
+                val response = transport.fetch(current.etag, deadline)
+                when (response.status) {
+                    304 -> complete(
+                        current, if (current.etag != null) RulesOutcome.CURRENT else RulesOutcome.REJECTED
+                    )
+                    200 -> {
+                        val downloaded = SignedRules.verify(response.body, publicKey, appVersionCode)
+                        downloaded.requireSuccessorOf(current.signed)
+                        val accepted = CachedRules(downloaded, response.etag)
+                        if (complete(
+                                accepted,
+                                if (downloaded.rules.revision > current.signed.rules.revision)
+                                    RulesOutcome.UPDATED else RulesOutcome.CURRENT
+                            )) {
+                            runCatching { cache.save(accepted, current) }.onFailure {
+                                mutableState.value = RulesState(
+                                    accepted.signed.rules.revision, RulesOutcome.CACHE_FAILED
+                                )
+                            }
+                        }
+                    }
+                    else -> complete(current, RulesOutcome.OFFLINE)
+                }
+            } catch (_: java.io.IOException) {
+                complete(current, RulesOutcome.OFFLINE)
+            } catch (_: TimeoutException) {
+                complete(current, RulesOutcome.TIMEOUT)
+            } catch (_: Exception) {
+                complete(current, RulesOutcome.REJECTED)
+            } finally {
+                timeout.cancel(false)
+                synchronized(lock) { refreshing = false }
+            }
+        }
+        true
     }
 
     fun snapshot(): SourceRules {
@@ -252,6 +314,6 @@ class RulesRepository(
                 finish(local, RulesOutcome.TIMEOUT)
             }
         }
-        return selected.get().signed.rules
+        return local.signed.rules
     }
 }
