@@ -2,6 +2,12 @@
 
 As of 2026-10-17.
 
+## Caption toggle state label — 2026-10-17
+
+- Replaced the fixed “Captions off” action with a stateful “Captions: on” / “Captions: off” toggle, with matching Turkish labels. Original and translated captions both display On. Selecting the toggle updates captions immediately while keeping the menu open and focus on the toggle. Turning captions back on in the same menu restores the preceding mode; unavailable translation falls back to original captions. Opening an already-off menu and enabling captions selects original captions. Original/Translate, language, and style choices remain available.
+- `:app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug --offline` passed: 69 unit tests passed, one existing publication-only test skipped, and no lint errors. Four focused caption UI tests passed using D-pad Select on `emulator-5554` (`ro.kernel.qemu=1`, API 34), covering both labels, retained focus/open menu, initially-off enablement, translated-mode restoration, and unavailable-provider fallback. English/Turkish retain 190 unique matching string keys.
+- Updated debug APK: `app/build/outputs/apk/debug/app-debug.apk`. This check exercised the actual caption menu with injected mode/settings state; full media playback, live source responses, provider requests, large text, and physical-TV behavior were not repeated. No source handling, Media3 track-selection logic, persistence, dependencies, or SDK settings changed; no source breakage was assessed in this label/toggle check.
+
 ## Bottom playback controller — 2026-10-17
 
 - Moved playback controls to the bottom. Episodes remains at the left; filled Material previous/play-pause/next icons form the centered transport group; Settings sits at the right. Added only the BOM-managed Compose Material Icons Extended dependency for the requested icons; no custom player icon drawables, SDK/version changes, or persistence changes.

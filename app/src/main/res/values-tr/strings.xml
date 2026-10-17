@@ -56,8 +56,8 @@
     <string name="play">Oynat</string>
     <string name="seek_back">−10 sn</string>
     <string name="seek_forward">+10 sn</string>
-    <string name="captions_on">Altyazı açık</string>
-    <string name="captions_off">Altyazı kapalı</string>
+    <string name="captions_off">Altyazı: kapalı</string>
+    <string name="captions_on">Altyazı: açık</string>
     <string name="captions_settings">Altyazılar</string>
     <string name="captions_original">Orijinal altyazılar</string>
     <string name="captions_translate">%1$s ile çevir</string>

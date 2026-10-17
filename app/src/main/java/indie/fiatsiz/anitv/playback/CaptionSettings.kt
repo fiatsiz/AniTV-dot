@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -96,6 +100,8 @@ internal fun CaptionSettings(
     val captionStyle = translation.captionStyle
     val translationReady =
         translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()
+    var lastEnabledMode by remember { mutableStateOf(CaptionMode.ORIGINAL) }
+    val captionsEnabled = captionMode != CaptionMode.OFF
     Column(
         modifier
             .width(320.dp)
@@ -111,24 +117,24 @@ internal fun CaptionSettings(
                     fontWeight = FontWeight.SemiBold
                 )
                 Button(
-                    onClick = { onMode(CaptionMode.OFF); onMenu(CaptionMenu.CLOSED) },
+                    onClick = {
+                        if (captionsEnabled) {
+                            lastEnabledMode = captionMode
+                            onMode(CaptionMode.OFF)
+                        } else {
+                            onMode(if (lastEnabledMode == CaptionMode.TRANSLATED && !translationReady) CaptionMode.ORIGINAL else lastEnabledMode)
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(
-                            if (captionMode == CaptionMode.OFF) Modifier.focusRequester(captionFocus) else Modifier
-                        )
-                        .semantics { selected = captionMode == CaptionMode.OFF }) {
-                    Text(stringResource(R.string.captions_off))
+                        .focusRequester(captionFocus)
+                        .semantics { selected = captionsEnabled }) {
+                    Text(stringResource(if (captionsEnabled) R.string.captions_on else R.string.captions_off))
                 }
                 Button(
                     onClick = { onMode(CaptionMode.ORIGINAL); onMenu(CaptionMenu.CLOSED) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(
-                            if (captionMode == CaptionMode.ORIGINAL) Modifier.focusRequester(
-                                captionFocus
-                            ) else Modifier
-                        )
                         .semantics { selected = captionMode == CaptionMode.ORIGINAL }) {
                     Text(stringResource(R.string.captions_original))
                 }
@@ -137,11 +143,6 @@ internal fun CaptionSettings(
                     enabled = translationReady,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(
-                            if (captionMode == CaptionMode.TRANSLATED) Modifier.focusRequester(
-                                captionFocus
-                            ) else Modifier
-                        )
                         .semantics { selected = captionMode == CaptionMode.TRANSLATED }) {
                     Text(
                         stringResource(

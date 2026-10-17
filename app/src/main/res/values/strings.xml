@@ -56,8 +56,8 @@
     <string name="play">Play</string>
     <string name="seek_back">−10s</string>
     <string name="seek_forward">+10s</string>
-    <string name="captions_on">Captions on</string>
-    <string name="captions_off">Captions off</string>
+    <string name="captions_off">Captions: off</string>
+    <string name="captions_on">Captions: on</string>
     <string name="captions_settings">Captions</string>
     <string name="captions_original">Original captions</string>
     <string name="captions_translate">Translate with %1$s</string>
