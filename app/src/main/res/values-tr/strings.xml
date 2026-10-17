@@ -185,4 +185,8 @@
     <string name="update_error_certificate">APK imzalama sertifikası yüklü AniTV’den farklı. Aynı sahibin imzaladığı bir sürüm kullanın. Bu kontrolü aşmak için uygulamayı kaldırmayın.</string>
     <string name="update_error_version">APK sürümü yayımlanan sürümle eşleşmiyor veya sürüm kodu daha yeni değil.</string>
     <string name="update_error_sdk">Bu APK cihazınızdakinden daha yeni bir Android sürümü gerektiriyor.</string>
+    <string name="previous_episode">Önceki bölüm</string>
+    <string name="next_episode">Sonraki bölüm</string>
+    <string name="playback_progress">Oynatma ilerlemesi</string>
+    <string name="quality_title">Kalite</string>
 </resources>

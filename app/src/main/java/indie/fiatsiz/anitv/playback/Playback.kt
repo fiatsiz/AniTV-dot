@@ -1,15 +1,15 @@
 package indie.fiatsiz.anitv.playback
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.getValue
@@ -22,15 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.media3.common.C
 import androidx.media3.common.text.Cue
@@ -102,6 +99,8 @@ internal fun Playback(
     var positionMs by remember(stream) { mutableStateOf(savedPositionMs) }
     var durationMs by remember(stream) { mutableStateOf(0L) }
     var controlsVisible by remember(stream) { mutableStateOf(true) }
+    var settingsOpen by remember(stream) { mutableStateOf(false) }
+    var restoreSettingsFocus by remember(stream) { mutableStateOf(false) }
     var qualityOpen by remember(stream) { mutableStateOf(false) }
     var episodesOpen by remember(stream) { mutableStateOf(false) }
     var restoreEpisodesFocus by remember(stream) { mutableStateOf(false) }
@@ -126,6 +125,8 @@ internal fun Playback(
     val episodesButtonFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val controlFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val videoFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val settingsButtonFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val settingsFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val qualityFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val captionFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val languageFocus = remember { androidx.compose.ui.focus.FocusRequester() }
@@ -268,59 +269,50 @@ internal fun Playback(
                 captionMode == CaptionMode.OFF || (translationOn && !translationFailed)
             ).build()
     }
-    BackHandler(captionMenu != CaptionMenu.CLOSED || qualityOpen) {
+    fun closeSettingsPage() {
         when {
             captionMenu == CaptionMenu.LANGUAGES -> captionMenu = CaptionMenu.OPTIONS
-            captionMenu in listOf(
-                CaptionMenu.FONT,
-                CaptionMenu.SIZE,
-                CaptionMenu.BACKGROUND,
-                CaptionMenu.FOREGROUND
-            ) -> captionMenu = CaptionMenu.STYLES
-
+            captionMenu in listOf(CaptionMenu.FONT, CaptionMenu.SIZE, CaptionMenu.BACKGROUND, CaptionMenu.FOREGROUND) -> captionMenu = CaptionMenu.STYLES
             captionMenu == CaptionMenu.STYLES -> captionMenu = CaptionMenu.OPTIONS
             captionMenu == CaptionMenu.OPTIONS -> captionMenu = CaptionMenu.CLOSED
-            else -> qualityOpen = false
+            qualityOpen -> qualityOpen = false
+            else -> {
+                settingsOpen = false
+                restoreSettingsFocus = true
+            }
         }
     }
-    androidx.compose.runtime.LaunchedEffect(
-        controlsVisible,
-        qualityOpen,
-        captionMenu,
-        episodesOpen
-    ) {
+    fun selectEpisode(selected: Episode) {
+        if (player.currentPosition > 0) progressCallback(
+            player.currentPosition, player.duration.coerceAtLeast(0)
+        )
+        onSelectEpisode(selected)
+    }
+    androidx.compose.runtime.LaunchedEffect(controlsVisible, settingsOpen, episodesOpen) {
         when {
-            episodesOpen -> Unit
+            episodesOpen || settingsOpen -> Unit
             !controlsVisible -> videoFocus.requestFocus()
-            captionMenu == CaptionMenu.LANGUAGES -> languageFocus.requestFocus()
-            captionMenu == CaptionMenu.STYLES -> styleFocus.requestFocus()
-            captionMenu in listOf(
-                CaptionMenu.FONT,
-                CaptionMenu.SIZE,
-                CaptionMenu.BACKGROUND,
-                CaptionMenu.FOREGROUND
-            ) -> choiceFocus.requestFocus()
-
-            captionMenu == CaptionMenu.OPTIONS -> captionFocus.requestFocus()
-            qualityOpen -> qualityFocus.requestFocus()
             restoreEpisodesFocus -> {
                 restoreEpisodesFocus = false
                 androidx.compose.runtime.withFrameNanos { }
                 episodesButtonFocus.requestFocus()
             }
-
+            restoreSettingsFocus -> {
+                restoreSettingsFocus = false
+                androidx.compose.runtime.withFrameNanos { }
+                settingsButtonFocus.requestFocus()
+            }
             else -> controlFocus.requestFocus()
         }
     }
     androidx.compose.runtime.LaunchedEffect(
         controlsVisible,
-        qualityOpen,
-        captionMenu,
+        settingsOpen,
         episodesOpen,
         playing,
         interactionTick
     ) {
-        if (controlsVisible && playing && !episodesOpen && !qualityOpen && captionMenu == CaptionMenu.CLOSED) {
+        if (controlsVisible && playing && !episodesOpen && !settingsOpen) {
             delay(6_000)
             controlsVisible = false
         }
@@ -329,26 +321,7 @@ internal fun Playback(
         Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                when {
-                    controlsVisible && !episodesOpen && !qualityOpen && captionMenu == CaptionMenu.CLOSED && event.key == Key.DirectionDown -> {
-                        controlsVisible = false
-                        true
-                    }
-
-                    !controlsVisible && (event.key == Key.DirectionUp || event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter) -> {
-                        controlsVisible = true
-                        true
-                    }
-
-                    else -> {
-                        interactionTick++; false
-                    }
-                }
-            }
-            .focusRequester(videoFocus)
-            .focusable()) {
+    ) {
         AndroidView(
             factory = {
                 PlayerView(it).apply {
@@ -392,113 +365,111 @@ internal fun Playback(
                 color = Color.White
             )
         }
-        if (controlsVisible) {
-            Row(
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .background(Color(0xDD0F0F23))
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = {
-                        qualityOpen = false
-                        captionMenu = CaptionMenu.CLOSED
-                        episodesOpen = true
-                    },
-                    modifier = Modifier.focusRequester(episodesButtonFocus)
-                ) { Text(stringResource(R.string.episodes)) }
-                Button(onClick = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) }) {
-                    Text(
-                        stringResource(R.string.seek_back)
-                    )
-                }
-                Button(
-                    onClick = { if (player.playWhenReady) player.pause() else player.play() },
-                    modifier = Modifier.focusRequester(controlFocus)
-                ) {
-                    Text(stringResource(if (playing) R.string.pause else R.string.play))
-                }
-                Button(onClick = {
-                    player.seekTo(
-                        (player.currentPosition + 10_000).coerceAtMost(
-                            player.duration.coerceAtLeast(0)
-                        )
-                    )
-                }) { Text(stringResource(R.string.seek_forward)) }
-                Button(
-                    onClick = {
-                        qualityOpen = false
-                        captionMenu =
-                            if (captionMenu == CaptionMenu.CLOSED) CaptionMenu.OPTIONS else CaptionMenu.CLOSED
-                    },
-                    enabled = hasCaptions
-                ) { Text(stringResource(if (hasCaptions) R.string.captions_settings else R.string.captions_unavailable)) }
-                if (qualityOptions.size > 1) Button(onClick = {
-                    captionMenu = CaptionMenu.CLOSED
-                    qualityOpen = !qualityOpen
-                }) { Text(stringResource(R.string.quality, selectedQuality)) }
-                else Text(stringResource(R.string.auto_quality), color = Color.White)
-                Text(
-                    "${positionMs / 60_000}:${
-                        (positionMs / 1_000 % 60).toString().padStart(2, '0')
-                    } / " +
-                            "${durationMs / 60_000}:${
-                                (durationMs / 1_000 % 60).toString().padStart(2, '0')
-                            }", color = Color.White
-                )
-            }
-            if (qualityOpen) Column(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 76.dp, end = 16.dp)
-                    .background(Color(0xEE0F0F23))
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        player.trackSelectionParameters =
-                            player.trackSelectionParameters.buildUpon()
-                                .clearOverridesOfType(C.TRACK_TYPE_VIDEO).build()
-                        selectedQuality = resources.getString(R.string.auto)
-                        qualityOpen = false
-                    },
-                    modifier = Modifier.focusRequester(qualityFocus)
-                ) { Text(stringResource(R.string.auto)) }
-                qualityOptions.forEach { option ->
-                    Button(onClick = {
-                        player.trackSelectionParameters =
-                            player.trackSelectionParameters.buildUpon()
-                                .setOverrideForType(
-                                    TrackSelectionOverride(
-                                        option.group,
-                                        option.index
-                                    )
-                                ).build()
-                        selectedQuality = option.label.substringBefore(" ·")
-                        qualityOpen = false
-                    }) { Text(option.label) }
+        val episodeIndex = episodes.indexOfFirst { it.id == currentEpisode.id }
+        val previous = episodes.getOrNull(episodeIndex - 1).takeIf { episodeIndex > 0 && !episodesLoading }
+        val next = episodes.getOrNull(episodeIndex + 1).takeIf { episodeIndex >= 0 && !episodesLoading }
+        PlaybackControls(
+            visible = controlsVisible,
+            active = !episodesOpen && !settingsOpen,
+            playing = playing,
+            positionMs = positionMs,
+            durationMs = durationMs,
+            seekable = player.isCurrentMediaItemSeekable,
+            previousEnabled = previous != null,
+            nextEnabled = next != null,
+            videoFocus = videoFocus,
+            controlFocus = controlFocus,
+            episodesFocus = episodesButtonFocus,
+            settingsFocus = settingsButtonFocus,
+            onVisible = { controlsVisible = it },
+            onInteraction = { interactionTick++ },
+            onPlayPause = { if (player.playWhenReady) player.pause() else player.play() },
+            onSeek = { offset ->
+                val target = seekPosition(player.currentPosition, offset, player.duration)
+                player.seekTo(target)
+                positionMs = target
+            },
+            onSeekTo = { target -> player.seekTo(target); positionMs = target },
+            onPrevious = { previous?.let { selectEpisode(it) } },
+            onNext = { next?.let { selectEpisode(it) } },
+            onEpisodes = { episodesOpen = true },
+            onSettings = { settingsOpen = true }
+        )
+        if (settingsOpen) Dialog(
+            onDismissRequest = { closeSettingsPage() },
+            properties = DialogProperties(dismissOnClickOutside = false, usePlatformDefaultWidth = false)
+        ) {
+            androidx.compose.runtime.LaunchedEffect(captionMenu, qualityOpen) {
+                when (captionMenu) {
+                    CaptionMenu.LANGUAGES -> languageFocus.requestFocus()
+                    CaptionMenu.STYLES -> styleFocus.requestFocus()
+                    CaptionMenu.FONT, CaptionMenu.SIZE, CaptionMenu.BACKGROUND, CaptionMenu.FOREGROUND -> choiceFocus.requestFocus()
+                    CaptionMenu.OPTIONS -> captionFocus.requestFocus()
+                    CaptionMenu.CLOSED -> if (qualityOpen) qualityFocus.requestFocus() else settingsFocus.requestFocus()
                 }
             }
-            if (captionMenu != CaptionMenu.CLOSED) CaptionSettings(
-                captionMenu,
-                captionMode,
-                translation,
-                effectiveTarget,
-                captionFocus,
-                languageFocus,
-                styleFocus,
-                choiceFocus,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 76.dp, end = 16.dp),
-                onMenu = { captionMenu = it },
-                onMode = { captionMode = it },
-                onTranslationSettings = onTranslationSettings
-            )
+            Box(Modifier.fillMaxSize().padding(32.dp)) {
+                val menuModifier = Modifier.align(Alignment.BottomEnd).width(320.dp)
+                    .heightIn(max = 400.dp).verticalScroll(rememberScrollState())
+                when {
+                    captionMenu != CaptionMenu.CLOSED -> CaptionSettings(
+                        captionMenu, captionMode, translation, effectiveTarget,
+                        captionFocus, languageFocus, styleFocus, choiceFocus,
+                        modifier = menuModifier,
+                        onMenu = { captionMenu = it },
+                        onMode = { captionMode = it },
+                        onTranslationSettings = onTranslationSettings
+                    )
+                    else -> Column(
+                        menuModifier.background(Color(0xFF0F0F23)).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(stringResource(if (qualityOpen) R.string.quality_title else R.string.settings))
+                        if (qualityOpen) {
+                            Button(
+                                onClick = {
+                                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                                        .clearOverridesOfType(C.TRACK_TYPE_VIDEO).build()
+                                    selectedQuality = resources.getString(R.string.auto)
+                                    qualityOpen = false
+                                },
+                                modifier = Modifier.fillMaxWidth().focusRequester(qualityFocus)
+                            ) { Text(stringResource(R.string.auto)) }
+                            qualityOptions.forEach { option ->
+                                Button(
+                                    onClick = {
+                                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                                            .setOverrideForType(TrackSelectionOverride(option.group, option.index)).build()
+                                        selectedQuality = option.label.substringBefore(" ·")
+                                        qualityOpen = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { Text(option.label) }
+                            }
+                        } else {
+                            Button(
+                                onClick = { qualityOpen = true }, enabled = qualityOptions.size > 1,
+                                modifier = Modifier.fillMaxWidth().then(
+                                    if (qualityOptions.size > 1) Modifier.focusRequester(settingsFocus) else Modifier
+                                )
+                            ) { Text(stringResource(R.string.quality, selectedQuality)) }
+                            if (qualityOptions.size <= 1) Text(stringResource(R.string.auto_quality))
+                            Button(
+                                onClick = { captionMenu = CaptionMenu.OPTIONS }, enabled = hasCaptions,
+                                modifier = Modifier.fillMaxWidth().then(
+                                    if (qualityOptions.size <= 1 && hasCaptions) Modifier.focusRequester(settingsFocus) else Modifier
+                                )
+                            ) { Text(stringResource(if (hasCaptions) R.string.captions_settings else R.string.captions_unavailable)) }
+                        }
+                        Button(
+                            onClick = { closeSettingsPage() },
+                            modifier = Modifier.fillMaxWidth().then(
+                                if (!qualityOpen && qualityOptions.size <= 1 && !hasCaptions) Modifier.focusRequester(settingsFocus) else Modifier
+                            )
+                        ) { Text(stringResource(R.string.back)) }
+                    }
+                }
+            }
         }
         if (buffering) Text(
             stringResource(R.string.buffering),
@@ -514,11 +485,7 @@ internal fun Playback(
                     restoreEpisodesFocus = true
                     interactionTick++
                 } else {
-                    if (player.currentPosition > 0) progressCallback(
-                        player.currentPosition,
-                        player.duration.coerceAtLeast(0)
-                    )
-                    onSelectEpisode(selected)
+                    selectEpisode(selected)
                 }
             })
     }

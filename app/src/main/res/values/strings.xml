@@ -185,4 +185,8 @@
     <string name="update_error_certificate">APK signing certificate differs from installed AniTV. Use a release signed by the same owner. Do not uninstall to bypass this check.</string>
     <string name="update_error_version">APK version does not match the release or its version code is not newer.</string>
     <string name="update_error_sdk">This APK requires a newer Android version than this device runs.</string>
+    <string name="previous_episode">Previous episode</string>
+    <string name="next_episode">Next episode</string>
+    <string name="playback_progress">Playback progress</string>
+    <string name="quality_title">Quality</string>
 </resources>
