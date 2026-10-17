@@ -1,7 +1,7 @@
 package indie.fiatsiz.anitv.ui
 
-import android.app.LocaleManager
-import android.os.LocaleList
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import android.graphics.BitmapFactory
 import android.webkit.WebSettings
 import androidx.lifecycle.Lifecycle
@@ -273,7 +273,7 @@ internal fun AniTVApp(
                 selectedStream,
                 saved,
                 translationSettings,
-                configuration.locales[0].language,
+                androidx.core.os.ConfigurationCompat.getLocales(configuration)[0]!!.language,
                 userAgent,
                 anime = selectedAnime,
                 currentEpisode = selectedEpisode,
@@ -391,16 +391,12 @@ internal fun AniTVApp(
             }
 
             page == Page.SETTINGS -> {
-                val localeManager = context.getSystemService(LocaleManager::class.java)
-                val appLocales = localeManager.applicationLocales
-                val selectedLanguage = if (appLocales.isEmpty) "" else appLocales[0].language
+                val appLocales = AppCompatDelegate.getApplicationLocales()
+                val selectedLanguage = appLocales[0]?.language.orEmpty()
                 SettingsContent(
                     selectedLanguage, translationSettings, firstFocus, ::back, { tag ->
                         if (tag != selectedLanguage)
-                            localeManager.applicationLocales =
-                                if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(
-                                    tag
-                                )
+                            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
                     }, rulesState = rulesState, updateState = updateState,
                     onCheckUpdate = { rules.refresh(); updates.check(true) },
                     onDownloadUpdate = { updates.download() },

@@ -10,7 +10,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.PublicKey
 import java.util.Base64
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -124,7 +124,7 @@ class GitHubRulesTransport : RulesTransport {
             etag?.let { connection.setRequestProperty("If-None-Match", it) }
             val status = connection.responseCode
             val body = if (status == 200) {
-                require(connection.contentLengthLong <= SignedRules.MAX_BYTES) { "Rules response too large" }
+                require((connection.getHeaderField("Content-Length")?.toLongOrNull() ?: -1L) <= SignedRules.MAX_BYTES) { "Rules response too large" }
                 connection.readTimeout = remainingMillis()
                 connection.inputStream.use { readLimited(it, SignedRules.MAX_BYTES, deadlineNanos) }
             } else byteArrayOf()
@@ -151,7 +151,7 @@ class RulesRepository(
 ) {
     private val lock = Any()
     private val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(deadlineMillis)
-    private val selected = CompletableFuture<CachedRules>()
+    private val selected = CountDownLatch(1)
     private var refreshing = false
 
     @Volatile
@@ -186,10 +186,10 @@ class RulesRepository(
         worker.execute {
             try {
                 val cached = cache.load(publicKey, appVersionCode, bundled)
-                synchronized(lock) { if (!selected.isDone) local = cached }
-                if (selected.isDone || System.nanoTime() >= deadlineNanos) return@execute
+                synchronized(lock) { if (selected.count != 0L) local = cached }
+                if (selected.count == 0L || System.nanoTime() >= deadlineNanos) return@execute
                 val response = transport.fetch(cached.etag, deadlineNanos)
-                if (selected.isDone || System.nanoTime() >= deadlineNanos) return@execute
+                if (selected.count == 0L || System.nanoTime() >= deadlineNanos) return@execute
                 when (response.status) {
                     304 -> finish(
                         cached,
@@ -227,24 +227,24 @@ class RulesRepository(
             } catch (_: Exception) {
                 finish(local, RulesOutcome.REJECTED)
             } finally {
-                if (!selected.isDone) finish(local, RulesOutcome.TIMEOUT)
+                if (selected.count != 0L) finish(local, RulesOutcome.TIMEOUT)
             }
         }
     }
 
     private fun finish(value: CachedRules, outcome: RulesOutcome): Boolean = synchronized(lock) {
-        if (selected.isDone) return false
+        if (selected.count == 0L) return false
         val onTime = System.nanoTime() < deadlineNanos
         val chosen = if (onTime) value else local
         local = chosen
         mutableState.value =
             RulesState(chosen.signed.rules.revision, if (onTime) outcome else RulesOutcome.TIMEOUT)
-        selected.complete(chosen)
+        selected.countDown()
         onTime
     }
 
     fun refresh(): Boolean = synchronized(lock) {
-        if (!selected.isDone || refreshing) return false
+        if (selected.count != 0L || refreshing) return false
         refreshing = true
         val current = local
         val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(deadlineMillis)
@@ -304,15 +304,10 @@ class RulesRepository(
     }
 
     fun snapshot(): SourceRules {
-        if (!selected.isDone) {
-            try {
-                selected.get(
-                    (deadlineNanos - System.nanoTime()).coerceAtLeast(0),
-                    TimeUnit.NANOSECONDS
-                )
-            } catch (_: TimeoutException) {
-                finish(local, RulesOutcome.TIMEOUT)
-            }
+        if (selected.count != 0L) {
+            if (!selected.await(
+                    (deadlineNanos - System.nanoTime()).coerceAtLeast(0), TimeUnit.NANOSECONDS
+                )) finish(local, RulesOutcome.TIMEOUT)
         }
         return local.signed.rules
     }

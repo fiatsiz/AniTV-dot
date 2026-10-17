@@ -42,7 +42,7 @@ class OpeningSkipSource(
         try {
             if (connection.responseCode !in 200..299) throw IOException("Opening lookup unavailable")
             return connection.inputStream.use {
-                val bytes = it.readNBytes(256 * 1024 + 1)
+                val bytes = readLimited(it, 256 * 1024 + 1)
                 if (bytes.size > 256 * 1024) throw IOException("Opening response too large")
                 bytes.toString(Charsets.UTF_8)
             }

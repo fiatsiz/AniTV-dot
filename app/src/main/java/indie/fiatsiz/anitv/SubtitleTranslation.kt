@@ -190,7 +190,7 @@ class SubtitleTranslator {
             val status = connection.responseCode
             if (status !in 200..299) throw IOException("Translation request failed ($status)")
             val response = connection.inputStream.use { input ->
-                val bytes = input.readNBytes(1_000_001)
+                val bytes = indie.fiatsiz.anitv.source.readLimited(input, 1_000_001)
                 if (bytes.size > 1_000_000) throw IOException("Translation response too large")
                 JSONObject(String(bytes, StandardCharsets.UTF_8))
             }

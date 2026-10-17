@@ -1,19 +1,21 @@
 [versions]
 agp = "9.4.1"
-coreKtx = "1.19.1"
+coreKtx = "1.18.0"
 appcompat = "1.8.0"
 kotlin = "2.2.10"
 composeBom = "2026.02.01"
 tvFoundation = "1.0.0"
 tvMaterial = "1.1.0"
-lifecycleRuntimeKtx = "2.11.0"
+lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
 media3 = "1.11.1"
 jsoup = "1.23.2"
 junit = "4.13.2"
 json = "20250517"
+desugarJdkLibs = "2.1.5"
 
 [libraries]
+desugar-jdk-libs-nio = { group = "com.android.tools", name = "desugar_jdk_libs_nio", version.ref = "desugarJdkLibs" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }

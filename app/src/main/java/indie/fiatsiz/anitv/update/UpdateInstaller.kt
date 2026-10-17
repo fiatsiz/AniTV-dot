@@ -3,8 +3,10 @@ package indie.fiatsiz.anitv.update
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ClipData
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
@@ -13,6 +15,9 @@ import androidx.lifecycle.LifecycleOwner
 class UpdateFileProvider : FileProvider()
 
 internal object UpdateInstaller {
+    fun canInstall(context: Context): Boolean =
+        Build.VERSION.SDK_INT < 26 || context.packageManager.canRequestPackageInstalls()
+
     fun install(activity: Activity, repository: UpdateRepository) {
         repository.forInstall { file ->
             activity.runOnUiThread {
@@ -20,7 +25,7 @@ internal object UpdateInstaller {
                     (activity as? LifecycleOwner)?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) != true
                 ) return@runOnUiThread
                 try {
-                    if (!activity.packageManager.canRequestPackageInstalls()) {
+                    if (!canInstall(activity)) {
                         repository.installStatus(InstallStatus.PERMISSION)
                         activity.startActivity(
                             Intent(

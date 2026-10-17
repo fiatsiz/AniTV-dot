@@ -96,7 +96,9 @@ internal fun CaptionSettings(
     onMode: (CaptionMode) -> Unit,
     onTranslationSettings: (TranslationSettings) -> Unit
 ) {
-    val displayLocale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    val displayLocale = androidx.core.os.ConfigurationCompat.getLocales(
+        androidx.compose.ui.platform.LocalConfiguration.current
+    )[0]!!
     val captionStyle = translation.captionStyle
     val translationReady =
         translation.provider != TranslationProvider.OFF && translation.apiKey.isNotBlank()

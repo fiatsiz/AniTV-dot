@@ -46,7 +46,7 @@ internal fun UpdateContent(
 ) {
     val busy = state.download in setOf(DownloadStatus.DOWNLOADING, DownloadStatus.VERIFYING)
     val configuration = LocalConfiguration.current
-    val locale = configuration.locales[0]
+    val locale = androidx.core.os.ConfigurationCompat.getLocales(configuration)[0]!!
     val dateFormat = remember(locale) {
         DateFormat.getDateTimeInstance(
             DateFormat.MEDIUM,

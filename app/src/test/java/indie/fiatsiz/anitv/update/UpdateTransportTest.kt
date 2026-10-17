@@ -20,8 +20,8 @@ class UpdateTransportTest {
         override fun usingProxy() = false
         override fun getResponseCode() = status
         override fun getInputStream() = body.inputStream()
-        override fun getHeaderField(name: String) = headers[name]
-        override fun getContentLengthLong() = length
+        override fun getHeaderField(name: String) =
+            headers[name] ?: if (name.equals("Content-Length", ignoreCase = true)) length.toString() else null
     }
 
     @Test
