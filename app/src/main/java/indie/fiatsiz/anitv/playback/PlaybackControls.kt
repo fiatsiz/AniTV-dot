@@ -23,8 +23,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -117,21 +119,35 @@ internal fun PlaybackControls(
     ) {
         Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                .background(if (visible) colors.surface.copy(alpha = 0.96f) else Color.Transparent)
-                .padding(horizontal = 32.dp, vertical = 16.dp)
+                .padding(bottom = if (visible) 0.dp else 16.dp)
         ) {
-            if (openingVisible) Button(
-                onClick = { onInteraction(); onSkipOpening() },
-                modifier = Modifier.align(Alignment.End).padding(bottom = 8.dp).heightIn(min = 48.dp)
-                    .focusRequester(openingFocus)
-                    .onFocusChanged {
-                        // Retain outgoing focus until the removal effect can restore the slider/video.
-                        if (it.isFocused || currentOpeningVisible) openingFocused = it.isFocused
-                        onOpeningFocusChanged(it.isFocused)
-                    },
-                scale = ButtonDefaults.scale(focusedScale = 1f)
-            ) { Text(stringResource(R.string.skip_opening)) }
-            if (visible) {
+            if (openingVisible) Row(
+                Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(
+                    onClick = { onInteraction(); onSkipOpening() },
+                    modifier = Modifier
+                        .focusRequester(openingFocus)
+                        .onFocusChanged {
+                            // Retain outgoing focus until the removal effect can restore the slider/video.
+                            if (it.isFocused || currentOpeningVisible) openingFocused = it.isFocused
+                            onOpeningFocusChanged(it.isFocused)
+                        },
+                    contentPadding = PaddingValues(0.dp),
+                    scale = ButtonDefaults.scale(focusedScale = 1f)
+                ) {
+                    Box(
+                        Modifier.heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) { Text(stringResource(R.string.skip_opening), textAlign = TextAlign.Center) }
+                }
+            }
+            if (visible) Column(
+                Modifier.fillMaxWidth().testTag("playback_controller")
+                    .background(colors.surface.copy(alpha = 0.96f))
+                    .padding(horizontal = 32.dp, vertical = 16.dp)
+            ) {
                 val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
                 val progressLabel = stringResource(R.string.playback_progress)
                 Canvas(

@@ -63,6 +63,30 @@ class PlaybackControlsInstrumentedTest {
     private fun openingButton() = compose.onNodeWithText(context.getString(R.string.skip_opening))
 
     @Test
+    fun openingPromptStaysOutsideControllerAndCentersItsLabel() {
+        content(opening = OpeningInterval(30_000, 40_000))
+        val panelBefore = compose.onNodeWithTag("playback_controller").fetchSemanticsNode().boundsInRoot
+        val sliderBefore = control(R.string.playback_progress).fetchSemanticsNode().boundsInRoot
+        openingButton().assertDoesNotExist()
+        control(R.string.playback_progress).performSemanticsAction(SemanticsActions.SetProgress) { it(0.55f) }
+        openingButton().assertIsDisplayed()
+        assertEquals(panelBefore, compose.onNodeWithTag("playback_controller").fetchSemanticsNode().boundsInRoot)
+        assertEquals(sliderBefore, control(R.string.playback_progress).fetchSemanticsNode().boundsInRoot)
+        key(Key.DirectionUp)
+        key(Key.DirectionUp)
+        openingButton().assertIsFocused()
+        val button = openingButton().fetchSemanticsNode().boundsInRoot
+        val label = compose.onNodeWithText(context.getString(R.string.skip_opening), useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(button.bottom < panelBefore.top)
+        assertEquals(button.center.x, label.center.x, 1f)
+        assertEquals(button.center.y, label.center.y, 1f)
+        key(Key.DirectionCenter)
+        openingButton().assertDoesNotExist()
+        assertEquals(panelBefore, compose.onNodeWithTag("playback_controller").fetchSemanticsNode().boundsInRoot)
+    }
+
+    @Test
     fun openingButtonNeedsSelectAndReturnsFocusAfterSkipping() {
         content(opening = OpeningInterval(10_000, 40_000))
         openingButton().assertIsDisplayed().assertIsNotFocused()
