@@ -68,7 +68,7 @@ class OpeningSkipInstrumentedTest {
         compose.runOnIdle { assertTrue(back) }
     }
 
-    @Test fun installedAndroidParserResolvesRomanizedTitleAndSkipsOnlyOnce() {
+    @Test fun installedAndroidParserResolvesRomanizedTitleAndOffersManualTarget() {
         val source = OpeningSkipSource("fixture") { url ->
             if (url.contains("myanimelist.net"))
                 """{"categories":[{"type":"anime","items":[{"id":60489,"type":"anime","name":"Takopii no Genzai"}]}]}"""
@@ -76,8 +76,8 @@ class OpeningSkipInstrumentedTest {
         }
         val interval = source.opening(Anime("329", "Takopi's Original Sin", japaneseTitle = "Takopii no Genzai"),
             Episode("99", "1", "Episode 1"), 1_400_000)
-        val skipper = OpeningSkipper()
-        assertEquals(112_500L, skipper.target(interval, 22_500, 1_400_000, true))
-        assertNull(skipper.target(interval, 22_500, 1_400_000, true))
+        assertEquals(112_500L, openingSkipTarget(interval, 22_500, 1_400_000, true))
+        assertEquals(112_500L, openingSkipTarget(interval, 22_500, 1_400_000, true))
+        assertNull(openingSkipTarget(interval, 112_500, 1_400_000, true))
     }
 }

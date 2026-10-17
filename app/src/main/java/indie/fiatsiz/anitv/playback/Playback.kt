@@ -96,7 +96,7 @@ internal fun Playback(
     var skipOpenings by remember { mutableStateOf(playbackPreferences.getBoolean("skip_openings", true)) }
     var openingStatus by remember(stream) { mutableStateOf(OpeningStatus.LOADING) }
     var openingInterval by remember(stream) { mutableStateOf<OpeningInterval?>(null) }
-    val openingSkipper = remember(anime.id, currentEpisode.id) { OpeningSkipper() }
+    var openingButtonFocused by remember(stream) { mutableStateOf(false) }
     var openingNotice by remember(stream) { mutableStateOf(false) }
     val hasCaptions = stream.subtitleUrl != null
     val translationReady =
@@ -258,15 +258,6 @@ internal fun Playback(
             delay(250)
             positionMs = player.currentPosition.coerceAtLeast(0)
             durationMs = player.duration.coerceAtLeast(0)
-            openingSkipper.target(
-                openingInterval, positionMs, durationMs,
-                skipOpenings && player.isPlaying && player.isCurrentMediaItemSeekable && !settingsOpen && !episodesOpen
-            )?.let { target ->
-                player.seekTo(target)
-                positionMs = target
-                progressCallback(target, durationMs)
-                openingNotice = true
-            }
         }
     }
     androidx.compose.runtime.LaunchedEffect(
@@ -357,10 +348,11 @@ internal fun Playback(
         controlsVisible,
         settingsOpen,
         episodesOpen,
+        openingButtonFocused,
         playing,
         interactionTick
     ) {
-        if (controlsVisible && playing && !episodesOpen && !settingsOpen) {
+        if (controlsVisible && playing && !episodesOpen && !settingsOpen && !openingButtonFocused) {
             delay(6_000)
             controlsVisible = false
         }
@@ -447,7 +439,24 @@ internal fun Playback(
             onPrevious = { previous?.let { selectEpisode(it) } },
             onNext = { next?.let { selectEpisode(it) } },
             onEpisodes = { episodesOpen = true },
-            onSettings = { settingsOpen = true }
+            onSettings = { settingsOpen = true },
+            openingAvailable = openingSkipTarget(
+                openingInterval, positionMs, durationMs,
+                skipOpenings && player.isCurrentMediaItemSeekable
+            ) != null,
+            onOpeningFocusChanged = { openingButtonFocused = it },
+            onSkipOpening = {
+                openingSkipTarget(
+                    openingInterval, player.currentPosition, player.duration,
+                    skipOpenings && player.isCurrentMediaItemSeekable && !settingsOpen && !episodesOpen
+                )?.let { target ->
+                    player.seekTo(target)
+                    positionMs = target
+                    progressCallback(target, player.duration.coerceAtLeast(0))
+                    openingNotice = true
+                    interactionTick++
+                }
+            }
         )
         if (settingsOpen) Dialog(
             onDismissRequest = { closeSettingsPage() },

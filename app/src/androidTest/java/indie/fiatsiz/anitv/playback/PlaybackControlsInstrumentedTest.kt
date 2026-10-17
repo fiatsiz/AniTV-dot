@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import indie.fiatsiz.anitv.R
+import indie.fiatsiz.anitv.source.OpeningInterval
 import indie.fiatsiz.anitv.ui.theme.AniTVTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -26,8 +27,10 @@ class PlaybackControlsInstrumentedTest {
     private var nextCount = 0
     private var episodesCount = 0
     private var settingsCount = 0
+    private var openingCount = 0
 
-    private fun content(previousEnabled: Boolean = true, nextEnabled: Boolean = true, seekable: Boolean = true) {
+    private fun content(previousEnabled: Boolean = true, nextEnabled: Boolean = true, seekable: Boolean = true,
+                        opening: OpeningInterval? = null) {
         compose.setContent {
             val video = remember { FocusRequester() }
             val play = remember { FocusRequester() }
@@ -42,7 +45,13 @@ class PlaybackControlsInstrumentedTest {
                     video, play, episodes, settings, { visible = it }, {}, { playing = !playing },
                     { position = seekPosition(position, it, 60_000); progress = position },
                     { position = it; progress = position },
-                    { previousCount++ }, { nextCount++ }, { episodesCount++ }, { settingsCount++ }
+                    { previousCount++ }, { nextCount++ }, { episodesCount++ }, { settingsCount++ },
+                    openingAvailable = openingSkipTarget(opening, progress, 60_000, seekable) != null,
+                    onSkipOpening = {
+                        openingSkipTarget(opening, progress, 60_000, seekable)?.let {
+                            position = it; progress = it; openingCount++
+                        }
+                    }
                 )
             }
             LaunchedEffect(visible) { if (visible) play.requestFocus() else video.requestFocus() }
@@ -51,6 +60,61 @@ class PlaybackControlsInstrumentedTest {
 
     private fun control(label: Int) = compose.onNodeWithContentDescription(context.getString(label))
     private fun key(key: Key) = compose.onRoot().performKeyInput { pressKey(key) }
+    private fun openingButton() = compose.onNodeWithText(context.getString(R.string.skip_opening))
+
+    @Test
+    fun openingButtonNeedsSelectAndReturnsFocusAfterSkipping() {
+        content(opening = OpeningInterval(10_000, 40_000))
+        openingButton().assertIsDisplayed().assertIsNotFocused()
+        control(R.string.pause).assertIsFocused()
+        compose.runOnIdle { assertEquals(20_000L, position); assertEquals(0, openingCount) }
+        key(Key.DirectionCenter)
+        control(R.string.play).assertIsFocused()
+        openingButton().assertIsDisplayed()
+        key(Key.DirectionUp)
+        key(Key.DirectionUp)
+        openingButton().assertIsFocused()
+        val button = openingButton().fetchSemanticsNode().boundsInRoot
+        val slider = control(R.string.playback_progress).fetchSemanticsNode().boundsInRoot
+        assertTrue(button.bottom <= slider.top)
+        assertEquals(slider.right, button.right, 1f)
+        key(Key.DirectionCenter)
+        compose.runOnIdle { assertEquals(40_000L, position); assertEquals(1, openingCount) }
+        openingButton().assertDoesNotExist()
+        control(R.string.playback_progress).assertIsFocused()
+        key(Key.DirectionLeft)
+        openingButton().assertIsDisplayed()
+        compose.runOnIdle { assertEquals(30_000L, position); assertEquals(1, openingCount) }
+    }
+
+    @Test
+    fun openingExpiryRestoresSliderFocusWithoutSeeking() {
+        content(opening = OpeningInterval(10_000, 40_000))
+        key(Key.DirectionUp)
+        key(Key.DirectionUp)
+        openingButton().assertIsFocused()
+        control(R.string.playback_progress).performSemanticsAction(SemanticsActions.SetProgress) { it(0.9f) }
+        openingButton().assertDoesNotExist()
+        control(R.string.playback_progress).assertIsFocused()
+        compose.runOnIdle { assertEquals(54_000L, position); assertEquals(0, openingCount) }
+    }
+
+    @Test
+    fun hiddenControllerKeepsOpeningPromptAndSupportsDpadSelect() {
+        content(opening = OpeningInterval(10_000, 40_000))
+        key(Key.DirectionUp)
+        key(Key.DirectionUp)
+        key(Key.DirectionUp)
+        control(R.string.playback_progress).assertDoesNotExist()
+        openingButton().assertIsDisplayed()
+        key(Key.DirectionUp)
+        openingButton().assertIsFocused()
+        key(Key.DirectionCenter)
+        openingButton().assertDoesNotExist()
+        compose.runOnIdle { assertEquals(40_000L, position); assertEquals(1, openingCount) }
+        key(Key.DirectionDown)
+        control(R.string.pause).assertIsFocused()
+    }
 
     @Test
     fun upFocusesSliderThenHidesAndDownReopens() {
@@ -101,7 +165,8 @@ class PlaybackControlsInstrumentedTest {
 
     @Test
     fun boundariesDisableEpisodeSkipAndUnknownMediaDoesNotSeek() {
-        content(previousEnabled = false, nextEnabled = false, seekable = false)
+        content(previousEnabled = false, nextEnabled = false, seekable = false, opening = OpeningInterval(10_000, 40_000))
+        openingButton().assertDoesNotExist()
         control(R.string.previous_episode).assertIsNotEnabled()
         control(R.string.next_episode).assertIsNotEnabled()
         key(Key.DirectionUp)

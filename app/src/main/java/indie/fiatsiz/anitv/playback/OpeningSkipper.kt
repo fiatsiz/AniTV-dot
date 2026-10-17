@@ -12,16 +12,11 @@ import indie.fiatsiz.anitv.source.OpeningInterval
 
 internal enum class OpeningStatus { LOADING, READY, NOT_FOUND, UNAVAILABLE }
 
-internal class OpeningSkipper {
-    private var skipped = false
-
-    fun target(interval: OpeningInterval?, positionMs: Long, durationMs: Long, active: Boolean): Long? {
-        if (!active || skipped || interval == null || interval.startMs < 0 ||
-            interval.endMs <= interval.startMs || interval.endMs >= durationMs ||
-            positionMs !in interval.startMs until interval.endMs) return null
-        skipped = true
-        return interval.endMs
-    }
+internal fun openingSkipTarget(interval: OpeningInterval?, positionMs: Long, durationMs: Long, active: Boolean): Long? {
+    if (!active || interval == null || interval.startMs < 0 ||
+        interval.endMs <= interval.startMs || interval.endMs >= durationMs ||
+        positionMs !in interval.startMs until interval.endMs) return null
+    return interval.endMs
 }
 
 @Composable
