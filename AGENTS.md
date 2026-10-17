@@ -48,5 +48,6 @@ AniTV is an Android TV app for searching anime on `https://hianime.at`, selectin
 3. Add focused tests for local library/progress rules and any nontrivial parsing change.
 4. Build a debug APK. On the connected TV, test D-pad navigation, full-screen playback, video, audio, subtitles, seek, and Back where possible.
 5. Update `docs/STATUS.md` and `docs/ARCHITECTURE.md` after adding/fixing/changing anything to match verified results. Report the APK path, tested and untested steps, and source breakage.
+6. When user asks to release a new version, update `docs/RELEASE.md` and `docs/RELEASE-VERIFICATION.md` with the new version number, build instructions, and verification results. Build a release APK signed with the existing key. Upload the APK to GitHub releases and provide the user with the download link.
 
 Content rights belong to their respective owners. Personal installation does not grant redistribution rights.

@@ -27,8 +27,9 @@ Proje geliştirme aşamasında, ancak aşağıdaki özellikler kullanılabilir d
 
 ## Geliştirme Durumu
 
-- Minimum SDK versiyonu: 34 (Android 14)
-- Hedef SDK versiyonu: 37 (Android 17)
+- Minimum SDK versiyonu: 23 (Android 6)
+- Hedef SDK versiyonu: 34 (Android 14)
+- Derleme SDK versiyonu: 36 (Android 16)
 
 ## Kurulum ve sürümler
 
@@ -40,14 +41,16 @@ Sürümün `SHA256SUMS` dosyasını ve imza sertifikasını kontrol edin, ardın
 
 Sürüm, eşleşen GPL-3.0 kaynak kodunu, [lisansı](LICENSE), `RELEASE-INFO.txt` ve `SHA256SUMS` dosyalarını içerir. İmzalar ve test edilen/edilmeyen davranışlar için [doğrulama raporuna](docs/RELEASE-VERIFICATION.md), yerel derleme için [sürüm kılavuzuna](docs/RELEASE.md) bakın.
 
-## İlham Kaynağı
+## Teşekkürler
 
-Bu proje, anime izlemek için kullanılan bir komut satırı aracı olan [ani-cli](https://github.com/pystardust/ani-cli) projesinden ilham alınarak oluşturuldu. Android TV kullanıcıları için (özellikle de kendim için) benzer bir deneyim yaratmak istedim.
+- [ani-cli](https://github.com/pystardust/ani-cli) - Bu projeyi oluşturmamda bana ilham verdiği ve içerik toplama konusunda kod referansları sağladığı için.
+- [ani-skip](https://github.com/synacktraa/ani-skip) - Anime açılış sahnelerini atlama konusunda kod referansı sağladığı için.
+- [aniskip](https://github.com/aniskip) (ve [API'si](https://github.com/aniskip/aniskip-api)) - Anime açılış sahnelerindeki zaman damgalarını takip etmemize yardımcı olduğu için.
 
 ## Geliştirmede Kullanılan Yapay Zeka Araçları
 
 <details>
-  <summary>AI Kullanımı</summary>
+  <summary>Ayrıntılar</summary>
 
   Bu proje benim bir hobi projem olduğu için, geliştirme sürecinde bana yardımcı olması amacıyla yapay zeka araçları kullanıyorum (zaten bu projeyi başlangıçta sadece anime izlemek amacıyla kendi kullanımım için yaptım). Ancak uygulamanın testlerini Android TV’mde yapıyorum ve kodu depoya göndermeden önce son bir gözden geçirme yapıyorum. Dolayısıyla, herhangi bir hata bulursanız lütfen bunu GitHub "Issues” bölümünde bildirin.
 </details>

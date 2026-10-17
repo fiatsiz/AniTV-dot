@@ -28,8 +28,9 @@ The project is still in development, but the following features are already impl
 
 ## Current Status of Development
 
-- Minimum SDK version: 34 (Android 14)
-- Target SDK version: 37 (Android 17)
+- Minimum SDK version: 23 (Android 6)
+- Target SDK version: 34 (Android 14)
+- Compile SDK version: 36 (Android 16)
 
 ## Installation and releases
 
@@ -41,14 +42,16 @@ From 1.1.0 onward, AniTV checks for newer stable GitHub releases on launch/resum
 
 The release includes matching GPL-3.0 source, the [license](LICENSE), `RELEASE-INFO.txt`, and `SHA256SUMS`. See the [verification report](docs/RELEASE-VERIFICATION.md) for fingerprints and tested/untested behavior, or the [release guide](docs/RELEASE.md) to build locally.
 
-## Inspiration
+## Acknowledgements
 
-This project was inspired by the [ani-cli](https://github.com/pystardust/ani-cli) project, which is a command-line tool for watching animes. I wanted to create a similar experience for Android TV users (especially for myself).
+- [ani-cli](https://github.com/pystardust/ani-cli) - For inspiration to create this project and code references to scrape content.
+- [ani-skip](https://github.com/synacktraa/ani-skip) - For anime opening skipping code reference.
+- [aniskip](https://github.com/aniskip) (and their [API](https://github.com/aniskip/aniskip-api)) - For timestamp tracking for anime openings.
 
 ## AI Tools in Development
 
 <details>
-  <summary>AI Usage</summary>
+  <summary>Details</summary>
 
   This project is a hobby project of mine, so I use AI tools to help me with the development (in the first place I created this project only for my use to watch animes). But I do the tests of the application with my Android TV, and I do the final review of the code before pushing it to the repository. So, if you find any bug, please report it in the issues section.
 </details>
