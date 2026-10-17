@@ -177,7 +177,6 @@
     <string name="update_install">Install</string>
     <string name="update_retry">Retry download</string>
     <string name="update_download">Update — download APK</string>
-    <string name="update_schedule">Checks run on launch or resume once every 24 hours. Downloads start only when selected and stop when AniTV enters the background. Android requires installation confirmation.</string>
     <string name="update_notes">Release notes</string>
     <string name="update_hide_notes">Hide release notes</string>
     <string name="update_empty_notes">No release notes were supplied.</string>

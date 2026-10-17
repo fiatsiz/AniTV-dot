@@ -167,11 +167,6 @@ internal fun UpdateContent(
                 )
             }
         }
-        Text(
-            stringResource(R.string.update_schedule),
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
         state.release?.let { release ->
             var expanded by remember(release.version) { mutableStateOf(false) }
             Button(
