@@ -1,6 +1,15 @@
 # AniTV status
 
-As of 2026-10-17.
+As of 2026-10-18.
+
+## Skip Opening on API 23 — 2026-10-18
+
+- Reproduced the missing button on Overgeared Episode 2 in the Android TV API 23 emulator. Playback Settings reported an unavailable lookup. MAL returned HTTP 200, but AniSkip failed with `SSLHandshakeException` / `SSLProtocolException` and `TLSV1_ALERT_PROTOCOL_VERSION`. A direct TLS 1.2 probe was rejected; TLS 1.3 succeeded. A newer socket provider alone was insufficient because Android 6's URLConnection transport still restricted the connection protocol.
+- Opening lookup now uses one application-scoped OkHttp 5.4.0 client with Conscrypt 2.7.0 TLS on API 23–28. API 29+ uses native TLS. Existing platform certificate validation, hostname checks, ISRG Root X1 compatibility, five-second connect/read limits, rejected redirects, bounded 256 KiB responses, and exact title/timing rules remain in place. No global cryptographic provider is registered; Keystore and other URLConnection-based flows retain their prior behavior. OkHttp 5.5.0 requires compile SDK 37, so the verified SDK-36-compatible 5.4.0 is used. SDK levels remain 23/34/36, and no playback/button/focus code changes were needed.
+- Debug assembly, unit tests, Android test assembly, and debug lint passed with one Gradle worker and a 768 MiB heap. **85 unit tests passed; one existing publication-only test was skipped.** Debug lint: zero errors, 24 warnings, five hints. The permanent regression checks TLS 1.3 in the actual lookup client's connection policy/socket and preserves its timeout/redirect/retry policy. The trust test also verifies that the no-extra-root path retains platform CAs. Temporary live diagnostic code was removed.
+- **19 Android tests passed on API 23**, including opening settings/parser, actual client TLS capability, SDK/signers, signed rules, captions, and controller/focus/seek cases. **Three focused Android tests passed on API 34**, covering native client TLS capability and the opening settings/parser. All device control was limited to verified emulators (`ro.kernel.qemu=1`), with only one emulator running at a time.
+- A real API 23 lookup returned Overgeared Episode 2's interval **74.292–164.292 seconds** for the 23:40 stream. The actual button appeared at the saved 1:53 position. D-pad Up focused it; Select moved the timer to 2:44, showed the AniSkip notice, removed the prompt, restored slider focus, and preserved paused playback. Video remained available; Back was exercised before restoring the original library preferences byte-for-byte. No HiAnime selector, endpoint, parser, or saved-data format changed; no source breakage remained in the exercised flow.
+- Debug APK: `app/build/outputs/apk/debug/app-debug.apk`; SHA-256: `b7fe1199de18e28cd9fc4f2a0787338e548c5e846cac1f8c2c27387281a97750`. SDK tools confirmed 23/34/36 and valid debug v1/v2 signatures. Physical TVs, ARM runtime behavior, API 24–28 runtime behavior, audible audio, DUB timing, real translation requests, and full updater installation were not tested. The API 34 run was a focused automated check, not a repeated full live playback flow. No UI layout, text, icons, SDKs, app version, release artifact, or remote publication changed; the agent-started emulators were closed after verification.
 
 ## Android 6 minimum and SDK compatibility — 2026-10-17
 

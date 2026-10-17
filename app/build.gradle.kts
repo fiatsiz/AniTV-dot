@@ -68,6 +68,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.conscrypt.android)
+    implementation(libs.okhttp)
     coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

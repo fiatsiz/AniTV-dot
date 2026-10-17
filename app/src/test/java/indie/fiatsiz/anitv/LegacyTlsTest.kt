@@ -26,6 +26,7 @@ class LegacyTlsTest {
         val systemFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         systemFactory.init(null as KeyStore?)
         val system = systemFactory.trustManagers.filterIsInstance<X509TrustManager>().single()
+        assertEquals(system.acceptedIssuers.toSet(), legacyTrustManager(null).acceptedIssuers.toSet())
         val combined = legacyTrustManager(root)
         assertTrue(combined.acceptedIssuers.toSet().containsAll(system.acceptedIssuers.toSet()))
         assertTrue(root in combined.acceptedIssuers)

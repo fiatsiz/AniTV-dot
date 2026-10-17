@@ -1,9 +1,9 @@
 package indie.fiatsiz.anitv.source
 
 import org.json.JSONObject
+import indie.fiatsiz.anitv.AniTVApplication
+import okhttp3.Request
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URI
 import java.net.URLEncoder
 import kotlin.math.abs
 import kotlin.math.roundToLong
@@ -32,22 +32,15 @@ class OpeningSkipSource(
 
     private fun get(url: String): String {
         request?.let { return it(url) }
-        val connection = (URI(url).toURL().openConnection() as HttpURLConnection).apply {
-            connectTimeout = 5_000
-            readTimeout = 5_000
-            instanceFollowRedirects = false
-            setRequestProperty("User-Agent", userAgent)
-            setRequestProperty("Accept", "application/json")
-        }
-        try {
-            if (connection.responseCode !in 200..299) throw IOException("Opening lookup unavailable")
-            return connection.inputStream.use {
+        val request = Request.Builder().url(url)
+            .header("User-Agent", userAgent).header("Accept", "application/json").build()
+        AniTVApplication.openingHttpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("Opening lookup unavailable")
+            return response.body.byteStream().use {
                 val bytes = readLimited(it, 256 * 1024 + 1)
                 if (bytes.size > 256 * 1024) throw IOException("Opening response too large")
                 bytes.toString(Charsets.UTF_8)
             }
-        } finally {
-            connection.disconnect()
         }
     }
 
