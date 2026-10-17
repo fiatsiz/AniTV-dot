@@ -16,9 +16,15 @@ Watch animes with your Android TV with **AniTV-dot**.
 
 The project is still in development, but the following features are already implemented:
 
-- Searching, favoriting, mark as watched anime titles.
+- Searching, favoriting, marking as watched anime titles.
 - Continue watching animes from the last watched episode.
-- Caption settings such as closing/opening captions, changing style of captions, and translating captions to other languages via Google Translate and DeepL (API keys required) (DeepL API tested and works, Google Translate API NOT TESTED).
+- Caption settings
+  - Enabling/Disabling captions
+  - Changing style of captions
+  - Translating captions to other languages via Google Translate and DeepL (API keys required) (DeepL API tested and works, Google Translate API NOT TESTED).
+- Changing the quality of the video stream.
+- Sub/Dub (if available) selection.
+
 
 ## Current Status of Development
 

@@ -18,7 +18,12 @@ Proje geliştirme aşamasında, ancak aşağıdaki özellikler kullanılabilir d
 
 - Animeleri arama, favorilere ekleme ve izlendi olarak işaretleme.
 - En son izlenen anime ve bölümlerini devam ettirme.
-- Altyazıları açma/kapama, altyazı stilini değiştirme ve Google Translate ile DeepL aracılığıyla altyazıları diğer dillere çevirme ayarları (API anahtarları gerekli) (DeepL API test edildi ve çalışıyor; Google Translate API TEST EDİLMEDİ).
+- Altyazı ayarları
+  - Altyazıları açma/kapatma
+  - Altyazı stillerini değiştirme
+  - Altyazıları diğer dillere çevirme (Google Translate ve DeepL aracılığıyla) (API anahtarları gerekli) (DeepL API test edildi ve çalışıyor; Google Translate API TEST EDİLMEDİ).
+- Video akışının kalitesini değiştirme.
+- Altyazı/Dublaj (eğer mevcutsa) seçimleri.
 
 ## Geliştirme Durumu
 
