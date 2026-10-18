@@ -1,5 +1,15 @@
 # Local APK releases
 
+## 1.2.0 preparation — 2026-10-18 (not published)
+
+The next release is **1.2.0 / versionCode 3**, package `indie.fiatsiz.anitv`, with minimum/target/compile SDK **23/34/36**. It includes manual Skip Opening with legacy TLS support, revised TV playback controls, the caption-state toggle, and manual signed-rules refresh. Latest remains 1.1.0 until publication completes.
+
+The owner rebuilt `app/build/outputs/apk/release/app-release.apk` with Android Studio after the version bump. The supplied **1.2.0 / code 3** APK verifies with the permanent owner certificate, v1/v2 signatures, and SDK levels 23/34/36. SHA-256: `cc2f4b2619e59d156c59fa083dd613597b5169358fc1d02cad00af051593495a`. No replacement key or agent-signed rebuild was used. To reproduce, use Android Studio's Generate Signed APK workflow with the existing key, or supply the four external signing variables below and run the documented Gradle commands.
+
+GitHub CLI authentication needs renewal with an account that can publish to `fiatsiz/AniTV-dot` (`gh auth login --hostname github.com`). Do not put credentials in chat or Git. Release assets are `AniTV-1.2.0.apk`, matching source, `LICENSE`, `RELEASE-INFO.txt`, and `SHA256SUMS`. Publish stable tag `v1.2.0` after authentication, then verify downloaded assets and the public latest-release contract. No tag or release has been created for 1.2.0. See [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md).
+
+## Published 1.1.0
+
 The published owner-signed [AniTV 1.1.0 release](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.1.0) is **1.1.0 / versionCode 2**, application ID `indie.fiatsiz.anitv`, Android 14/API 34 minimum. It adds a stable GitHub release updater. The published [1.0.0 release](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0) has no APK updater; install the first updater-enabled, owner-signed APK manually. The owner authorized publication on 2026-10-14. It is public Latest; APK, matching formatted source, GPL-3.0 license, provenance, and checksums were downloaded and verified after upload.
 
 ## Versioning
@@ -94,9 +104,9 @@ Do these manually on the Beko TV; agent automation must control only an emulator
 
 `UpdateFixtureActivity` and its injected local transport exist only in `src/debug`. Release builds contain neither that Activity nor its manifest entry. Use a fresh emulator and verify `adb -s <serial> shell getprop ro.kernel.qemu` prints `1` before any device control. Do not publish synthetic releases or use an owner key for synthetic APKs.
 
-1. Build/install the ordinary debug APK (1.1.0 / code 2) on the emulator.
-2. Create a detached temporary worktree from this milestone. In that worktree only, change versionName to `1.2.0` and versionCode to `3`, copy the machine’s ignored `local.properties`, and run `:app:assembleDebug --offline`. It uses the same development debug certificate; never change the owner release signing configuration.
-3. Copy the candidate into the installed app’s private fixture directory. Generate a JSON response with `tag_name: "v1.2.0"`, `draft: false`, `prerelease: false`, plain `body`, and an `assets` array containing the exact name, `state: "uploaded"`, actual byte size, actual `sha256:` digest, and URL `https://github.com/fiatsiz/AniTV-dot/releases/download/v1.2.0/AniTV-1.2.0.apk`. This URL is fixture metadata only; the debug transport reads local bytes.
+1. Build/install the ordinary debug APK (1.2.0 / code 3) on the emulator.
+2. Create a detached temporary worktree from this milestone. In that worktree only, change versionName to `1.3.0` and versionCode to `4`, copy the machine’s ignored `local.properties`, and run `:app:assembleDebug --offline`. It uses the same development debug certificate; never change the owner release signing configuration.
+3. Copy the candidate into the installed app’s private fixture directory. Generate a JSON response with `tag_name: "v1.3.0"`, `draft: false`, `prerelease: false`, plain `body`, and an `assets` array containing the exact name, `state: "uploaded"`, actual byte size, actual `sha256:` digest, and URL `https://github.com/fiatsiz/AniTV-dot/releases/download/v1.3.0/AniTV-1.3.0.apk`. This URL is fixture metadata only; the debug transport reads local bytes.
 
 ```bash
 adb -s <serial> shell run-as indie.fiatsiz.anitv mkdir -p files/updater-fixture

@@ -18,7 +18,7 @@ class UpdateInstrumentedTest {
         val fixtures = File(context.filesDir, "updater-fixture")
         val candidate = File(fixtures, "candidate.apk")
         assertTrue(
-            "Prepare the debug-only v1.2.0/versionCode 3 fixture first; see docs/RELEASE.md",
+            "Prepare the debug-only v1.3.0/versionCode 4 fixture first; see docs/RELEASE.md",
             candidate.isFile
         )
         val release = Release.parse(File(fixtures, "release.json").readBytes())!!
@@ -39,7 +39,7 @@ class UpdateInstrumentedTest {
         assertEquals(UpdateProblem.VERSION, assertThrows(UpdateException::class.java) {
             inspector.inspect(
                 candidate,
-                release.copy(version = StableVersion.parse("1.3.0")!!),
+                release.copy(version = StableVersion.parse("1.3.1")!!),
                 installed
             )
         }.problem)

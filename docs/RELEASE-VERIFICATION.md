@@ -1,5 +1,31 @@
 # AniTV release verification
 
+## Owner-signed 1.2.0 preparation — 2026-10-18 (not published)
+
+The owner requested a new GitHub release and supplied a signed APK. Its initial packaged identity was still 1.1.0 / code 2, already published. Source was advanced to 1.2.0 / code 3, and the owner rebuilt with the existing key in Android Studio. The rebuilt artifact is accepted for staging unchanged; publication remains pending GitHub authentication (authenticated `gh api user` returned HTTP 401). Latest still reports v1.1.0. No 1.2.0 tag, release, or push has been made.
+
+| Item | Verified value |
+| --- | --- |
+| Planned release asset | `AniTV-1.2.0.apk` |
+| Owner-built APK | `app/build/outputs/apk/release/app-release.apk` |
+| Size | 26,835,296 bytes |
+| APK SHA-256 | `cc2f4b2619e59d156c59fa083dd613597b5169358fc1d02cad00af051593495a` |
+| Owner certificate SHA-256 | `9a65e9f457a546bd65d51146f1e4ab611f44c57be68e089c000d4431fb805854` |
+| Signature | APK v1/v2, RSA-3072, CN `fiatsiz`; same certificate as 1.0.0/1.1.0 |
+| Package/version | `indie.fiatsiz.anitv`, versionName `1.2.0`, versionCode `3` |
+| Minimum / target / compile SDK | 23 / 34 / 36 |
+| Debuggable / testOnly | Neither enabled |
+| Embedded Git base | `a0718b34ca07da01f03ba38fe032a32642461a4e` |
+| Bundled rules / public key | Match tracked source byte for byte |
+| Debug fixture | No `UpdateFixtureActivity` in manifest or DEX |
+| Native ABIs | arm64-v8a, armeabi-v7a, x86, x86_64 |
+
+The corresponding source includes the version bump to 1.2.0 / code 3, emulator fixture maintenance, and release documentation after the embedded base. No application behavior changed during preparation. SDK `aapt` inspected packaged identity/SDK/manifest; `apksigner` verified signatures and the permanent certificate. Rebuild instructions are in RELEASE.md; no signing password or private key is part of the source assets.
+
+`./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintRelease --offline --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx768m` passed: 85 tests passed, one existing publication-only test skipped; release lint reported zero errors, 17 warnings, five hints. The debug APK contains 1.2.0 / code 3, SDKs 23/34/36, SHA-256 `bfc49e4f2ff0219e1eb39b70b8978aa2883e6c554e4fde6cd0713836cb934e4c`.
+
+No adb devices were connected. Signed-build installation, D-pad navigation, video, audible audio, subtitles, seek, Back, full updater installation, physical-TV behavior, and live source availability were not retested. Earlier feature debug/emulator checks do not establish these signed-build results. No physical device was controlled. Release upload/download/checksum/latest-contract verification is still pending.
+
 ## Owner-signed 1.1.0 — 2026-10-14
 
 The owner supplied the signed APK and requested code/release publication. The APK was copied unchanged into release staging; no replacement signing key or rebuild was used. Published as [public Latest](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.1.0) at 2026-10-14 18:15:35 UTC, with draft/prerelease disabled. Tag `v1.1.0` points to `36c28f84ae57e61678e43730404a4b17ef6b52c2`; its changes after the source archive commit are verification documentation only.

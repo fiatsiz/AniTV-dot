@@ -2,6 +2,14 @@
 
 As of 2026-10-18.
 
+## 1.2.0 release preparation — 2026-10-18 (not published)
+
+- Set versionName/versionCode to **1.2.0 / 3** for the new features since published 1.1.0. SDK levels remain **23/34/36**. Updated the emulator-only updater fixture instructions to use 1.3.0 / code 4 and its deliberate mismatch to use 1.3.1. No app behavior, ownership, or persisted format changed.
+- The initially supplied signed APK retained 1.1.0 / code 2 and was unsuitable as a new stable release. After the version bump, the owner rebuilt `app/build/outputs/apk/release/app-release.apk`. The rebuilt 1.2.0 / code 3 APK is 26,835,296 bytes, SHA-256 `cc2f4b2619e59d156c59fa083dd613597b5169358fc1d02cad00af051593495a`, with valid v1/v2 signatures and the same permanent owner certificate as prior releases. It is not debuggable/testOnly; bundled signed rules/public key match source, and the debug fixture is absent. Embedded provenance is base commit `a0718b34ca07da01f03ba38fe032a32642461a4e`; the corresponding release source also includes this version bump and fixture maintenance.
+- `./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintRelease --offline --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx768m` passed: **85 unit tests passed, one existing publication-only test skipped**; release lint: zero errors, 17 warnings, five hints. Debug APK: `app/build/outputs/apk/debug/app-debug.apk`, SHA-256 `bfc49e4f2ff0219e1eb39b70b8978aa2883e6c554e4fde6cd0713836cb934e4c`, packaged version 1.2.0 / code 3 and SDK levels 23/34/36.
+- No adb devices were connected. No installation, D-pad, playback, audio, subtitles, seek, Back, updater installation, physical-TV, or live source checks were repeated for the supplied signed artifact. Earlier debug/emulator results remain separate evidence; current source availability was not reassessed.
+- Publication is pending GitHub authentication: authenticated `gh api user` returned HTTP 401. Public release metadata still identifies stable Latest as v1.1.0. No 1.2.0 tag, release, asset upload, or push has been made. The unrelated untracked `codex` file remains excluded. See RELEASE.md and RELEASE-VERIFICATION.md for release preparation and proof.
+
 ## Skip Opening on API 23 — 2026-10-18
 
 - Reproduced the missing button on Overgeared Episode 2 in the Android TV API 23 emulator. Playback Settings reported an unavailable lookup. MAL returned HTTP 200, but AniSkip failed with `SSLHandshakeException` / `SSLProtocolException` and `TLSV1_ALERT_PROTOCOL_VERSION`. A direct TLS 1.2 probe was rejected; TLS 1.3 succeeded. A newer socket provider alone was insufficient because Android 6's URLConnection transport still restricted the connection protocol.
