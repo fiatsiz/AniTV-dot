@@ -20,6 +20,7 @@ AniTV is an Android TV app for searching anime on `https://hianime.at`, selectin
 - Use "Conventional Commits" for git commit messages such as "feat: ...", "fix: ...", "chore: ..."
 - Do not use `git reset --hard`, force pushes, or history rewrites. Do not create a remote or push unless the user asks.
 - Use **Material Icons** for the icons in the app. Do not use other icon sets or custom icons unless the user asks.
+- When releasing a new version to GitHub Releases, in the release note, only include what's added new and the checksums of the release APK files.
 
 ## Current baseline
 

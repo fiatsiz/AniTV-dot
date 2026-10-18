@@ -33,13 +33,11 @@ Proje geliştirme aşamasında, ancak aşağıdaki özellikler kullanılabilir d
 
 ## Kurulum ve sürümler
 
-[AniTV 1.1.0 sürümünden](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.1.0) `AniTV-1.1.0.apk` dosyasını indirin. Android 14 veya daha yeni Android TV / Google TV gereklidir. VersionName `1.1.0`, Android versionCode `2` değerindedir.
+[AniTV 1.2.0 sürümünden](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.2.0) `AniTV-1.2.0.apk` dosyasını indirin. Android 14 veya daha yeni Android TV / Google TV gereklidir. VersionName `1.2.0`, Android versionCode `3` değerindedir.
 
-Sürümün `SHA256SUMS` dosyasını ve imza sertifikasını kontrol edin, ardından APK'yı TV'ye kopyalayıp seçtiğiniz APK yükleyicisiyle kurun. 1.0.0'da APK güncelleyici bulunmadığından 1.1.0'ı elle kurun. İki sürüm de aynı uygulama sahibi sertifikasıyla imzalanmıştır; uygulamayı kaldırmadan yerinde güncelleme yapılabilir. Farklı sertifikayla imzalanmış debug kurulumu genellikle yerinde güncellenemez; kaldırmak favorileri ve ilerlemeyi silebilir. İmza hatasını aşmak için verileri temizlemeyin veya uygulamayı kaldırmayın.
+Sürümün `SHA256SUMS` dosyasını ve imza sertifikasını kontrol edin, ardından APK'yı TV'ye kopyalayıp seçtiğiniz APK yükleyicisiyle kurun.
 
 1.1.0'dan itibaren AniTV, son denemeden bu yana 24 saat geçtiğinde açılışta veya uygulamaya dönüşte GitHub'daki daha yeni kararlı sürümleri denetler. Ayarlar'dan elle de denetleyebilirsiniz. Ana ekrandaki bildirim, Ayarlar'daki güncelleme ayrıntılarını açar. İndirme yalnızca Güncelle'yi seçtiğinizde başlar; ilerleme gösterilir ve iptal edilebilir. AniTV arka plana geçtiğinde tamamlanmamış indirmeler durdurulur. Kurulum için Android'in uygulama yükleme izni ve onayı gerekir. AniTV kapalıyken denetim yapmaz veya sessiz kurulum gerçekleştirmez. İmzalı HiAnime ayrıştırma kuralları, herkese açık [rules dalından](https://github.com/fiatsiz/AniTV-dot/tree/rules) ayrı olarak güncellenmeye devam eder.
-
-Sürüm, eşleşen GPL-3.0 kaynak kodunu, [lisansı](LICENSE), `RELEASE-INFO.txt` ve `SHA256SUMS` dosyalarını içerir. İmzalar ve test edilen/edilmeyen davranışlar için [doğrulama raporuna](docs/RELEASE-VERIFICATION.md), yerel derleme için [sürüm kılavuzuna](docs/RELEASE.md) bakın.
 
 ## Teşekkürler
 
