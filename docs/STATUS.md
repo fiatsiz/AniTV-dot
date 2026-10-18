@@ -2,13 +2,14 @@
 
 As of 2026-10-18.
 
-## 1.2.0 release preparation — 2026-10-18 (not published)
+## Published 1.2.0 — 2026-10-18
 
 - Set versionName/versionCode to **1.2.0 / 3** for the new features since published 1.1.0. SDK levels remain **23/34/36**. Updated the emulator-only updater fixture instructions to use 1.3.0 / code 4 and its deliberate mismatch to use 1.3.1. No app behavior, ownership, or persisted format changed.
 - The initially supplied signed APK retained 1.1.0 / code 2 and was unsuitable as a new stable release. After the version bump, the owner rebuilt `app/build/outputs/apk/release/app-release.apk`. The rebuilt 1.2.0 / code 3 APK is 26,835,296 bytes, SHA-256 `cc2f4b2619e59d156c59fa083dd613597b5169358fc1d02cad00af051593495a`, with valid v1/v2 signatures and the same permanent owner certificate as prior releases. It is not debuggable/testOnly; bundled signed rules/public key match source, and the debug fixture is absent. Embedded provenance is base commit `a0718b34ca07da01f03ba38fe032a32642461a4e`; the corresponding release source also includes this version bump and fixture maintenance.
 - `./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintRelease --offline --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx768m` passed: **85 unit tests passed, one existing publication-only test skipped**; release lint: zero errors, 17 warnings, five hints. Debug APK: `app/build/outputs/apk/debug/app-debug.apk`, SHA-256 `bfc49e4f2ff0219e1eb39b70b8978aa2883e6c554e4fde6cd0713836cb934e4c`, packaged version 1.2.0 / code 3 and SDK levels 23/34/36.
 - No adb devices were connected. No installation, D-pad, playback, audio, subtitles, seek, Back, updater installation, physical-TV, or live source checks were repeated for the supplied signed artifact. Earlier debug/emulator results remain separate evidence; current source availability was not reassessed.
-- Publication is pending GitHub authentication: authenticated `gh api user` returned HTTP 401. Public release metadata still identifies stable Latest as v1.1.0. No 1.2.0 tag, release, asset upload, or push has been made. The unrelated untracked `codex` file remains excluded. See RELEASE.md and RELEASE-VERIFICATION.md for release preparation and proof.
+- After the owner renewed GitHub authentication, published [v1.2.0](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.2.0) as public stable Latest at **2026-10-18 14:04:10 UTC**. Tag/source archive commit: `c07d85336ba0fbc8e88c9098e2cce9980fe7131a`. The five uploaded assets match local sizes and SHA-256 digests; unauthenticated latest-release metadata satisfies the updater contract. `master` and the new tag were pushed without rewriting history; the rules branch is unchanged. The unrelated untracked `codex` file remains excluded. See RELEASE.md and RELEASE-VERIFICATION.md for release proof.
+- Post-publication checks downloaded the source archive, license, provenance, and checksums byte-for-byte. Public APK HTTP 206 access and its first 1,024 bytes were verified. A full slow APK re-download was stopped; its downloaded checksum was not recomputed. GitHub’s full uploaded APK SHA-256 matches the owner artifact. Later documentation commits leave the immutable tag and release assets unchanged.
 
 ## Skip Opening on API 23 — 2026-10-18
 

@@ -1,12 +1,12 @@
 # AniTV release verification
 
-## Owner-signed 1.2.0 preparation — 2026-10-18 (not published)
+## Owner-signed 1.2.0 — 2026-10-18
 
-The owner requested a new GitHub release and supplied a signed APK. Its initial packaged identity was still 1.1.0 / code 2, already published. Source was advanced to 1.2.0 / code 3, and the owner rebuilt with the existing key in Android Studio. The rebuilt artifact is accepted for staging unchanged; publication remains pending GitHub authentication (authenticated `gh api user` returned HTTP 401). Latest still reports v1.1.0. No 1.2.0 tag, release, or push has been made.
+The owner requested a new GitHub release and supplied a signed APK. Its initial packaged identity was still 1.1.0 / code 2, already published. Source was advanced to 1.2.0 / code 3, and the owner rebuilt with the existing key in Android Studio. The rebuilt artifact was staged and published unchanged after the owner renewed GitHub authentication. [AniTV 1.2.0](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.2.0) is public stable Latest, published at **2026-10-18 14:04:10 UTC**, with draft/prerelease disabled. Tag and source archive commit: `c07d85336ba0fbc8e88c9098e2cce9980fe7131a`. Application source and tag were pushed; the independently versioned rules branch remains unchanged.
 
 | Item | Verified value |
 | --- | --- |
-| Planned release asset | `AniTV-1.2.0.apk` |
+| Published release asset | `AniTV-1.2.0.apk` |
 | Owner-built APK | `app/build/outputs/apk/release/app-release.apk` |
 | Size | 26,835,296 bytes |
 | APK SHA-256 | `cc2f4b2619e59d156c59fa083dd613597b5169358fc1d02cad00af051593495a` |
@@ -24,7 +24,13 @@ The corresponding source includes the version bump to 1.2.0 / code 3, emulator f
 
 `./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintRelease --offline --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx768m` passed: 85 tests passed, one existing publication-only test skipped; release lint reported zero errors, 17 warnings, five hints. The debug APK contains 1.2.0 / code 3, SDKs 23/34/36, SHA-256 `bfc49e4f2ff0219e1eb39b70b8978aa2883e6c554e4fde6cd0713836cb934e4c`.
 
-No adb devices were connected. Signed-build installation, D-pad navigation, video, audible audio, subtitles, seek, Back, full updater installation, physical-TV behavior, and live source availability were not retested. Earlier feature debug/emulator checks do not establish these signed-build results. No physical device was controlled. Release upload/download/checksum/latest-contract verification is still pending.
+No adb devices were connected. Signed-build installation, D-pad navigation, video, audible audio, subtitles, seek, Back, full updater installation, physical-TV behavior, and live source availability were not retested. Earlier feature debug/emulator checks do not establish these signed-build results. No physical device was controlled. GitHub upload size/digest checks and the public latest-release contract passed. Signed-build runtime limits remain unchanged.
+
+### 1.2.0 publication verification
+
+All five uploaded assets have the exact local byte counts and GitHub `sha256:` digests. The source archive, LICENSE, RELEASE-INFO.txt, and SHA256SUMS were downloaded and matched staging byte for byte. The unauthenticated latest-release endpoint returned stable `v1.2.0`, the exact uploaded APK name, 26,835,296-byte size, browser URL, and expected full-file SHA-256 digest. An unauthenticated public APK range request returned HTTP 206 and its first 1,024 bytes matched the supplied owner APK. Full APK re-download was stopped because of slow transfer rates; its full downloaded checksum was not independently recomputed. The full uploaded APK digest was verified through GitHub metadata against the local owner artifact.
+
+Tag `v1.2.0` stays at source archive commit `c07d85336ba0fbc8e88c9098e2cce9980fe7131a`. Later publication-record commits change documentation only. The rules branch remains `e97e669715f09b71e1713ec464b010083d226279`. Release assets and the owner-supplied APK were not replaced after publication. No additional app build or device test was needed for this documentation-only record.
 
 ## Owner-signed 1.1.0 — 2026-10-14
 

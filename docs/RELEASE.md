@@ -1,16 +1,16 @@
 # Local APK releases
 
-## 1.2.0 preparation — 2026-10-18 (not published)
+## Published 1.2.0 — 2026-10-18
 
-The next release is **1.2.0 / versionCode 3**, package `indie.fiatsiz.anitv`, with minimum/target/compile SDK **23/34/36**. It includes manual Skip Opening with legacy TLS support, revised TV playback controls, the caption-state toggle, and manual signed-rules refresh. Latest remains 1.1.0 until publication completes.
+The public Latest release is [AniTV 1.2.0](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.2.0), **1.2.0 / versionCode 3**, package `indie.fiatsiz.anitv`, with minimum/target/compile SDK **23/34/36**. Published on 2026-10-18 at 14:04:10 UTC, it includes manual Skip Opening with legacy TLS support, revised TV playback controls, the caption-state toggle, and manual signed-rules refresh.
 
 The owner rebuilt `app/build/outputs/apk/release/app-release.apk` with Android Studio after the version bump. The supplied **1.2.0 / code 3** APK verifies with the permanent owner certificate, v1/v2 signatures, and SDK levels 23/34/36. SHA-256: `cc2f4b2619e59d156c59fa083dd613597b5169358fc1d02cad00af051593495a`. No replacement key or agent-signed rebuild was used. To reproduce, use Android Studio's Generate Signed APK workflow with the existing key, or supply the four external signing variables below and run the documented Gradle commands.
 
-GitHub CLI authentication needs renewal with an account that can publish to `fiatsiz/AniTV-dot` (`gh auth login --hostname github.com`). Do not put credentials in chat or Git. Release assets are `AniTV-1.2.0.apk`, matching source, `LICENSE`, `RELEASE-INFO.txt`, and `SHA256SUMS`. Publish stable tag `v1.2.0` after authentication, then verify downloaded assets and the public latest-release contract. No tag or release has been created for 1.2.0. See [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md).
+The five release assets are `AniTV-1.2.0.apk`, matching source, `LICENSE`, `RELEASE-INFO.txt`, and `SHA256SUMS`. Tag `v1.2.0` and the source archive identify commit `c07d85336ba0fbc8e88c9098e2cce9980fe7131a`. GitHub reports the expected uploaded sizes and SHA-256 digests; the unauthenticated latest-release endpoint satisfies the updater contract. The four supporting assets were downloaded and matched staging; public APK range access and its first 1,024 bytes were verified. Full APK re-download was stopped due to slow transfer rates; the full-file GitHub digest matches the local owner APK. Authentication was renewed by the owner before publication. See [RELEASE-VERIFICATION.md](RELEASE-VERIFICATION.md).
 
 ## Published 1.1.0
 
-The published owner-signed [AniTV 1.1.0 release](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.1.0) is **1.1.0 / versionCode 2**, application ID `indie.fiatsiz.anitv`, Android 14/API 34 minimum. It adds a stable GitHub release updater. The published [1.0.0 release](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0) has no APK updater; install the first updater-enabled, owner-signed APK manually. The owner authorized publication on 2026-10-14. It is public Latest; APK, matching formatted source, GPL-3.0 license, provenance, and checksums were downloaded and verified after upload.
+The published owner-signed [AniTV 1.1.0 release](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.1.0) is **1.1.0 / versionCode 2**, application ID `indie.fiatsiz.anitv`, Android 14/API 34 minimum. It adds a stable GitHub release updater. The published [1.0.0 release](https://github.com/fiatsiz/AniTV-dot/releases/tag/v1.0.0) has no APK updater; install the first updater-enabled, owner-signed APK manually. The owner authorized publication on 2026-10-14. It was published as Latest; APK, matching formatted source, GPL-3.0 license, provenance, and checksums were downloaded and verified after upload.
 
 ## Versioning
 
@@ -44,7 +44,7 @@ Before distribution, verify with SDK `apksigner verify --verbose --print-certs`,
 
 ## Signed source rules
 
-The app automatically checks the public [rules branch](https://github.com/fiatsiz/AniTV-dot/tree/rules) once per process startup. It renders Home immediately and waits at most three seconds total before source operations use a validated initial snapshot. Published 1.1.0 performs rules checks only at startup. Current development builds also use Settings → Check for updates to check signed rules and APK releases independently. A verified newer rules revision activates for subsequent source requests without restarting playback, and its signed envelope/ETag is cached. Each manual rules request has a fresh three-second deadline; unavailable, rejected, or late responses keep the current rules. The existing APK schedule/debounce/download/installation flow remains separate. Settings shows version/revision/outcome in English or Turkish.
+The app automatically checks the public [rules branch](https://github.com/fiatsiz/AniTV-dot/tree/rules) once per process startup. It renders Home immediately and waits at most three seconds total before source operations use a validated initial snapshot. Published 1.1.0 performs rules checks only at startup. Published 1.2.0 and current development builds also use Settings → Check for updates to check signed rules and APK releases independently. A verified newer rules revision activates for subsequent source requests without restarting playback, and its signed envelope/ETag is cached. Each manual rules request has a fresh three-second deadline; unavailable, rejected, or late responses keep the current rules. The existing APK schedule/debounce/download/installation flow remains separate. Settings shows version/revision/outcome in English or Turkish.
 
 Rules schema 1 supports current HTML and JSON-wrapped HTML, named object-property paths, selectors/attributes, three relative endpoint templates, server/audio names, and the current Base64/XOR decoding switches/key. HiAnime origin, HTTPS, numeric ID validation, response limits, subtitle requirements/selection, and VTT remain compiled. New domains, providers, formats, or decoding algorithms can require a new APK. Correctly signed rules can still be wrong for the live site; fixture tests and live response inspection remain required.
 
@@ -78,7 +78,7 @@ This test uses the installed application parser with synthetic keys/transport an
 
 ## Stable APK release contract
 
-The updater requests unauthenticated `GET https://api.github.com/repos/fiatsiz/AniTV-dot/releases/latest`. Publish a full, non-draft, non-prerelease release tagged exactly `vMAJOR.MINOR.PATCH` (numeric components without leading zeroes). Attach exactly one uploaded `AniTV-MAJOR.MINOR.PATCH.apk` with positive size no greater than 100 MiB and GitHub asset `digest` equal to `sha256:<64 hex digits>`. Missing/unsupported assets or digests produce an error rather than an installation offer. The current `v1.0.0` asset meets this contract.
+The updater requests unauthenticated `GET https://api.github.com/repos/fiatsiz/AniTV-dot/releases/latest`. Publish a full, non-draft, non-prerelease release tagged exactly `vMAJOR.MINOR.PATCH` (numeric components without leading zeroes). Attach exactly one uploaded `AniTV-MAJOR.MINOR.PATCH.apk` with positive size no greater than 100 MiB and GitHub asset `digest` equal to `sha256:<64 hex digits>`. Missing/unsupported assets or digests produce an error rather than an installation offer. The current `v1.2.0` asset meets this contract.
 
 The APK must have package `indie.fiatsiz.anitv`, matching versionName, a strictly increasing versionCode, compatible minimum SDK, and the same current signing certificate(s) as the installed application. Keep the permanent owner key. The verified 1.0.0 owner certificate SHA-256 is `9a65e9f457a546bd65d51146f1e4ab611f44c57be68e089c000d4431fb805854`. Debug APKs cannot update that owner-signed installation. Never uninstall automatically to resolve a certificate mismatch. Ship matching GPL-3.0 source, license, provenance, and checksums with each distributed APK.
 
@@ -98,7 +98,7 @@ Do these manually on the Beko TV; agent automation must control only an emulator
 4. Select Update. Check visible progress and Cancel. Start again, press physical Home, then return: the unfinished transfer must be canceled. Repeat with an Activity/language recreation: the active transfer must continue.
 5. Complete download. Check permission denial and permission grant followed by a separate Install selection. Cancel Android’s installer, return, and retry without downloading again.
 6. Confirm Android’s update prompt, install, reopen AniTV, and verify the new version plus unchanged library/settings. Never uninstall to bypass a signing error.
-7. Regression-check live search, episodes, SUB/DUB video and audible audio, subtitles, seeking, Back, Home/resume, DeepL, and caption styling. Record skipped checks; no newer public release currently exists for end-to-end production updater testing.
+7. Regression-check live search, episodes, SUB/DUB video and audible audio, subtitles, seeking, Back, Home/resume, DeepL, and caption styling. Record skipped checks; owner-signed 1.2.0 is now available to test the production updater from owner-signed 1.1.0. This end-to-end physical-TV update remains unverified.
 
 ### Local emulator fixture workflow
 
